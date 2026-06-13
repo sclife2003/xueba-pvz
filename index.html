@@ -371,6 +371,29 @@
         return map;
     }
 
+    // ==================== ASSET PIPELINE (Phase 3) ====================
+    // SVG 精灵外部加载：drawImage 只显示不回读，即使 file:// 下 canvas 被 taint 也不影响渲染。
+    // 未提供精灵的单位自动回退旧程序化绘制，迁移期间全程可玩。换成 PNG 只需替换 assets/ 文件。
+    const SPRITE_MANIFEST = {
+      enemy_slime: 'assets/sprites/enemy_slime.svg',
+      tower_pencil: 'assets/sprites/tower_pencil.svg'
+    };
+    const ASSETS = {
+      images: {},
+      ready: false,
+      load() {
+        const entries = Object.entries(SPRITE_MANIFEST);
+        if (entries.length === 0) { this.ready = true; return Promise.resolve(); }
+        return Promise.all(entries.map(([id, url]) => new Promise(res => {
+          const img = new Image();
+          img.onload = () => { this.images[id] = img; res(); };
+          img.onerror = () => { res(); }; // 缺图不阻塞启动
+          img.src = url;
+        }))).then(() => { this.ready = true; });
+      },
+      get(id) { return this.images[id]; }
+    };
+
     // ==================== GAME ENGINE ====================
     class GameEngine {
         constructor(callbacks) {
@@ -969,7 +992,32 @@
             for(let i=this.particles.length-1; i>=0; i--) { const p=this.particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life--; if(p.life<=0) this.particles.splice(i,1); }
         }
 
+        drawEnemySprite(ctx, o, G, sprite) {
+            const bobY = Math.sin(this.frame * 0.1) * 3;
+            const cx = o.x + G/2, cy = o.y + G/2 + bobY;
+            const squish = 1 + Math.sin(this.frame * 0.15) * 0.04;
+            const size = G * 1.12;
+            if (o.slowTimer > 0) {
+                ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = '#90CDF4';
+                ctx.beginPath(); ctx.arc(cx, cy, size * 0.52, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            }
+            ctx.save();
+            ctx.translate(cx, cy); ctx.scale(1 / squish, squish);
+            ctx.drawImage(sprite, -size/2, -size/2, size, size);
+            if (o.hitFlash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(sprite, -size/2, -size/2, size, size); }
+            ctx.restore();
+            if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
+            if (o.hp < o.maxHp) {
+                const barY = o.y - 6;
+                ctx.fillStyle = 'red'; ctx.fillRect(o.x + 15, barY, G - 30, 6);
+                ctx.fillStyle = '#48bb78'; ctx.fillRect(o.x + 15, barY, (G - 30) * (o.hp / o.maxHp), 6);
+                ctx.strokeStyle = 'black'; ctx.lineWidth = 1; ctx.strokeRect(o.x + 15, barY, G - 30, 6);
+            }
+        }
+
         drawEnemy(ctx, o, G) {
+            const sprite = ASSETS.get('enemy_' + o.id);
+            if (sprite) { this.drawEnemySprite(ctx, o, G, sprite); return; }
             const bobY = Math.sin(this.frame * 0.1) * 3;
             const x = o.x, y = o.y + bobY;
             const cx = x + G/2, cy = y + G/2;
@@ -1063,6 +1111,14 @@
                 this.objs.forEach(o => {
                     if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
                     if(o.type==='tower') {
+                        const tSprite = ASSETS.get('tower_' + o.id);
+                        if (tSprite) {
+                            const sq = 1 + Math.sin(this.frame*0.12 + o.c)*0.03;
+                            const sz = G * 1.08;
+                            ctx.save(); ctx.translate(o.x+G/2, o.y+G/2); ctx.scale(1, sq);
+                            ctx.drawImage(tSprite, -sz/2, -sz/2, sz, sz); ctx.restore();
+                            if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.45)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
+                        } else {
                         ctx.fillStyle = o.data.color;
                         if(o.data.type==='wall') { ctx.fillRect(o.x+10, o.y+10, G-20, G-20); ctx.strokeStyle='white'; ctx.strokeRect(o.x+10,o.y+10,G-20,G-20); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText('🛡️', o.x+G/3.5, o.y+G/1.5); }
                         else if(o.data.type==='bomb') {
@@ -1072,6 +1128,7 @@
                         }
                         else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(o.data.icon, o.x+G/3.5, o.y+G/1.5); }
                         if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
+                        }
                     } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
                     else if(o.type==='bullet') { ctx.fillStyle=o.color; ctx.beginPath(); ctx.arc(o.x, o.y, 8, 0, Math.PI*2); ctx.fill(); }
                     else if(o.type==='orb') { ctx.shadowBlur=15; ctx.shadowColor='#F6E05E'; ctx.fillStyle='#F6E05E'; ctx.beginPath(); ctx.arc(o.x, o.y, 25, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#FFFFF0'; ctx.lineWidth=3; ctx.stroke(); ctx.shadowBlur=0; }
@@ -1768,6 +1825,7 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
+    ASSETS.load(); // 异步预加载 SVG 精灵，加载完成后绘制自动切换（缺图回退旧画法）
 
     // Wire UI events
     ui.onSelectTower = (t) => {

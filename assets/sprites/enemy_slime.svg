@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="slimeBody" cx="42%" cy="34%" r="78%">
+      <stop offset="0%" stop-color="#9ae6b4"/>
+      <stop offset="55%" stop-color="#48bb78"/>
+      <stop offset="100%" stop-color="#2f855a"/>
+    </radialGradient>
+    <linearGradient id="slimeShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- ground shadow -->
+  <ellipse cx="64" cy="116" rx="34" ry="8" fill="#000000" opacity="0.18"/>
+  <!-- jelly body -->
+  <path d="M64 18 C92 18 104 44 104 70 C104 98 86 112 64 112 C42 112 24 98 24 70 C24 44 36 18 64 18 Z"
+        fill="url(#slimeBody)" stroke="#276749" stroke-width="2.5"/>
+  <!-- top shine -->
+  <ellipse cx="52" cy="42" rx="20" ry="13" fill="url(#slimeShine)" opacity="0.85"/>
+  <!-- cheeks -->
+  <ellipse cx="44" cy="78" rx="7" ry="4.5" fill="#f6948c" opacity="0.5"/>
+  <ellipse cx="84" cy="78" rx="7" ry="4.5" fill="#f6948c" opacity="0.5"/>
+  <!-- lazy half-closed eyes -->
+  <ellipse cx="50" cy="64" rx="9" ry="10" fill="#ffffff"/>
+  <ellipse cx="78" cy="64" rx="9" ry="10" fill="#ffffff"/>
+  <circle cx="51" cy="66" r="4.5" fill="#1a202c"/>
+  <circle cx="79" cy="66" r="4.5" fill="#1a202c"/>
+  <circle cx="49.5" cy="64.5" r="1.5" fill="#ffffff"/>
+  <circle cx="77.5" cy="64.5" r="1.5" fill="#ffffff"/>
+  <path d="M41 62 Q50 58 59 62" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M69 62 Q78 58 87 62" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- small mouth -->
+  <path d="M58 86 Q64 92 70 86" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- sleepy zzz -->
+  <text x="90" y="42" font-family="Arial" font-size="15" font-weight="bold" fill="#2f855a" opacity="0.8">z</text>
+  <text x="100" y="30" font-family="Arial" font-size="10" font-weight="bold" fill="#2f855a" opacity="0.6">z</text>
+</svg>

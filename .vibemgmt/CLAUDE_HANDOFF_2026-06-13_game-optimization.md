@@ -281,6 +281,32 @@ Wrong answers should teach, not abruptly end the run.
 
 ## 7. Visual Design Direction
 
+### PvZ-quality benchmark
+
+The target quality bar is not "a nicer prototype UI." The target is closer to the production polish of classic lane tower defense games such as Plants vs. Zombies:
+
+- Strong style guide discipline: consistent badges, patterns, iconography, packaging-like UI language, and reusable visual rules.
+- Caricature-style characters: exaggerated shapes, readable faces, humorous proportions, and distinct silhouettes.
+- Slick animation: idle motion, attack anticipation, hit reactions, death effects, and UI transitions must feel authored.
+- Vivid but controlled colors: bright enough to feel playful, but with strong contrast between battlefield, units, enemies, and UI.
+- Charm over raw resolution: HD or clean graphics are not enough if the result loses personality, visual rhythm, or hand-crafted appeal.
+- Half-second readability: every defender and enemy should communicate role and threat immediately.
+
+Reference observations:
+
+- PvZ has official-style brand systems and licensee style guides covering badges, patterns, iconography, and product applications.
+- Reviews repeatedly point to caricature, slick animation, vivid colors, humor, and charm as core to PvZ's feel.
+- Player discussions around remasters and later entries show that fans notice when art becomes merely cleaner but loses the original charm, proportions, or hand-crafted detail.
+
+Implementation implication:
+
+```text
+Do not merely recolor the current UI.
+Do not rely on emoji as final art.
+Do not treat Phase 3 as minor polish.
+Phase 3 must be a full original art direction pass with a small but complete production-quality vertical slice first.
+```
+
 ### Target style
 
 ```text
@@ -488,20 +514,81 @@ Acceptance:
 - Correct answer changes the battlefield within 1 second.
 - Wrong answer teaches without feeling too punishing.
 
-### Phase 3: Art unification
+### Phase 3: PvZ-level original school art pass
 
-Deliverables:
+Goal:
 
-1. Replace most emoji-like UI with original drawn shapes.
-2. Improve Canvas defender drawings.
-3. Improve Canvas enemy drawings.
-4. Add hit / attack / death effects.
+```text
+Reach PvZ-like production readability, charm, animation feedback, and visual consistency while staying fully original to the school learning theme.
+```
+
+This phase happens **after Phase 2**. Do not start it until gameplay clarity and quiz-to-combat integration are complete.
+
+Phase 3 is not just cleanup. It is a proper art direction and implementation phase.
+
+#### Phase 3A: Art direction vertical slice
+
+Deliver a high-quality slice before replacing all art:
+
+1. Redraw Chapter 1 classroom battlefield:
+   - Desk-grid lanes.
+   - Chalkboard background elements.
+   - Window / chalk tray / wood trim details.
+   - Clear safe battlefield area on mobile landscape.
+2. Redraw the left tower bar as a polished pencil box:
+   - Not generic buttons.
+   - Sticker-card defenders.
+   - Clear cost, cooldown, selected state, disabled state.
+3. Redraw 3 defenders in original Canvas art:
+   - 課本發電站
+   - 鉛筆投手
+   - 橡皮堡壘
+4. Redraw 2 enemies in original Canvas art:
+   - 懶惰怪
+   - 抄作業怪
+5. Add production-style feedback:
+   - Idle animation.
+   - Attack anticipation.
+   - Hit flash.
+   - Death paper scraps / chalk dust.
+   - Placement bounce.
+
+#### Phase 3B: Full art replacement
+
+After the vertical slice is approved:
+
+1. Replace most emoji-like UI with original drawn UI or Canvas shapes.
+2. Redraw all defenders with a consistent school-stationery style.
+3. Redraw all enemies with clear silhouettes and school-pressure themes.
+4. Add scene backgrounds for all chapters:
+   - Classroom.
+   - Playground.
+   - Library / study room.
+   - Exam hall.
+5. Add combat effects:
+   - Projectile trails.
+   - Slow / glue state.
+   - Armor / tank state.
+   - Boss arrival warning.
+   - Reward skill effects.
+6. Add a small internal style guide section inside the code or `.vibemgmt/`:
+   - Color tokens.
+   - Stroke widths.
+   - Shadow rules.
+   - Character shape language.
+   - UI card rules.
 
 Acceptance:
 
-- Units are readable without text.
+- Each defender and enemy is readable without text within half a second.
 - Enemy threat type is readable by silhouette.
-- Visual style feels like one coherent game.
+- Fast enemies look light, small, sharp, and mobile.
+- Tank enemies look thick, heavy, and slow.
+- Defender units look stable, friendly, and clearly school-themed.
+- UI looks like a complete school fantasy game, not a prototype overlay.
+- Animation feedback exists for placement, attack, hit, and death.
+- The result remains original and does not copy PvZ assets, names, silhouettes, or character designs.
+- If Canvas-only art cannot reach the target bar, propose an asset pipeline instead of continuing low-quality hand drawing.
 
 ### Phase 4: Strategic level design
 
@@ -603,4 +690,3 @@ Also report:
 - Phase 1 每一項如何完成
 - 剩餘風險
 ```
-
