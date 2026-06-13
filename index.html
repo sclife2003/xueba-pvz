@@ -87,6 +87,17 @@
     <script>
     // ==================== CONSTANTS ====================
     const SIDEBAR_WIDTH_LANDSCAPE = 110;
+    const SIDEBAR_GAME_GAP_LANDSCAPE = 22;
+
+    function readSafeAreaInset(side) {
+        if (!document.body) return 0;
+        const probe = document.createElement('div');
+        probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;padding-${side}:env(safe-area-inset-${side});`;
+        document.body.appendChild(probe);
+        const px = parseFloat(getComputedStyle(probe).getPropertyValue(`padding-${side}`)) || 0;
+        probe.remove();
+        return px;
+    }
 
     const TOWERS = {
       textbook: { id: 'textbook', name: '知识课本', cost: 50, type: 'producer', range: 0, rate: 240, dmg: 100, color: '#F6E05E', icon: '📒', recharge: 180 },
@@ -372,7 +383,10 @@
             let topM, bottomM, leftM, rightM;
             if (isLandscape) {
                 topM = 20; bottomM = 20;
-                leftM = SIDEBAR_WIDTH_LANDSCAPE + 15; rightM = 20;
+                const safeLeft = readSafeAreaInset('left');
+                const safeRight = readSafeAreaInset('right');
+                leftM = safeLeft + SIDEBAR_WIDTH_LANDSCAPE + SIDEBAR_GAME_GAP_LANDSCAPE;
+                rightM = Math.max(20, safeRight + 20);
                 const availH = this.h - topM - bottomM;
                 let targetG = Math.floor(availH / this.R);
                 const availW = this.w - leftM - rightM;
@@ -1031,17 +1045,25 @@
         renderTowerBar() {
             if (this.phase !== 'td') return null;
             const isL = this.isLandscape;
+            const towerList = Object.values(TOWERS);
+            const landscapeButtonSize = isL
+                ? Math.max(44, Math.min(56, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 88) / towerList.length)))
+                : 80;
             const bar = this.el('div', {
                 pointerEvents:'auto',
                 position: isL ? 'absolute' : 'absolute',
-                ...(isL ? { left:'0', top:'0', bottom:'0', display:'flex', flexDirection:'column' } : { bottom:'0', left:'0', right:'0', display:'flex', justifyContent:'center' })
+                ...(isL ? {
+                    left:'0', top:'0', bottom:'0', display:'flex', flexDirection:'column',
+                    paddingLeft:'env(safe-area-inset-left)', paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)',
+                    boxSizing:'border-box', zIndex:'40'
+                } : { bottom:'0', left:'0', right:'0', display:'flex', justifyContent:'center' })
             });
             const inner = this.el('div', {
                 ...(isL ? {
                     backgroundColor:'#5D4037', borderRight:'4px solid #3E2723', borderTopRightRadius:'1rem', borderBottomRightRadius:'1rem',
                     boxShadow:'4px 0 10px rgba(0,0,0,0.3)', height:'100%', display:'flex', flexDirection:'column',
-                    justifyContent:'flex-start', padding:'8px 4px', gap:'4px', width: SIDEBAR_WIDTH_LANDSCAPE + 'px', boxSizing:'border-box',
-                    overflowY:'auto', overflowX:'hidden'
+                    justifyContent:'flex-start', padding:'6px 4px', gap:'3px', width: SIDEBAR_WIDTH_LANDSCAPE + 'px', boxSizing:'border-box',
+                    overflowY:'auto', overflowX:'visible'
                 } : {
                     backgroundColor:'#5D4037', borderTop:'4px solid #3E2723', padding:'8px 8px', paddingBottom:'calc(20px + env(safe-area-inset-bottom))', borderTopLeftRadius:'24px', borderTopRightRadius:'24px',
                     boxShadow:'0 -4px 20px rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', gap:'8px', overflowX:'auto', flexShrink:'0'
@@ -1050,17 +1072,17 @@
 
             // Landscape stats
             if (isL) {
-                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'4px', marginBottom:'8px', padding:'8px', background:'rgba(0,0,0,0.2)', borderRadius:'8px', margin:'4px', flexShrink:'0' });
+                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', padding:'6px', background:'rgba(0,0,0,0.2)', borderRadius:'8px', margin:'2px 4px 4px', flexShrink:'0' });
                 const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center' });
-                mpRow.append(this.el('span', { fontSize:'20px' }, '☀️'), this.el('span', { color:'#fde68a', fontWeight:'900', fontSize:'18px' }, String(Math.floor(this.stats.mp))));
-                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center', borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop:'4px' });
+                mpRow.append(this.el('span', { fontSize:'18px' }, '☀️'), this.el('span', { color:'#fde68a', fontWeight:'900', fontSize:'16px' }, String(Math.floor(this.stats.mp))));
+                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center', borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop:'2px' });
                 const hpColor = this.stats.hp <= 1 ? '#fc8181' : '#fca5a5';
-                hpRow.append(this.el('span', { fontSize:'20px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'18px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
+                hpRow.append(this.el('span', { fontSize:'18px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
                 stats.append(mpRow, hpRow);
                 inner.appendChild(stats);
             }
 
-            Object.values(TOWERS).forEach(t => {
+            towerList.forEach(t => {
                 const cooldown = this.stats.cooldowns?.[t.id] || 0;
                 const isCooldown = cooldown > 0;
                 const canAfford = this.stats.mp >= t.cost;
@@ -1069,7 +1091,7 @@
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                     overflow:'hidden', transition:'all 0.15s', border:'4px solid', fontFamily:'inherit',
-                    ...(isL ? { width:'100%', height:'56px', minHeight:'44px', flex:'0 0 auto', margin:'2px 0' } : { width:'64px', height:'80px', flexShrink:'0' }),
+                    ...(isL ? { width:'100%', height: landscapeButtonSize + 'px', minHeight:'44px', flex:'0 0 auto', margin:'1px 0' } : { width:'64px', height:'80px', flexShrink:'0' }),
                     backgroundColor: isSelected ? '#fef9c3' : (canAfford ? 'white' : '#e5e7eb'),
                     borderColor: isSelected ? '#eab308' : '#e2e8f0',
                     transform: isSelected ? (isL ? 'translateX(8px) scale(1.05)' : 'translateY(-16px) scale(1.1)') : 'none',
@@ -1086,12 +1108,12 @@
                 }, String(t.cost));
 
                 // Icon
-                const iconEl = this.el('div', { fontSize: isL ? '22px' : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, t.icon);
+                const iconEl = this.el('div', { fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, t.icon);
 
                 // Name
                 const nameEl = this.el('div', {
                     backgroundColor:'#f1f5f9', color:'#475569', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
-                    fontSize:'8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #cbd5e1'
+                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #cbd5e1'
                 }, t.name);
 
                 // Cooldown overlay
