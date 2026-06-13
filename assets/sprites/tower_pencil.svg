@@ -1,40 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="pencilBody" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#f6d365"/>
-      <stop offset="50%" stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#d99a2b"/>
+    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#b8801f"/>
+      <stop offset="22%" stop-color="#f6d365"/>
+      <stop offset="48%" stop-color="#ffe9a8"/>
+      <stop offset="70%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#a9722a"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#d8a878"/>
+      <stop offset="50%" stop-color="#f0d2a8"/>
+      <stop offset="100%" stop-color="#b9825b"/>
+    </linearGradient>
+    <linearGradient id="ferrule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="40%" stop-color="#f1f5f9"/>
+      <stop offset="60%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#7c8a9e"/>
+    </linearGradient>
+    <linearGradient id="eraserG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#d4699a"/>
+      <stop offset="45%" stop-color="#f9a8cf"/>
+      <stop offset="100%" stop-color="#c85b8e"/>
     </linearGradient>
   </defs>
-  <!-- ground shadow -->
-  <ellipse cx="64" cy="117" rx="26" ry="7" fill="#000000" opacity="0.18"/>
-  <!-- pencil (slightly tilted) -->
+  <ellipse cx="64" cy="118" rx="24" ry="6" fill="#000000" opacity="0.2"/>
   <g transform="rotate(-8 64 64)">
+    <!-- drop shadow -->
+    <rect x="53" y="32" width="28" height="86" rx="5" fill="#3a2a10" opacity="0.22"/>
     <!-- wood cone -->
-    <polygon points="64,8 54,30 74,30" fill="#e8c39e" stroke="#b9825b" stroke-width="2"/>
+    <polygon points="64,8 53,31 75,31" fill="url(#wood)" stroke="#a9772a" stroke-width="1.5"/>
+    <polygon points="64,8 58,20 70,20" fill="#e8c39e" opacity="0.5"/>
     <!-- graphite tip -->
-    <polygon points="64,8 60,18 68,18" fill="#3a3a3a"/>
+    <polygon points="64,8 60.5,17 67.5,17" fill="#2b2b2b"/>
+    <polygon points="64,8 62.5,13 65.5,13" fill="#5b5b5b"/>
     <!-- barrel -->
-    <rect x="50" y="30" width="28" height="62" rx="4" fill="url(#pencilBody)" stroke="#a9772a" stroke-width="2"/>
-    <!-- barrel highlight -->
-    <rect x="54" y="33" width="5" height="56" rx="2.5" fill="#ffffff" opacity="0.35"/>
+    <rect x="50" y="30" width="28" height="62" rx="3" fill="url(#barrel)" stroke="#8a5f20" stroke-width="1.5"/>
+    <!-- wood-grain lines -->
+    <line x1="58" y1="33" x2="58" y2="89" stroke="#b8801f" stroke-width="0.8" opacity="0.4"/>
+    <line x1="70" y1="33" x2="70" y2="89" stroke="#b8801f" stroke-width="0.8" opacity="0.4"/>
+    <!-- specular highlight -->
+    <rect x="55" y="32" width="4" height="58" rx="2" fill="#ffffff" opacity="0.55"/>
     <!-- ferrule -->
-    <rect x="50" y="92" width="28" height="9" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/>
-    <rect x="50" y="95" width="28" height="2" fill="#94a3b8"/>
+    <rect x="49" y="92" width="30" height="10" rx="1" fill="url(#ferrule)" stroke="#7c8a9e" stroke-width="1"/>
+    <line x1="49" y1="96" x2="79" y2="96" stroke="#7c8a9e" stroke-width="1.2"/>
+    <line x1="49" y1="99" x2="79" y2="99" stroke="#7c8a9e" stroke-width="0.8" opacity="0.6"/>
     <!-- eraser -->
-    <rect x="51" y="101" width="26" height="14" rx="6" fill="#f687b3" stroke="#d4699a" stroke-width="2"/>
+    <rect x="51" y="101" width="26" height="15" rx="6" fill="url(#eraserG)" stroke="#c0568a" stroke-width="1.5"/>
+    <ellipse cx="58" cy="106" rx="3" ry="4" fill="#ffffff" opacity="0.35"/>
   </g>
   <!-- face -->
-  <ellipse cx="57" cy="58" rx="6" ry="7" fill="#ffffff"/>
-  <ellipse cx="72" cy="56" rx="6" ry="7" fill="#ffffff"/>
-  <circle cx="58" cy="59" r="3" fill="#1a202c"/>
-  <circle cx="73" cy="57" r="3" fill="#1a202c"/>
-  <circle cx="57" cy="58" r="1" fill="#ffffff"/>
-  <circle cx="72" cy="56" r="1" fill="#ffffff"/>
-  <path d="M51 49 Q57 47 62 50" stroke="#7a5b1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <path d="M67 47 Q73 45 78 48" stroke="#7a5b1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <path d="M58 68 Q66 74 74 67" stroke="#7a5b1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="56" cy="58" rx="6.5" ry="7.5" fill="#ffffff" stroke="#e2d3a0" stroke-width="0.5"/>
+  <ellipse cx="72" cy="56" rx="6.5" ry="7.5" fill="#ffffff" stroke="#e2d3a0" stroke-width="0.5"/>
+  <circle cx="57.5" cy="59.5" r="3.2" fill="#1a202c"/>
+  <circle cx="73.5" cy="57.5" r="3.2" fill="#1a202c"/>
+  <circle cx="56.3" cy="58.3" r="1.1" fill="#ffffff"/>
+  <circle cx="72.3" cy="56.3" r="1.1" fill="#ffffff"/>
+  <path d="M50 48 Q56 45 62 49" stroke="#6b4f16" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M67 46 Q73 43 79 47" stroke="#6b4f16" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M57 68 Q66 75 75 67" stroke="#6b4f16" stroke-width="2.8" fill="none" stroke-linecap="round"/>
   <!-- arm ready to shoot -->
-  <path d="M44 70 Q34 72 32 64" stroke="#d99a2b" stroke-width="5" fill="none" stroke-linecap="round"/>
-  <circle cx="31" cy="63" r="4" fill="#fbbf24" stroke="#a9772a" stroke-width="1.5"/>
+  <path d="M44 71 Q33 73 30 64" stroke="#d99a2b" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  <circle cx="29" cy="62" r="4.5" fill="#fbbf24" stroke="#a9772a" stroke-width="1.5"/>
 </svg>

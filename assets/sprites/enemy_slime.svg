@@ -1,37 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <radialGradient id="slimeBody" cx="42%" cy="34%" r="78%">
-      <stop offset="0%" stop-color="#9ae6b4"/>
-      <stop offset="55%" stop-color="#48bb78"/>
-      <stop offset="100%" stop-color="#2f855a"/>
+    <radialGradient id="slimeBody" cx="40%" cy="30%" r="82%">
+      <stop offset="0%" stop-color="#c6f6d5"/>
+      <stop offset="32%" stop-color="#9ae6b4"/>
+      <stop offset="68%" stop-color="#48bb78"/>
+      <stop offset="100%" stop-color="#22683f"/>
     </radialGradient>
-    <linearGradient id="slimeShine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+    <radialGradient id="slimeCore" cx="50%" cy="70%" r="50%">
+      <stop offset="0%" stop-color="#e9fff2" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#e9fff2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="slimeShine" x1="0.1" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
   <!-- ground shadow -->
-  <ellipse cx="64" cy="116" rx="34" ry="8" fill="#000000" opacity="0.18"/>
-  <!-- jelly body -->
-  <path d="M64 18 C92 18 104 44 104 70 C104 98 86 112 64 112 C42 112 24 98 24 70 C24 44 36 18 64 18 Z"
-        fill="url(#slimeBody)" stroke="#276749" stroke-width="2.5"/>
-  <!-- top shine -->
-  <ellipse cx="52" cy="42" rx="20" ry="13" fill="url(#slimeShine)" opacity="0.85"/>
+  <ellipse cx="64" cy="116" rx="36" ry="9" fill="#0a3a22" opacity="0.22"/>
+  <!-- drop shadow (offset, no filter for mobile compat) -->
+  <path d="M64 23 C92 23 104 49 104 75 C104 103 86 117 64 117 C42 117 24 103 24 75 C24 49 36 23 64 23 Z" fill="#143d28" opacity="0.28"/>
+  <!-- body -->
+  <path d="M64 18 C92 18 104 44 104 70 C104 98 86 112 64 112 C42 112 24 98 24 70 C24 44 36 18 64 18 Z" fill="url(#slimeBody)"/>
+  <!-- subsurface core glow -->
+  <path d="M64 18 C92 18 104 44 104 70 C104 98 86 112 64 112 C42 112 24 98 24 70 C24 44 36 18 64 18 Z" fill="url(#slimeCore)"/>
+  <!-- bottom volume shade -->
+  <path d="M30 84 C40 104 88 104 98 84 C92 104 74 112 64 112 C54 112 36 104 30 84 Z" fill="#1f5b3c" opacity="0.3"/>
+  <!-- crisp outline -->
+  <path d="M64 18 C92 18 104 44 104 70 C104 98 86 112 64 112 C42 112 24 98 24 70 C24 44 36 18 64 18 Z" fill="none" stroke="#1f5b3c" stroke-width="2" opacity="0.55"/>
+  <!-- big glossy highlight -->
+  <path d="M40 32 C51 24 67 27 71 38 C74 47 60 53 47 50 C38 48 33 40 40 32 Z" fill="url(#slimeShine)" opacity="0.9"/>
+  <!-- sparkles -->
+  <circle cx="78" cy="34" r="4" fill="#ffffff" opacity="0.85"/>
+  <circle cx="86" cy="42" r="2" fill="#ffffff" opacity="0.7"/>
   <!-- cheeks -->
-  <ellipse cx="44" cy="78" rx="7" ry="4.5" fill="#f6948c" opacity="0.5"/>
-  <ellipse cx="84" cy="78" rx="7" ry="4.5" fill="#f6948c" opacity="0.5"/>
-  <!-- lazy half-closed eyes -->
-  <ellipse cx="50" cy="64" rx="9" ry="10" fill="#ffffff"/>
-  <ellipse cx="78" cy="64" rx="9" ry="10" fill="#ffffff"/>
-  <circle cx="51" cy="66" r="4.5" fill="#1a202c"/>
-  <circle cx="79" cy="66" r="4.5" fill="#1a202c"/>
-  <circle cx="49.5" cy="64.5" r="1.5" fill="#ffffff"/>
-  <circle cx="77.5" cy="64.5" r="1.5" fill="#ffffff"/>
-  <path d="M41 62 Q50 58 59 62" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <path d="M69 62 Q78 58 87 62" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <!-- small mouth -->
-  <path d="M58 86 Q64 92 70 86" stroke="#276749" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="42" cy="80" rx="8" ry="5" fill="#f88379" opacity="0.45"/>
+  <ellipse cx="86" cy="80" rx="8" ry="5" fill="#f88379" opacity="0.45"/>
+  <!-- glossy lazy eyes -->
+  <ellipse cx="50" cy="66" rx="10" ry="11.5" fill="#1a202c"/>
+  <ellipse cx="78" cy="66" rx="10" ry="11.5" fill="#1a202c"/>
+  <circle cx="53" cy="62" r="3.6" fill="#ffffff"/>
+  <circle cx="81" cy="62" r="3.6" fill="#ffffff"/>
+  <circle cx="47" cy="70" r="1.6" fill="#ffffff" opacity="0.7"/>
+  <circle cx="75" cy="70" r="1.6" fill="#ffffff" opacity="0.7"/>
+  <!-- heavy lazy lids -->
+  <path d="M39 59 Q50 54 61 59 L61 56 Q50 51 39 56 Z" fill="#22683f"/>
+  <path d="M67 59 Q78 54 89 59 L89 56 Q78 51 67 56 Z" fill="#22683f"/>
+  <!-- mouth -->
+  <path d="M57 88 Q64 95 71 88" stroke="#22683f" stroke-width="3" fill="none" stroke-linecap="round"/>
   <!-- sleepy zzz -->
-  <text x="90" y="42" font-family="Arial" font-size="15" font-weight="bold" fill="#2f855a" opacity="0.8">z</text>
-  <text x="100" y="30" font-family="Arial" font-size="10" font-weight="bold" fill="#2f855a" opacity="0.6">z</text>
+  <text x="90" y="40" font-family="Arial" font-size="16" font-weight="bold" fill="#2f855a" opacity="0.85">z</text>
+  <text x="101" y="29" font-family="Arial" font-size="11" font-weight="bold" fill="#2f855a" opacity="0.6">z</text>
 </svg>
