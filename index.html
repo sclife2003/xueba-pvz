@@ -99,6 +99,24 @@
         return px;
     }
 
+    function isOrientationBlocked(phase) {
+        // 只在需要完整横向战场的阶段拦截；菜单/结算/过关/救援竖屏也能正常看
+        return (phase === 'td' || phase === 'maze') && window.innerHeight > window.innerWidth;
+    }
+
+    async function requestLandscapeMode() {
+        try {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+            }
+            if (screen.orientation && screen.orientation.lock) {
+                await screen.orientation.lock('landscape');
+            }
+        } catch (e) {
+            // Mobile browsers may reject orientation lock; the portrait gate still protects gameplay.
+        }
+    }
+
     const TOWERS = {
       textbook: { id: 'textbook', name: '知识课本', cost: 50, type: 'producer', range: 0, rate: 240, dmg: 100, color: '#F6E05E', icon: '📒', recharge: 180 },
       pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100 },
@@ -354,6 +372,8 @@
             this.ctx = canvas.getContext('2d');
             this.resize();
             window.addEventListener('resize', () => this.resize());
+            window.addEventListener('orientationchange', () => this.resize());
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
             this.startLoop();
         }
 
@@ -382,20 +402,26 @@
             const isLandscape = this.w > this.h;
             let topM, bottomM, leftM, rightM;
             if (isLandscape) {
-                topM = 20; bottomM = 20;
+                // 用 visualViewport 取得排除浏览器动态工具栏后的真实可视区，避免底部/右侧格子被切
+                const vw = (window.visualViewport && window.visualViewport.width) || this.w;
+                const vh = (window.visualViewport && window.visualViewport.height) || this.h;
+                const safeTop = readSafeAreaInset('top');
+                const safeBottom = readSafeAreaInset('bottom');
                 const safeLeft = readSafeAreaInset('left');
                 const safeRight = readSafeAreaInset('right');
+                topM = Math.max(16, safeTop + 12);
+                bottomM = Math.max(16, safeBottom + 12);
                 leftM = safeLeft + SIDEBAR_WIDTH_LANDSCAPE + SIDEBAR_GAME_GAP_LANDSCAPE;
                 rightM = Math.max(20, safeRight + 20);
-                const availH = this.h - topM - bottomM;
+                const availH = vh - topM - bottomM;
                 let targetG = Math.floor(availH / this.R);
-                const availW = this.w - leftM - rightM;
+                const availW = vw - leftM - rightM;
                 const minCols = 10;
                 if (availW / targetG < minCols) targetG = Math.floor(availW / minCols);
                 this.G = Math.max(30, Math.min(120, targetG));
-                this.OY = topM + (availH - this.R * this.G) / 2;
+                this.OY = topM + Math.max(0, (availH - this.R * this.G) / 2);
                 this.OX = leftM;
-                this.C = Math.floor((this.w - this.OX - rightM) / this.G);
+                this.C = Math.max(1, Math.floor((vw - this.OX - rightM) / this.G));
             } else {
                 topM = 100; bottomM = 140; leftM = 0; rightM = 0;
                 const availableH = this.h - topM - bottomM;
@@ -712,6 +738,7 @@
 
         update() {
             if (this.phase === 'over' || this.phase === 'level_complete' || this.phase === 'rescue_quiz') return;
+            if (isOrientationBlocked(this.phase)) return;
             if (this.phase === 'maze') {
                 this.updateMazeMovement();
                 for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
@@ -1000,7 +1027,7 @@
                 marginBottom:'24px', padding:'6px 16px', borderRadius:'999px', border:'1px solid rgba(255,255,255,0.3)',
                 color:'rgba(255,255,255,0.7)', fontSize:'14px', background:'transparent', cursor:'pointer'
             }, () => {
-                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+                if (!document.fullscreenElement) requestLandscapeMode();
                 else if(document.exitFullscreen) document.exitFullscreen();
             });
 
@@ -1047,7 +1074,7 @@
             const isL = this.isLandscape;
             const towerList = Object.values(TOWERS);
             const landscapeButtonSize = isL
-                ? Math.max(44, Math.min(56, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 88) / towerList.length)))
+                ? Math.max(42, Math.min(54, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 112) / towerList.length)))
                 : 80;
             const bar = this.el('div', {
                 pointerEvents:'auto',
@@ -1091,7 +1118,7 @@
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                     overflow:'hidden', transition:'all 0.15s', border:'4px solid', fontFamily:'inherit',
-                    ...(isL ? { width:'100%', height: landscapeButtonSize + 'px', minHeight:'44px', flex:'0 0 auto', margin:'1px 0' } : { width:'64px', height:'80px', flexShrink:'0' }),
+                    ...(isL ? { width:'100%', height: landscapeButtonSize + 'px', minHeight:'42px', flex:'0 0 auto', margin:'0' } : { width:'64px', height:'80px', flexShrink:'0' }),
                     backgroundColor: isSelected ? '#fef9c3' : (canAfford ? 'white' : '#e5e7eb'),
                     borderColor: isSelected ? '#eab308' : '#e2e8f0',
                     transform: isSelected ? (isL ? 'translateX(8px) scale(1.05)' : 'translateY(-16px) scale(1.1)') : 'none',
@@ -1184,6 +1211,38 @@
             const box = this.el('div', { backgroundColor:'white', padding:'24px', borderRadius:'24px', boxShadow:'0 20px 60px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', alignItems:'center', border:'4px solid #e0e7ff' });
             box.append(this.el('div', { fontSize:'60px', animation:'bounce 1s infinite', marginBottom:'8px' }, '🧠'), this.el('div', { color:'#4f46e5', fontSize:'20px', fontWeight:'bold' }, '准备题目中...'));
             overlay.appendChild(box);
+            return overlay;
+        }
+
+        renderOrientationGate() {
+            if (!isOrientationBlocked(this.phase)) return null;
+            const overlay = this.el('div', {
+                position:'absolute', inset:'0', zIndex:'120', pointerEvents:'auto',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                padding:'calc(20px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left))',
+                background:'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(67,20,7,0.96))',
+                color:'white', textAlign:'center', boxSizing:'border-box'
+            });
+            const card = this.el('div', {
+                width:'100%', maxWidth:'360px', display:'flex', flexDirection:'column', alignItems:'center',
+                gap:'14px', padding:'24px', borderRadius:'18px', border:'1px solid rgba(255,255,255,0.2)',
+                background:'rgba(255,255,255,0.08)', boxShadow:'0 20px 60px rgba(0,0,0,0.35)', backdropFilter:'blur(10px)',
+                boxSizing:'border-box'
+            });
+            const phone = this.el('div', {
+                width:'74px', height:'46px', border:'5px solid #fde68a', borderRadius:'14px',
+                position:'relative', boxShadow:'0 0 0 6px rgba(253,230,138,0.12)', marginBottom:'4px'
+            });
+            phone.appendChild(this.el('div', {
+                position:'absolute', width:'8px', height:'8px', borderRadius:'50%', right:'8px', top:'50%',
+                transform:'translateY(-50%)', background:'#fde68a'
+            }));
+            card.append(
+                phone,
+                this.el('div', { fontSize:'24px', fontWeight:'900', color:'#fde68a' }, '請橫放手機'),
+                this.el('div', { fontSize:'15px', lineHeight:'1.6', color:'#e2e8f0' }, '戰鬥畫面需要橫屏才能完整顯示道具列與防線。旋轉後會自動繼續。')
+            );
+            overlay.appendChild(card);
             return overlay;
         }
 
@@ -1330,6 +1389,9 @@
 
             const go = this.renderGameOver();
             if (go) this.root.appendChild(go);
+
+            const orientationGate = this.renderOrientationGate();
+            if (orientationGate) this.root.appendChild(orientationGate);
         }
     }
 
@@ -1393,6 +1455,7 @@
         ui.update({ selectedTower });
     };
     ui.onStartLevel = (idx) => {
+        requestLandscapeMode();
         if (idx > 100) {
             // next level
             const currentLevelIdx = LEVELS.findIndex(l => l.name === stats.levelName);
