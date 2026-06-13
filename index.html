@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#202020" />
+    <title>学霸异世界：PvZ特别版 (Beta)</title>
+    
+    <style>
+      @import url('data:text/css,');
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #202020;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        font-family: "Fredoka", "Microsoft YaHei", sans-serif;
+        overscroll-behavior: none;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      @keyframes highlight {
+        0% { transform: scale(1); background-color: #fff; }
+        50% { transform: scale(1.05); background-color: #bbf7d0; border-color: #22c55e; }
+        100% { transform: scale(1); background-color: #dcfce7; border-color: #22c55e; }
+      }
+      .answer-correct { animation: highlight 0.5s forwards; }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .bounce { animation: bounce 1s infinite; }
+      .pulse { animation: pulse 2s infinite; }
+      .spin { animation: spin 1s linear infinite; }
+
+      .chalkboard {
+        background-color: #2c3e50;
+        background-image: radial-gradient(#34495e 15%, transparent 16%), radial-gradient(#34495e 15%, transparent 16%);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        color: #ecf0f1;
+        font-family: 'Courier New', Courier, monospace;
+        border: 8px solid #8d6e63;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      }
+      .landscape-tower-bar {
+        background-color: #5D4037;
+        border-right: 4px solid #3E2723;
+        border-top-right-radius: 1rem;
+        border-bottom-right-radius: 1rem;
+        box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+        z-index: 40;
+      }
+      #ui-root {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+      }
+      /* Scrollbar hide */
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
+      .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      button { cursor: pointer; font-family: inherit; }
+      button:disabled { cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;"></canvas>
+    <div id="ui-root"></div>
+
+    <script>
+    // ==================== CONSTANTS ====================
+    const SIDEBAR_WIDTH_LANDSCAPE = 110;
+
+    const TOWERS = {
+      textbook: { id: 'textbook', name: '知识课本', cost: 50, type: 'producer', range: 0, rate: 240, dmg: 100, color: '#F6E05E', icon: '📒', recharge: 180 },
+      pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100 },
+      watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100 },
+      glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150 },
+      eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 600 },
+      teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900 }
+    };
+
+    const ENEMIES = {
+      slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground' },
+      bat: { id: 'bat', name: '蝙蝠', hp: 40, spd: 1.5, dmg: 2, val: 0, color: '#9f7aea', type: 'ground' },
+      tank: { id: 'tank', name: '铁桶怪', hp: 400, spd: 0.35, dmg: 10, val: 0, color: '#a0aec0', type: 'ground' },
+      boss: { id: 'boss', name: '魔王', hp: 2200, spd: 0.25, dmg: 50, val: 0, color: '#e53e3e', type: 'ground' },
+      elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground' }
+    };
+
+    const LEVELS = [
+      {
+        name: "第一章：初入校园 (简单)",
+        bg: "#2f855a", difficulty: 1.0,
+        tip: "主要任务：熟悉操作，多收集阳光！",
+        waves: [
+            { groups: [{ e: 'slime', n: 3, interval: 200, preDelay: 50 }, { e: 'elf', n: 1, interval: 0, preDelay: 100 }] },
+            { groups: [{ e: 'slime', n: 5, interval: 150, preDelay: 50 }, { e: 'tank', n: 1, interval: 0, preDelay: 200 }] },
+            { groups: [{ e: 'tank', n: 1, interval: 200, preDelay: 100 }, { e: 'slime', n: 10, interval: 100, preDelay: 100 }, { e: 'boss', n: 1, interval: 0, preDelay: 300 }] }
+        ]
+      },
+      {
+        name: "第二章：操场激战 (中等)",
+        bg: "#c05621", difficulty: 1.25,
+        tip: "蝙蝠速度很快但血量少，用胶水减速它们！",
+        waves: [
+            { groups: [{ e: 'slime', n: 5, interval: 100, preDelay: 50 }, { e: 'bat', n: 3, interval: 150, preDelay: 150 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 50 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
+            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 100 }, { e: 'slime', n: 12, interval: 60, preDelay: 50 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 200 }, { e: 'tank', n: 2, interval: 300, preDelay: 100 }] }
+        ]
+      },
+      {
+        name: "第三章：期末大考 (困难)",
+        bg: "#4c1d95", difficulty: 1.45,
+        tip: "这是真正的考验！使用「班主任」炸掉成群的敌人！",
+        waves: [
+            { groups: [{ e: 'slime', n: 6, interval: 70, preDelay: 50 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
+            { groups: [{ e: 'tank', n: 3, interval: 140, preDelay: 50 }, { e: 'bat', n: 6, interval: 70, preDelay: 100 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 100 }, { e: 'tank', n: 4, interval: 160, preDelay: 100 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 300, preDelay: 200 }, { e: 'tank', n: 4, interval: 170, preDelay: 100 }, { e: 'slime', n: 12, interval: 45, preDelay: 50 }] }
+        ]
+      },
+      {
+        name: "第四章：毕业典礼 (炼狱)",
+        bg: "#7f1d1d", difficulty: 1.7,
+        tip: "最终的试炼！活下来！",
+        waves: [
+            { groups: [{ e: 'bat', n: 7, interval: 60, preDelay: 50 }, { e: 'elf', n: 4, interval: 40, preDelay: 50 }] },
+            { groups: [{ e: 'tank', n: 6, interval: 120, preDelay: 50 }, { e: 'slime', n: 15, interval: 45, preDelay: 100 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 450, preDelay: 200 }, { e: 'bat', n: 9, interval: 55, preDelay: 50 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 250, preDelay: 100 }, { e: 'tank', n: 7, interval: 100, preDelay: 100 }, { e: 'slime', n: 16, interval: 35, preDelay: 50 }] }
+        ]
+      }
+    ];
+
+    // ==================== UTILS ====================
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // ==================== SAVE / PROGRESS ====================
+    const SAVE_KEY = 'xueba_pvz_save_v1';
+    function loadGameSave() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (raw) {
+                const d = JSON.parse(raw);
+                return { unlockedLevel: d.unlockedLevel || 0, hp: d.hp || 0 };
+            }
+        } catch (e) {}
+        return { unlockedLevel: 0, hp: 0 };
+    }
+    function writeGameSave(data) {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
+    }
+    // 初始生命随难度提升，避免高难度一开局就被淹没
+    function defaultHpForLevel(idx) {
+        const d = (LEVELS[idx] && LEVELS[idx].difficulty) || 1;
+        return Math.round(3 + d * 3); // 第一章6 → 第四章8
+    }
+    const HP_CAP = 15; // 存档生命上限，防止数值爆表
+
+    // ==================== QUIZ POOL ====================
+    const generateMathQuestion = () => {
+        const type = Math.floor(Math.random() * 3);
+        let q, aVal;
+        if (type === 0) {
+            const n1 = Math.floor(Math.random() * 50) + 10;
+            const n2 = Math.floor(Math.random() * 50) + 10;
+            q = `${n1} + ${n2} = ?`; aVal = n1 + n2;
+        } else if (type === 1) {
+            const n1 = Math.floor(Math.random() * 50) + 20;
+            const n2 = Math.floor(Math.random() * 20) + 1;
+            q = `${n1} - ${n2} = ?`; aVal = n1 - n2;
+        } else {
+            const n1 = Math.floor(Math.random() * 11) + 2;
+            const n2 = Math.floor(Math.random() * 11) + 2;
+            q = `${n1} x ${n2} = ?`; aVal = n1 * n2;
+        }
+        const dist1 = aVal + Math.floor(Math.random() * 5) + 1;
+        const dist2 = aVal - Math.floor(Math.random() * 5) - 1;
+        const answers = [
+            { t: String(aVal), ok: 1 },
+            { t: String(dist1), ok: 0 },
+            { t: String(dist2), ok: 0 }
+        ].sort(() => Math.random() - 0.5);
+        return { q, a: answers, visual: { type: "math", title: "快速计算", content: ["细心一点", "算得准比算得快重要！"] } };
+    };
+
+    const MATH_POOL = Array.from({ length: 150 }, generateMathQuestion);
+
+    const STATIC_QUESTIONS = [
+        { q: "125 x 8 = ?", a: [{t:"1000",ok:1},{t:"800",ok:0},{t:"1200",ok:0}], visual:{type:"math",title:"巧算口诀",content:["125 × 8 = 1000","25 × 4 = 100","看到125就找8，看到25就找4！"]} },
+        { q: "25 x 4 = ?", a: [{t:"100",ok:1},{t:"75",ok:0},{t:"125",ok:0}], visual:{type:"math",title:"巧算口诀",content:["25 × 4 = 100","就像4个25分硬币等于1元！"]} },
+        { q: "三角形内角和是？", a: [{t:"180°",ok:1},{t:"360°",ok:0},{t:"90°",ok:0}], visual:{type:"geo",title:"几何知识",content:["把三角形三个角剪下来拼在一起，","刚好是一条直线（平角），","所以是 180°！"]} },
+        { q: "圆周率 π 约等于？", a: [{t:"3.14",ok:1},{t:"3.41",ok:0},{t:"3.12",ok:0}] },
+        { q: "最大的两位数是？", a: [{t:"99",ok:1},{t:"10",ok:0},{t:"100",ok:0}] },
+        { q: "1小时有多少分钟？", a: [{t:"60",ok:1},{t:"100",ok:0},{t:"30",ok:0}] },
+        { q: "正方体有几个面？", a: [{t:"6",ok:1},{t:"4",ok:0},{t:"8",ok:0}] },
+        { q: "“横看成岭侧成峰”下一句？", a: [{t:"远近高低各不同",ok:1},{t:"只缘身在此山中",ok:0},{t:"柳暗花明又一村",ok:0}], visual:{type:"text",title:"古诗记忆",content:["《题西林壁》苏轼","横看成岭侧成峰，","远近高低各不同。","不识庐山真面目，","只缘身在此山中。"]} },
+        { q: "精卫填_？", a: [{t:"海",ok:1},{t:"河",ok:0},{t:"江",ok:0}], visual:{type:"text",title:"神话故事",content:["传说炎帝的女儿溺死东海，","化为精卫鸟，","衔石子要填平大海。"]} },
+        { q: "“李白”被称为什么？", a: [{t:"诗仙",ok:1},{t:"诗圣",ok:0},{t:"诗鬼",ok:0}] },
+        { q: "《西游记》作者是？", a: [{t:"吴承恩",ok:1},{t:"罗贯中",ok:0},{t:"施耐庵",ok:0}] },
+        { q: "“白日依山尽”下一句？", a: [{t:"黄河入海流",ok:1},{t:"欲穷千里目",ok:0},{t:"更上一层楼",ok:0}] },
+        { q: "端午节是纪念谁？", a: [{t:"屈原",ok:1},{t:"李白",ok:0},{t:"孔子",ok:0}] },
+        { q: "“三人行必有我师”是谁说的？", a: [{t:"孔子",ok:1},{t:"孟子",ok:0},{t:"老子",ok:0}] },
+        { q: "中国古代四大发明不包括？", a: [{t:"地动仪",ok:1},{t:"造纸术",ok:0},{t:"火药",ok:0}] },
+        { q: "Yesterday I ___ to school.", a: [{t:"went",ok:1},{t:"go",ok:0},{t:"going",ok:0}], visual:{type:"text",title:"语法：过去式",content:["Yesterday (昨天) 是过去时间。","Go 的过去式是 Went。","I went to school yesterday."]} },
+        { q: "She ___ reading a book now.", a: [{t:"is",ok:1},{t:"are",ok:0},{t:"am",ok:0}], visual:{type:"text",title:"语法：进行时",content:["Now (现在) 表示正在进行。","She (单数) 用 is。","结构：be + doing"]} },
+        { q: "Apple 的中文是？", a: [{t:"苹果",ok:1},{t:"香蕉",ok:0},{t:"梨",ok:0}] },
+        { q: "Thank you 的回答是？", a: [{t:"You're welcome",ok:1},{t:"No thanks",ok:0},{t:"Good bye",ok:0}] },
+        { q: "Red + Blue = ?", a: [{t:"Purple",ok:1},{t:"Green",ok:0},{t:"Orange",ok:0}] },
+        { q: "Book 的复数是？", a: [{t:"Books",ok:1},{t:"Bookes",ok:0},{t:"Bookies",ok:0}] },
+        { q: "Sun 的意思是？", a: [{t:"太阳",ok:1},{t:"月亮",ok:0},{t:"星星",ok:0}] },
+        { q: "水在常温下是？", a: [{t:"液体",ok:1},{t:"固体",ok:0},{t:"气体",ok:0}], visual:{type:"text",title:"物质三态",content:["冰 = 固体","水 = 液体","水蒸气 = 气体"]} },
+        { q: "人体骨骼有多少块？", a: [{t:"206",ok:1},{t:"108",ok:0},{t:"500",ok:0}] },
+        { q: "太阳系最大的行星？", a: [{t:"木星",ok:1},{t:"地球",ok:0},{t:"火星",ok:0}] },
+        { q: "光合作用需要？", a: [{t:"阳光",ok:1},{t:"月光",ok:0},{t:"灯光",ok:0}] },
+        { q: "蝌蚪长大变成？", a: [{t:"青蛙",ok:1},{t:"金鱼",ok:0},{t:"乌龟",ok:0}] },
+        { q: "熊猫主要吃什么？", a: [{t:"竹子",ok:1},{t:"肉",ok:0},{t:"鱼",ok:0}] },
+        { q: "冰融化成水体积会？", a: [{t:"变小",ok:1},{t:"变大",ok:0},{t:"不变",ok:0}] },
+        { q: "声音在什么中传播最快？", a: [{t:"固体",ok:1},{t:"液体",ok:0},{t:"空气",ok:0}] },
+        { q: "彩虹有几种颜色？", a: [{t:"7种",ok:1},{t:"5种",ok:0},{t:"10种",ok:0}] },
+        { q: "月亮本身发光吗？", a: [{t:"不发光",ok:1},{t:"发光",ok:0},{t:"有时发光",ok:0}] },
+        { q: "企鹅生活在哪里？", a: [{t:"南极",ok:1},{t:"北极",ok:0},{t:"赤道",ok:0}] }
+    ];
+
+    const MASTER_QUESTIONS = [...STATIC_QUESTIONS, ...MATH_POOL];
+    const DEFAULT_VISUAL = { type: "text", title: "提示", content: ["仔细审题，找出关键词。", "相信自己，下次一定行！"] };
+
+    // ==================== MAZE GENERATOR ====================
+    function generateMaze(width, height) {
+        width = width % 2 === 0 ? width + 1 : width;
+        height = height % 2 === 0 ? height + 1 : height;
+        const map = Array(height).fill(null).map(() => Array(width).fill(1));
+        function carve(cx, cy) {
+            const dirs = [{ x: 0, y: -2 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 2, y: 0 }].sort(() => Math.random() - 0.5);
+            for (const d of dirs) {
+                const nx = cx + d.x, ny = cy + d.y;
+                if (nx > 0 && nx < width - 1 && ny > 0 && ny < height - 1 && map[ny][nx] === 1) {
+                    map[cy + d.y/2][cx + d.x/2] = 0;
+                    map[ny][nx] = 0;
+                    carve(nx, ny);
+                }
+            }
+        }
+        map[1][1] = 0; carve(1, 1);
+        const emptySpots = [];
+        for(let y=1; y<height-1; y++) {
+            for(let x=1; x<width-1; x++) {
+                if(map[y][x] === 0 && !(x===1 && y===1)) {
+                    const dist = Math.abs(x - 1) + Math.abs(y - 1);
+                    emptySpots.push({x, y, dist});
+                }
+            }
+        }
+        if (emptySpots.length > 0) {
+            emptySpots.sort((a, b) => b.dist - a.dist);
+            const topN = Math.max(1, Math.floor(emptySpots.length * 0.1));
+            const exit = emptySpots[Math.floor(Math.random() * topN)];
+            map[exit.y][exit.x] = 5;
+        }
+        return map;
+    }
+
+    // ==================== GAME ENGINE ====================
+    class GameEngine {
+        constructor(callbacks) {
+            this.callbacks = callbacks;
+            this.phase = 'menu';
+            this.save = loadGameSave();
+            this.mp = 400; this.hp = 3;
+            this.objs = []; this.particles = []; this.floatTexts = [];
+            this.savedTowers = []; this.towerCooldowns = {};
+            this.frame = 0; this.R = 5;
+            this.waitNextWave = null;
+            this.touchStart = null;
+            this.mazeMoveTimer = 0;
+            this.selectedTower = null;
+            this.questionsAnswered = 0;
+            this.questionBag = [];
+            this.refillQuestions();
+            this.currentQuestionObj = null;
+        }
+
+        refillQuestions() {
+            this.questionBag = MASTER_QUESTIONS.map((_, i) => i);
+            shuffleArray(this.questionBag);
+        }
+
+        getQuestion() {
+            if (this.questionBag.length === 0) this.refillQuestions();
+            const idx = this.questionBag.pop();
+            return MASTER_QUESTIONS[idx];
+        }
+
+        mount(canvas) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.startLoop();
+        }
+
+        unmount() {
+            cancelAnimationFrame(this.animationId);
+        }
+
+        setSelectedTower(t) { this.selectedTower = t; }
+
+        syncSave(extra) {
+            this.save.hp = Math.min(HP_CAP, Math.max(0, this.hp));
+            if (extra && typeof extra.unlockedLevel === 'number') {
+                this.save.unlockedLevel = Math.max(this.save.unlockedLevel || 0, extra.unlockedLevel);
+            }
+            writeGameSave(this.save);
+        }
+
+        resize() {
+            if (!this.canvas) return;
+            const oldG = this.G || 1;
+            const oldOX = this.OX || 0;
+            const oldOY = this.OY || 0;
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.w = this.canvas.width; this.h = this.canvas.height;
+            const isLandscape = this.w > this.h;
+            let topM, bottomM, leftM, rightM;
+            if (isLandscape) {
+                topM = 20; bottomM = 20;
+                leftM = SIDEBAR_WIDTH_LANDSCAPE + 15; rightM = 20;
+                const availH = this.h - topM - bottomM;
+                let targetG = Math.floor(availH / this.R);
+                const availW = this.w - leftM - rightM;
+                const minCols = 10;
+                if (availW / targetG < minCols) targetG = Math.floor(availW / minCols);
+                this.G = Math.max(30, Math.min(120, targetG));
+                this.OY = topM + (availH - this.R * this.G) / 2;
+                this.OX = leftM;
+                this.C = Math.floor((this.w - this.OX - rightM) / this.G);
+            } else {
+                topM = 100; bottomM = 140; leftM = 0; rightM = 0;
+                const availableH = this.h - topM - bottomM;
+                this.G = Math.max(20, Math.min(90, Math.floor(availableH / this.R)));
+                if (this.w / this.G < 5) this.G = Math.floor(this.w / 5);
+                this.C = Math.floor(this.w / this.G);
+                this.OX = (this.w - this.C * this.G) / 2;
+                this.OY = topM + (Math.max(0, availableH - this.R * this.G) / 2);
+            }
+            if (oldG > 1 && this.objs.length > 0) {
+                this.objs.forEach(o => {
+                    if (o.type === 'tower') { o.x = this.OX + o.c * this.G; o.y = this.OY + o.r * this.G; }
+                    else if (['enemy','orb','bullet'].includes(o.type)) {
+                        const relX = (o.x - oldOX) / oldG;
+                        const relY = (o.y - oldOY) / oldG;
+                        o.x = this.OX + relX * this.G; o.y = this.OY + relY * this.G;
+                    }
+                });
+            }
+            if (this.phase === 'maze' && this.maze) {
+                const m = this.maze;
+                const cs = Math.min(60, Math.floor(Math.min(this.w / m.w, this.h / m.h)));
+                m.cs = cs; m.mx = (this.w - m.w * cs) / 2; m.my = (this.h - m.h * cs) / 2;
+            }
+        }
+
+        startLevel(idx) {
+            const isContinuation = (this.phase === 'level_complete' && idx === this.levelIdx + 1);
+            this.levelIdx = idx; this.waveIdx = 0;
+            const startMp = 400 + Math.round(((LEVELS[idx].difficulty || 1) - 1) * 300);
+            if (isContinuation) {
+                this.mp = Math.max(startMp, this.mp);
+            } else {
+                this.mp = startMp;
+                // 从菜单进入：沿用存档生命（至少为该关默认值），不再每次重置为 3
+                this.hp = Math.min(HP_CAP, Math.max(defaultHpForLevel(idx), this.save.hp || 0));
+                this.questionsAnswered = 0;
+            }
+            this.objs = []; this.particles = []; this.savedTowers = []; this.towerCooldowns = {};
+            this.phase = 'td'; this.naturalSunTimer = 200;
+            this.startTD();
+            this.callbacks.onPhaseChange('td');
+            this.updateStats();
+            this.syncSave();
+        }
+
+        useHint() {
+            if (this.hp > 1) {
+                this.hp--;
+                this.updateStats();
+                this.floatText("-1 ❤️ 提示", this.w/2, this.h/2, '#F56565', 50, 30);
+                return true;
+            }
+            return false;
+        }
+
+        triggerSOS() {
+            if (!this.currentQuestionObj) return;
+            const visual = this.currentQuestionObj.visual || DEFAULT_VISUAL;
+            this.callbacks.onExplanation(visual);
+        }
+
+        proceedToFollowUp() {
+            this.generateQuiz(null, null, false, true);
+        }
+
+        handleInput(type, x, y) {
+            if (type === 'start') {
+                this.touchStart = { x, y };
+                if (this.phase === 'maze') this.mazeTap(x, y);
+                else this.handleClick(x, y);
+            } else if (type === 'move') {
+                if (this.phase === 'maze' && this.touchStart) { this.currentTouch = { x, y }; this.mazePath = null; }
+            } else if (type === 'end') {
+                this.touchStart = null; this.currentTouch = null;
+            }
+        }
+
+        // 屏幕坐标 -> 迷宫格子，点击可走格则自动寻路过去
+        mazeTap(sx, sy) {
+            if (!this.maze) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width, scaleY = this.canvas.height / rect.height;
+            const cx = (sx - rect.left) * scaleX, cy = (sy - rect.top) * scaleY;
+            const m = this.maze;
+            const gx = Math.floor((cx - m.mx) / m.cs), gy = Math.floor((cy - m.my) / m.cs);
+            if (gx < 0 || gx >= m.w || gy < 0 || gy >= m.h) return;
+            if (m.map[gy][gx] === 1) return; // 墙不可点
+            const path = this.findMazePath(m.px, m.py, gx, gy);
+            if (path && path.length > 0) { this.mazePath = path; this.mazePathIdx = 0; this.currentTouch = null; }
+        }
+
+        // BFS 最短路径；找不到返回 null（代表不可达）
+        findMazePath(sx, sy, tx, ty) {
+            const m = this.maze;
+            if (!m || (sx === tx && sy === ty)) return [];
+            const key = (x, y) => y * m.w + x;
+            const visited = new Set([key(sx, sy)]);
+            const prev = {};
+            const queue = [{ x: sx, y: sy }];
+            const dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+            let head = 0;
+            while (head < queue.length) {
+                const cur = queue[head++];
+                if (cur.x === tx && cur.y === ty) {
+                    const path = [];
+                    let node = { x: tx, y: ty };
+                    while (!(node.x === sx && node.y === sy)) { path.push(node); node = prev[key(node.x, node.y)]; }
+                    return path.reverse();
+                }
+                for (const d of dirs) {
+                    const nx = cur.x + d.x, ny = cur.y + d.y;
+                    if (nx >= 0 && nx < m.w && ny >= 0 && ny < m.h && m.map[ny][nx] !== 1 && !visited.has(key(nx, ny))) {
+                        visited.add(key(nx, ny));
+                        prev[key(nx, ny)] = { x: cur.x, y: cur.y };
+                        queue.push({ x: nx, y: ny });
+                    }
+                }
+            }
+            return null;
+        }
+
+        findExit(map, w, h) {
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (map[y][x] === 5) return { x, y };
+            return null;
+        }
+
+        handleClick(x, y) {
+            if (this.phase !== 'td') return false;
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const cx = (x - rect.left) * scaleX;
+            const cy = (y - rect.top) * scaleY;
+            for (let i = this.objs.length - 1; i >= 0; i--) {
+                const o = this.objs[i];
+                if (o.type === 'orb') {
+                    if ((cx-o.x)**2 + (cy-o.y)**2 < 50**2) {
+                        this.mp += (o.val || 25);
+                        this.spawnParticles(o.x, o.y, '#F6E05E', 8);
+                        this.floatText(`+${o.val}`, o.x, o.y, '#F6E05E', 40);
+                        this.objs.splice(i, 1); this.updateStats(); return true;
+                    }
+                }
+            }
+            const uiSelected = this.selectedTower;
+            if (!uiSelected) return false;
+            if (this.towerCooldowns[uiSelected] > 0) return false;
+            const c = Math.floor((cx - this.OX) / this.G);
+            const r = Math.floor((cy - this.OY) / this.G);
+            if (c >= 0 && c < this.C && r >= 0 && r < this.R) {
+                if (!this.objs.some(o =>
+                    (o.type === 'tower' && o.c === c && o.r === r) ||
+                    (o.type === 'enemy' && o.r === r && Math.abs(o.x - (this.OX + c * this.G)) < 20)
+                )) {
+                    const tData = TOWERS[uiSelected];
+                    if (this.mp >= tData.cost) {
+                        this.mp -= tData.cost;
+                        this.objs.push({ type: 'tower', id: uiSelected, c, r, x: this.OX + c * this.G, y: this.OY + r * this.G, hp: tData.dmg, maxHp: tData.dmg, data: tData, cd: 0, fire: 0 });
+                        this.towerCooldowns[uiSelected] = tData.recharge;
+                        this.spawnParticles(cx, cy, '#fff', 8);
+                        this.floatText(`-${tData.cost}`, cx, cy, '#fbbf24');
+                        this.updateStats();
+                        this.callbacks.onSelectTower(null);
+                        this.selectedTower = null; return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        startTD() {
+            this.phase = 'td'; this.callbacks.onPhaseChange('td'); this.waitNextWave = null;
+            if (this.savedTowers.length > 0) { this.objs = [...this.savedTowers]; this.savedTowers = []; }
+            else if (this.waveIdx === 0) this.objs = [];
+            const lvl = LEVELS[this.levelIdx];
+            const waveData = lvl.waves[this.waveIdx];
+            if (!waveData) { return; }
+            this.spawnState = { active: true, groupIdx: 0, mobsLeftInGroup: waveData.groups[0].n, timer: waveData.groups[0].preDelay, totalGroups: waveData.groups.length };
+            this.floatText(`第 ${this.waveIdx + 1} 波`, this.w / 2, this.h / 2, '#fff', 120, 50);
+        }
+
+        startMaze() {
+            this.phase = 'maze'; this.callbacks.onPhaseChange('maze');
+            this.savedTowers = this.objs.filter(o => o.type === 'tower');
+            this.objs = []; this.particles = [];
+            this.mazePath = null; this.currentTouch = null;
+            const targetCell = 50;
+            let mw = Math.floor((this.w - 20) / targetCell);
+            let mh = Math.floor((this.h - 20) / targetCell);
+            if (mw % 2 === 0) mw--; if (mh % 2 === 0) mh--;
+            mw = Math.max(9, mw); mh = Math.max(9, mh);
+            const cs = Math.min(60, Math.floor(Math.min(this.w / mw, this.h / mh)));
+            const mx = (this.w - mw * cs) / 2;
+            const my = (this.h - mh * cs) / 2;
+            // 生成迷宫并验证出口从起点(1,1)可达，最多重试5次，杜绝"没路/被墙挡住"
+            let map, exit;
+            for (let attempt = 0; attempt < 5; attempt++) {
+                map = generateMaze(mw, mh);
+                exit = this.findExit(map, mw, mh);
+                this.maze = { map, w: mw, h: mh, px: 1, py: 1, cs, mx, my, exit };
+                if (exit && this.findMazePath(1, 1, exit.x, exit.y)) break;
+            }
+        }
+
+        updateMazeMovement() {
+            if (this.phase !== 'maze' || !this.maze) return;
+            if (this.mazeMoveTimer > 0) { this.mazeMoveTimer--; return; }
+            const m = this.maze;
+            // 自动寻路：点击空地后角色逐格走过去（手机主操作方式）
+            if (this.mazePath && this.mazePathIdx < this.mazePath.length) {
+                const step = this.mazePath[this.mazePathIdx++];
+                m.px = step.x; m.py = step.y; this.mazeMoveTimer = 6;
+                const tile = m.map[step.y][step.x];
+                if (tile === 5) { this.mazePath = null; this.generateQuiz(step.x, step.y); return; }
+                if (this.mazePathIdx >= this.mazePath.length) this.mazePath = null;
+                return;
+            }
+            // 拖曳即时移动（备用操作方式）
+            if (!this.currentTouch) return;
+            const cs = m.cs, mx = m.mx, my = m.my;
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width, scaleY = this.canvas.height / rect.height;
+            const touchX = (this.currentTouch.x - rect.left) * scaleX;
+            const touchY = (this.currentTouch.y - rect.top) * scaleY;
+            const playerScreenX = mx + m.px * cs + cs/2;
+            const playerScreenY = my + m.py * cs + cs/2;
+            const dx = touchX - playerScreenX, dy = touchY - playerScreenY;
+            if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+            let moveX = 0, moveY = 0;
+            if (Math.abs(dx) > Math.abs(dy)) { moveX = dx > 0 ? 1 : -1; } else { moveY = dy > 0 ? 1 : -1; }
+            const nx = m.px + moveX, ny = m.py + moveY;
+            if (nx >= 0 && nx < m.w && ny >= 0 && ny < m.h) {
+                const tile = m.map[ny][nx];
+                if (tile !== 1) {
+                    m.px = nx; m.py = ny; this.mazeMoveTimer = 7;
+                    if (tile === 5) { this.generateQuiz(nx, ny); }
+                }
+            }
+        }
+
+        generateQuiz(tx, ty, isRescue = false, isFollowUp = false) {
+            this.callbacks.onLoading(true);
+            this.currentTouch = null;
+            setTimeout(() => {
+                const q = this.getQuestion();
+                this.currentQuestionObj = q;
+                const answersWithIndex = q.a.map((ans, idx) => ({ ...ans, originalIndex: idx }));
+                const canSOS = !isRescue && !isFollowUp;
+                const canHint = this.questionsAnswered > 0;
+                this.callbacks.onQuizOpen(q.q, answersWithIndex, isRescue, canSOS, canHint);
+                if (tx !== null && ty !== null) this._pendingQuizTile = { x: tx, y: ty };
+                this.callbacks.onLoading(false);
+            }, 500);
+        }
+
+        resolveQuiz(correct) {
+            this.questionsAnswered++;
+            if (this.phase === 'rescue_quiz') {
+                if (correct) { this.hp = 4; this.phase = 'td'; this.callbacks.onPhaseChange('td'); this.updateStats(); this.syncSave(); }
+                else { this.phase = 'over'; this.callbacks.onPhaseChange('over'); this.callbacks.onGameOver(false, "复活失败", "下次再接再厉！"); }
+                return;
+            }
+            const tile = this._pendingQuizTile;
+            if (correct && this.maze && tile) {
+                this.mp += 200; this.hp = Math.min(HP_CAP, this.hp + 2); this.updateStats(); this.syncSave();
+                this.spawnParticles(this.w/2, this.h/2, '#ECC94B', 30);
+                this.floatText("通关! +200 能量 +2 ❤️", this.w/2, this.h/2, '#48bb78', 80, 40);
+                setTimeout(() => this.nextLevel(), 1200);
+            } else {
+                if (this.maze) {
+                    const neighbors = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+                    for(let n of neighbors) {
+                        const nx = this.maze.px + n.x, ny = this.maze.py + n.y;
+                        if(nx>=0 && nx<this.maze.w && ny>=0 && ny<this.maze.h && this.maze.map[ny][nx]===0) { this.maze.px = nx; this.maze.py = ny; break; }
+                    }
+                }
+                this.mp = Math.max(0, this.mp - 50); this.updateStats();
+                this.floatText("答错扣分!", this.w/2, this.h/2, '#f56565', 60, 30);
+            }
+        }
+
+        nextLevel() {
+            this.waveIdx++;
+            const lvl = LEVELS[this.levelIdx];
+            if (this.waveIdx >= lvl.waves.length) {
+                this.callbacks.onLevelComplete(this.levelIdx);
+                this.syncSave({ unlockedLevel: this.levelIdx + 1 });
+                if (this.levelIdx < LEVELS.length - 1) {
+                    this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete');
+                    this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);
+                } else {
+                    this.callbacks.onGameOver(true, "全游戏通关！", "你已经是异世界最强学霸了！");
+                    this.phase = 'over'; this.callbacks.onPhaseChange('over');
+                }
+            } else { this.startTD(); }
+        }
+
+        startLoop() {
+            const loop = () => { this.update(); this.draw(); this.animationId = requestAnimationFrame(loop); };
+            this.animationId = requestAnimationFrame(loop);
+        }
+
+        spawnOrb(x, y, val = 25) { this.objs.push({ type: 'orb', x, y, val, life: 400, maxLife: 400 }); }
+
+        spawnParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2, speed = Math.random() * 3 + 2;
+                this.particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 30+Math.random()*20, color, size: Math.random()*4+2 });
+            }
+        }
+
+        floatText(text, x, y, color, life = 50, size = 24) { this.floatTexts.push({ text, x, y, color, life, size }); }
+
+        update() {
+            if (this.phase === 'over' || this.phase === 'level_complete' || this.phase === 'rescue_quiz') return;
+            if (this.phase === 'maze') {
+                this.updateMazeMovement();
+                for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
+                for(let i=this.particles.length-1; i>=0; i--) { const p=this.particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life--; if(p.life<=0) this.particles.splice(i,1); }
+                return;
+            }
+            if (this.hp <= 0 && this.phase !== 'rescue_quiz') {
+                this.phase = 'over'; this.callbacks.onPhaseChange('over');
+                this.callbacks.onGameOver(false, "游戏结束", "生命值耗尽！"); return;
+            }
+            this.frame++;
+            if (this.phase === 'td') {
+                for(const k in this.towerCooldowns) if (this.towerCooldowns[k] > 0) this.towerCooldowns[k]--;
+                if (this.frame % 6 === 0) { this.mp += 1; }
+                if (this.frame % 10 === 0) this.updateStats();
+                this.naturalSunTimer--;
+                if (this.naturalSunTimer <= 0) { this.spawnOrb(this.OX + Math.random()*(this.C*this.G), this.OY + Math.random()*(this.R*this.G), 40); this.naturalSunTimer = 300; }
+                if (this.spawnState.active) {
+                    this.spawnState.timer--;
+                    if (this.spawnState.timer <= 0) {
+                        const grp = LEVELS[this.levelIdx].waves[this.waveIdx].groups[this.spawnState.groupIdx];
+                        const eDef = ENEMIES[grp.e], r = Math.floor(Math.random() * this.R);
+                        const difficulty = LEVELS[this.levelIdx].difficulty || 1.0;
+                        const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2), dmg = eDef.dmg * difficulty;
+                        this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
+                        this.spawnState.mobsLeftInGroup--; this.spawnState.timer = grp.interval;
+                        if (this.spawnState.mobsLeftInGroup <= 0) {
+                            this.spawnState.groupIdx++;
+                            if (this.spawnState.groupIdx < this.spawnState.totalGroups) {
+                                this.spawnState.mobsLeftInGroup = LEVELS[this.levelIdx].waves[this.waveIdx].groups[this.spawnState.groupIdx].n;
+                                this.spawnState.timer = LEVELS[this.levelIdx].waves[this.waveIdx].groups[this.spawnState.groupIdx].preDelay;
+                                if (this.spawnState.groupIdx === this.spawnState.totalGroups - 1) this.floatText("警告：最后一波!", this.w/2, this.h/2, '#e53e3e', 180, 40);
+                            } else { this.spawnState.active = false; }
+                        }
+                    }
+                } else if (!this.spawnState.active && !this.objs.some(o => o.type === 'enemy')) {
+                    if (this.waitNextWave === null) { this.waitNextWave = 300; this.floatText("战场打扫时间...", this.w/2, this.h/2, '#F6E05E', 250, 30); }
+                    this.waitNextWave--;
+                    if (this.waitNextWave <= 0) { this.waitNextWave = null; this.startMaze(); }
+                }
+                for (let i = this.objs.length - 1; i >= 0; i--) {
+                    const o = this.objs[i];
+                    if (o.type === 'orb') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'tower') {
+                        if (o.data.type === 'bomb') {
+                            const rowsToBomb = [o.r - 1, o.r, o.r + 1];
+                            this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { e.hp -= o.data.dmg; this.spawnParticles(e.x, e.y, '#F56565', 10); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
+                            this.spawnParticles(o.x, o.y, '#F56565', 50); this.objs.splice(i, 1); continue;
+                        }
+                        if (o.data.type === 'producer') { o.cd++; if(o.cd>=o.data.rate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, 40); o.cd=0; } }
+                        else if (o.data.type === 'shoot') {
+                            o.cd--; if(o.cd<=0) {
+                                const target = this.objs.find(e => e.type === 'enemy' && e.r === o.r && e.x > o.x);
+                                if (!target) {
+                                    const eatingEnemy = this.objs.find(e => e.type === 'enemy' && e.r === o.r && Math.abs(e.x - o.x) < this.G && e.x < this.w);
+                                    if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: o.data.dmg, color: o.data.color, isSlow: o.data.slow, vx: 0, vy: 0 }); o.cd = o.data.rate; }
+                                } else {
+                                    const ang = Math.atan2((target.y+this.G/2)-(o.y+this.G/4), (target.x+this.G/2)-(o.x+this.G/2));
+                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: o.data.dmg, color: o.data.color, isSlow: o.data.slow, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
+                                    o.cd = o.data.rate;
+                                }
+                            }
+                        }
+                        if (o.hp <= 0) this.objs.splice(i,1);
+                    }
+                    else if (o.type === 'enemy') {
+                        if(o.hitFlash>0) o.hitFlash--;
+                        let spd = Math.abs(o.vx);
+                        if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
+                        let move = true;
+                        const eating = this.objs.find(t=>t.type==='tower' && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
+                        if(eating) { move=false; o.isEating=true; if(this.frame%30===0) eating.hp-=o.dmg; } else o.isEating=false;
+                        if(move) o.x -= spd;
+                        if(o.x < this.OX-20) { this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e'); }
+                        else if(o.hp<=0) { if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); this.objs.splice(i,1); }
+                    }
+                    else if (o.type === 'bullet') {
+                        let dx = o.vx, dy = o.vy;
+                        if(o.target && o.target.hp>0) {
+                            const dist = Math.sqrt(((o.target.x+this.G/2)-o.x)**2 + ((o.target.y+this.G/2)-o.y)**2);
+                            if(dist<30) { o.target.hp-=o.dmg; o.target.hitFlash=5; if(o.isSlow) o.target.slowTimer=180; this.spawnParticles(o.x,o.y,o.color,4); this.objs.splice(i,1); continue; }
+                            else { const ang = Math.atan2((o.target.y+this.G/2)-o.y,(o.target.x+this.G/2)-o.x); o.vx=Math.cos(ang)*15; o.vy=Math.sin(ang)*15; dx=o.vx; dy=o.vy; }
+                        }
+                        o.x+=dx; o.y+=dy;
+                        if(o.x>this.w||o.x<0||o.y>this.h||o.y<0) this.objs.splice(i,1);
+                    }
+                }
+            }
+            for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
+            for(let i=this.particles.length-1; i>=0; i--) { const p=this.particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life--; if(p.life<=0) this.particles.splice(i,1); }
+        }
+
+        drawEnemy(ctx, o, G) {
+            const bobY = Math.sin(this.frame * 0.1) * 3;
+            const x = o.x, y = o.y + bobY;
+            const cx = x + G/2, cy = y + G/2;
+            const legSwing = Math.sin(this.frame * 0.2) * 8;
+            const levelIdx = o.levelIdx || 0;
+            let primaryColor = o.data.color, accColor = '#718096';
+            if (levelIdx === 1) { if(o.id==='slime') primaryColor='#4299E1'; if(o.id==='tank') accColor='#ECC94B'; if(o.id==='bat') primaryColor='#F56565'; }
+            else if (levelIdx >= 2) { if(o.id==='slime') primaryColor='#805AD5'; if(o.id==='tank') accColor='#1A202C'; if(o.id==='bat') primaryColor='#171923'; }
+            if (o.slowTimer > 0) ctx.fillStyle = '#90CDF4';
+            else ctx.fillStyle = primaryColor;
+            if (o.hitFlash > 0) ctx.fillStyle = 'white';
+            const mainColor = ctx.fillStyle;
+            ctx.save();
+            if (o.type === 'ground' && o.id !== 'slime') {
+                ctx.strokeStyle = '#2D3748'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(cx - 5, y + G - 10); ctx.lineTo(cx - 5 - legSwing, y + G); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 5, y + G - 10); ctx.lineTo(cx + 5 + legSwing, y + G); ctx.stroke();
+            }
+            if (o.id === 'slime') {
+                const squish = Math.cos(this.frame * 0.15) * 2;
+                ctx.beginPath(); ctx.moveTo(x + 10 - squish, y + G - 10);
+                ctx.bezierCurveTo(x + 5 - squish, y + G - 40 + squish, x + 20, y + 20 + squish, cx, y + 20 + squish);
+                ctx.bezierCurveTo(x + G - 20, y + 20 + squish, x + G - 5 + squish, y + G - 40 + squish, x + G - 10 + squish, y + G - 10);
+                ctx.fill();
+                ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(cx - 10, cy, 7, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 10, cy, 7, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = levelIdx === 2 ? 'red' : 'black'; ctx.beginPath(); ctx.arc(cx - 10, cy, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 10, cy, 3, 0, Math.PI*2); ctx.fill();
+            } else if (o.id === 'bat') {
+                const wingFlap = Math.sin(this.frame * 0.4) * 15;
+                ctx.fillStyle = levelIdx >= 2 ? '#2D3748' : '#4C1D95';
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(x - 10, y + 10 + wingFlap, x, cy + 20); ctx.quadraticCurveTo(x + 20, cy + 30, cx, cy + 10); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(x + G + 10, y + 10 + wingFlap, x + G, cy + 20); ctx.quadraticCurveTo(x + G - 20, cy + 30, cx, cy + 10); ctx.fill();
+                ctx.fillStyle = mainColor; ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#FBD38D'; ctx.beginPath(); ctx.arc(cx - 4, cy - 2, 2, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 4, cy - 2, 2, 0, Math.PI*2); ctx.fill();
+            } else if (o.id === 'tank') {
+                ctx.fillStyle = '#4A5568'; ctx.fillRect(x + 20, y + 40, G - 40, G - 50);
+                ctx.fillStyle = '#A0AEC0'; ctx.beginPath(); ctx.arc(cx, y + 35, 18, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = accColor; ctx.strokeStyle = '#2D3748'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(cx - 16, y + 28); ctx.lineTo(cx - 20, y + 5); ctx.lineTo(cx + 20, y + 5); ctx.lineTo(cx + 16, y + 28); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(cx - 6, y + 38, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 6, y + 38, 3, 0, Math.PI*2); ctx.fill();
+            } else if (o.id === 'boss') {
+                const bossColor = levelIdx === 2 ? '#9B2C2C' : '#C53030';
+                ctx.fillStyle = 'rgba(229, 62, 62, 0.3)'; ctx.beginPath(); ctx.arc(cx, cy, G/2, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = bossColor; ctx.beginPath(); ctx.arc(cx, cy, G/2 - 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#742A2A'; ctx.beginPath(); ctx.moveTo(cx-20, cy+20); ctx.lineTo(cx+20, cy+20); ctx.lineTo(cx, cy+50); ctx.fill();
+                ctx.fillStyle = '#F6AD55'; ctx.beginPath(); ctx.moveTo(cx - 20, cy - 20); ctx.bezierCurveTo(cx - 40, cy - 40, cx - 30, cy - 50, cx - 10, cy - 30); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(cx + 20, cy - 20); ctx.bezierCurveTo(cx + 40, cy - 40, cx + 30, cy - 50, cx + 10, cy - 30); ctx.fill();
+                ctx.fillStyle = levelIdx >= 1 ? '#F6E05E' : '#FBD38D';
+                ctx.beginPath(); ctx.moveTo(cx - 20, cy - 10); ctx.lineTo(cx - 5, cy); ctx.lineTo(cx - 20, cy + 5); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(cx + 20, cy - 10); ctx.lineTo(cx + 5, cy); ctx.lineTo(cx + 20, cy + 5); ctx.fill();
+                ctx.strokeStyle = 'black'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy + 15, 10, 3.14, 0); ctx.stroke();
+            } else if (o.id === 'elf') {
+                const glow = Math.sin(this.frame * 0.2) * 5;
+                ctx.fillStyle = 'rgba(250, 240, 137, 0.6)'; ctx.beginPath(); ctx.arc(cx, cy, 20 + glow, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#FFFFF0'; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.beginPath(); ctx.ellipse(cx - 15, cy, 15, 5, Math.PI/4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx + 15, cy, 15, 5, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#B7791F'; ctx.font = `${Math.max(10, G*0.25)}px Arial`; ctx.fillText('$', cx - 4, cy + 5);
+            }
+            if (o.isEating) { ctx.fillStyle = 'red'; ctx.font = `bold ${Math.max(12, G*0.3)}px Arial`; ctx.fillText('咬!', x, y); }
+            ctx.restore();
+            if (o.hp < o.maxHp) {
+                const barY = y - 10;
+                ctx.fillStyle = 'red'; ctx.fillRect(x + 15, barY, G - 30, 6);
+                ctx.fillStyle = '#48bb78'; ctx.fillRect(x + 15, barY, (G - 30) * (o.hp / o.maxHp), 6);
+                ctx.strokeStyle = 'black'; ctx.lineWidth = 1; ctx.strokeRect(x + 15, barY, G - 30, 6);
+            }
+        }
+
+        draw() {
+            if (!this.ctx) return;
+            const ctx = this.ctx, G = this.G;
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, this.w, this.h);
+            if (this.phase === 'td') {
+                for (let r = 0; r < this.R; r++) for (let c = 0; c < this.C; c++) {
+                    ctx.fillStyle = (r + c) % 2 === 0 ? '#38A169' : '#2F855A';
+                    ctx.fillRect(this.OX + c * this.G, this.OY + r * this.G, this.G, this.G);
+                }
+                this.objs.forEach(o => {
+                    if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
+                    if(o.type==='tower') {
+                        ctx.fillStyle = o.data.color;
+                        if(o.data.type==='wall') { ctx.fillRect(o.x+10, o.y+10, G-20, G-20); ctx.strokeStyle='white'; ctx.strokeRect(o.x+10,o.y+10,G-20,G-20); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText('🛡️', o.x+G/3.5, o.y+G/1.5); }
+                        else if(o.data.type==='bomb') {
+                            ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke();
+                            ctx.fillStyle='white'; ctx.font=`${G*0.6}px Arial`; ctx.fillText('👩‍🏫', o.x+G/4, o.y+G/1.4);
+                            ctx.fillStyle='#F6AD55'; ctx.beginPath(); ctx.arc(o.x+G-10, o.y+10, 5, 0, Math.PI*2); ctx.fill();
+                        }
+                        else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(o.data.icon, o.x+G/3.5, o.y+G/1.5); }
+                        if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
+                    } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
+                    else if(o.type==='bullet') { ctx.fillStyle=o.color; ctx.beginPath(); ctx.arc(o.x, o.y, 8, 0, Math.PI*2); ctx.fill(); }
+                    else if(o.type==='orb') { ctx.shadowBlur=15; ctx.shadowColor='#F6E05E'; ctx.fillStyle='#F6E05E'; ctx.beginPath(); ctx.arc(o.x, o.y, 25, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#FFFFF0'; ctx.lineWidth=3; ctx.stroke(); ctx.shadowBlur=0; }
+                });
+            } else if (this.phase === 'maze' && this.maze) {
+                const m = this.maze, cs = m.cs, mx = m.mx, my = m.my;
+                for(let y=0; y<m.h; y++) for(let x=0; x<m.w; x++) {
+                    const t = m.map[y][x], px = mx+x*cs, py = my+y*cs;
+                    if(t===1) { ctx.fillStyle='#1e293b'; ctx.fillRect(px,py,cs,cs); ctx.fillStyle='#334155'; ctx.fillRect(px,py,cs,5); }
+                    else { ctx.fillStyle='#f1f5f9'; ctx.fillRect(px,py,cs,cs); ctx.strokeStyle='#cbd5e1'; ctx.strokeRect(px,py,cs,cs); }
+                    if(t===5) {
+                        const pulse2 = Math.sin(this.frame * 0.15) * 4;
+                        ctx.fillStyle='rgba(72, 187, 120, 0.4)'; ctx.beginPath(); ctx.arc(px+cs/2, py+cs/2, cs/2.5 + pulse2, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle='#22c55e'; ctx.beginPath(); ctx.arc(px+cs/2, py+cs/2, cs/3, 0, Math.PI*2); ctx.fill();
+                        ctx.strokeStyle='white'; ctx.lineWidth=3; ctx.stroke(); ctx.fillStyle='white'; ctx.font='bold 24px Arial'; ctx.fillText('?', px+cs/2-7, py+cs/2+8);
+                    }
+                }
+                if (this.mazePath && this.mazePathIdx < this.mazePath.length) {
+                    ctx.fillStyle = 'rgba(59,130,246,0.35)';
+                    for (let pi = this.mazePathIdx; pi < this.mazePath.length; pi++) {
+                        const s = this.mazePath[pi];
+                        ctx.beginPath(); ctx.arc(mx+s.x*cs+cs/2, my+s.y*cs+cs/2, cs/6, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+                const px = mx+m.px*cs, py = my+m.py*cs;
+                ctx.fillStyle='#3b82f6'; ctx.beginPath(); ctx.arc(px+cs/2, py+cs/2, cs/3, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=3; ctx.stroke();
+                if (this.touchStart) {
+                    ctx.beginPath(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 4; ctx.arc(this.touchStart.x, this.touchStart.y, 50, 0, Math.PI * 2); ctx.stroke();
+                    if (this.currentTouch) {
+                        ctx.beginPath(); ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.arc(this.currentTouch.x, this.currentTouch.y, 20, 0, Math.PI * 2); ctx.fill();
+                        const playerScreenX = mx + m.px * cs + cs/2, playerScreenY = my + m.py * cs + cs/2;
+                        ctx.beginPath(); ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'; ctx.lineWidth = 4; ctx.setLineDash([10, 5]); ctx.moveTo(playerScreenX, playerScreenY); ctx.lineTo(this.currentTouch.x, this.currentTouch.y); ctx.stroke(); ctx.setLineDash([]);
+                    }
+                }
+            }
+            this.particles.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); });
+            this.floatTexts.forEach(t => { ctx.shadowBlur=2; ctx.shadowColor='black'; ctx.fillStyle=t.color; ctx.font=`bold ${t.size}px Arial`; ctx.fillText(t.text, t.x, t.y); ctx.shadowBlur=0; });
+        }
+
+        updateStats() {
+            const normalizedCooldowns = {};
+            for (const k in TOWERS) normalizedCooldowns[k] = this.towerCooldowns[k] ? this.towerCooldowns[k] / TOWERS[k].recharge : 0;
+            this.callbacks.onStatsUpdate(this.mp, this.hp, this.waveIdx + 1, LEVELS[this.levelIdx].name, 0, normalizedCooldowns);
+        }
+    }
+
+    // ==================== UI MANAGER ====================
+    class UIManager {
+        constructor() {
+            this.root = document.getElementById('ui-root');
+            this.phase = 'menu';
+            this.stats = { mp: 0, hp: 0, wave: 0, levelName: '', cooldowns: {} };
+            this.selectedTower = null;
+            this.quizData = null;
+            this.explanationData = null;
+            this.gameOverData = null;
+            this.isLoading = false;
+            this.unlockedLevel = 0;
+            this.isLandscape = window.innerWidth > window.innerHeight;
+            this.onSelectTower = null;
+            this.onStartLevel = null;
+            this.onRestart = null;
+            this.onQuizAnswer = null;
+            this.onHint = null;
+            this.onSOS = null;
+            this.onExplanationDismiss = null;
+            this.render();
+        }
+
+        update(patch) {
+            Object.assign(this, patch);
+            this.render();
+        }
+
+        el(tag, style, ...children) {
+            const e = document.createElement(tag);
+            if (style) Object.assign(e.style, style);
+            children.forEach(c => {
+                if (typeof c === 'string') e.appendChild(document.createTextNode(c));
+                else if (c) e.appendChild(c);
+            });
+            return e;
+        }
+
+        btn(text, style, onClick, disabled = false) {
+            const b = document.createElement('button');
+            b.textContent = text;
+            Object.assign(b.style, style);
+            b.onclick = onClick;
+            b.disabled = disabled;
+            return b;
+        }
+
+        renderMenu() {
+            const wrap = this.el('div', {
+                position:'absolute', inset:'0', display:'flex', alignItems:'center', justifyContent:'center', zIndex:'50', overflow:'hidden',
+                background:'linear-gradient(135deg, #312e81 0%, #581c87 50%, #1e293b 100%)',
+                pointerEvents:'auto'
+            });
+            const inner = this.el('div', { position:'relative', zIndex:'10', width:'100%', maxWidth:'440px', padding:'0 24px', display:'flex', flexDirection:'column', alignItems:'center' });
+            const icon = this.el('div', { marginBottom:'32px', fontSize:'80px', textAlign:'center', animation:'bounce 1s infinite' }, '🎓');
+            const title = this.el('h1', { fontSize:'48px', fontWeight:'900', background:'linear-gradient(to right, #fde68a, #f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:'8px', textAlign:'center', letterSpacing:'-1px' }, '学霸异世界');
+
+            const fsBtn = this.btn('⛶ 全屏模式', {
+                marginBottom:'24px', padding:'6px 16px', borderRadius:'999px', border:'1px solid rgba(255,255,255,0.3)',
+                color:'rgba(255,255,255,0.7)', fontSize:'14px', background:'transparent', cursor:'pointer'
+            }, () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+                else if(document.exitFullscreen) document.exitFullscreen();
+            });
+
+            const lvlList = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'16px' });
+            const colors = [
+                { bg:'#10b981', shadow:'#065f46', icon:'🌱' },
+                { bg:'#f59e0b', shadow:'#92400e', icon:'🔥' },
+                { bg:'#7c3aed', shadow:'#4c1d95', icon:'💀' },
+                { bg:'#ef4444', shadow:'#7f1d1d', icon:'👿' }
+            ];
+            LEVELS.forEach((lvl, idx) => {
+                const isLocked = idx > this.unlockedLevel;
+                const c = colors[idx];
+                const b = this.el('button', {
+                    width:'100%', position:'relative', borderRadius:'16px', padding:'16px', display:'flex', alignItems:'center', gap:'16px',
+                    border:'none', borderBottom:`6px solid ${isLocked ? '#1e293b' : c.shadow}`,
+                    background: isLocked ? '#475569' : c.bg,
+                    cursor: isLocked ? 'not-allowed' : 'pointer', opacity: isLocked ? '0.7' : '1',
+                    transition:'all 0.15s', fontFamily:'inherit'
+                });
+                b.onclick = () => { if (!isLocked) this.onStartLevel(idx); };
+                const iconEl = this.el('div', { background:'rgba(0,0,0,0.2)', width:'48px', height:'48px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', flexShrink:'0' }, isLocked ? '🔒' : c.icon);
+                const textWrap = this.el('div', { textAlign:'left', flex:'1' });
+                const t1 = this.el('div', { color:'white', fontWeight:'900', fontSize:'20px' }, lvl.name.split('：')[0]);
+                const t2 = this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'14px', fontWeight:'bold' }, lvl.name.split('：')[1] || '');
+                textWrap.append(t1, t2);
+                b.append(iconEl, textWrap);
+                lvlList.appendChild(b);
+            });
+            inner.append(icon, title, fsBtn, lvlList);
+            wrap.appendChild(inner);
+            return wrap;
+        }
+
+        renderTowerBar() {
+            if (this.phase !== 'td') return null;
+            const isL = this.isLandscape;
+            const bar = this.el('div', {
+                pointerEvents:'auto',
+                position: isL ? 'absolute' : 'absolute',
+                ...(isL ? { left:'0', top:'0', bottom:'0', display:'flex', flexDirection:'column' } : { bottom:'0', left:'0', right:'0', display:'flex', justifyContent:'center' })
+            });
+            const inner = this.el('div', {
+                ...(isL ? {
+                    backgroundColor:'#5D4037', borderRight:'4px solid #3E2723', borderTopRightRadius:'1rem', borderBottomRightRadius:'1rem',
+                    boxShadow:'4px 0 10px rgba(0,0,0,0.3)', height:'100%', display:'flex', flexDirection:'column',
+                    justifyContent:'flex-start', padding:'8px 4px', gap:'4px', width: SIDEBAR_WIDTH_LANDSCAPE + 'px', boxSizing:'border-box',
+                    overflowY:'auto', overflowX:'hidden'
+                } : {
+                    backgroundColor:'#5D4037', borderTop:'4px solid #3E2723', padding:'8px 8px', paddingBottom:'calc(20px + env(safe-area-inset-bottom))', borderTopLeftRadius:'24px', borderTopRightRadius:'24px',
+                    boxShadow:'0 -4px 20px rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', gap:'8px', overflowX:'auto', flexShrink:'0'
+                })
+            });
+
+            // Landscape stats
+            if (isL) {
+                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'4px', marginBottom:'8px', padding:'8px', background:'rgba(0,0,0,0.2)', borderRadius:'8px', margin:'4px', flexShrink:'0' });
+                const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center' });
+                mpRow.append(this.el('span', { fontSize:'20px' }, '☀️'), this.el('span', { color:'#fde68a', fontWeight:'900', fontSize:'18px' }, String(Math.floor(this.stats.mp))));
+                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center', borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop:'4px' });
+                const hpColor = this.stats.hp <= 1 ? '#fc8181' : '#fca5a5';
+                hpRow.append(this.el('span', { fontSize:'20px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'18px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
+                stats.append(mpRow, hpRow);
+                inner.appendChild(stats);
+            }
+
+            Object.values(TOWERS).forEach(t => {
+                const cooldown = this.stats.cooldowns?.[t.id] || 0;
+                const isCooldown = cooldown > 0;
+                const canAfford = this.stats.mp >= t.cost;
+                const isSelected = this.selectedTower === t.id;
+
+                const btnEl = this.el('button', {
+                    position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    overflow:'hidden', transition:'all 0.15s', border:'4px solid', fontFamily:'inherit',
+                    ...(isL ? { width:'100%', height:'56px', minHeight:'44px', flex:'0 0 auto', margin:'2px 0' } : { width:'64px', height:'80px', flexShrink:'0' }),
+                    backgroundColor: isSelected ? '#fef9c3' : (canAfford ? 'white' : '#e5e7eb'),
+                    borderColor: isSelected ? '#eab308' : '#e2e8f0',
+                    transform: isSelected ? (isL ? 'translateX(8px) scale(1.05)' : 'translateY(-16px) scale(1.1)') : 'none',
+                    boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.3)' : 'none',
+                    cursor: isCooldown ? 'not-allowed' : 'pointer',
+                    opacity: (!canAfford || isCooldown) && !isSelected ? '0.7' : '1'
+                });
+
+                // Cost badge
+                const badge = this.el('div', {
+                    position:'absolute', top:'-4px', right:'-4px', fontSize:'10px', fontWeight:'900',
+                    padding:'2px 6px', borderRadius:'999px', border:'1px solid white', zIndex:'5',
+                    backgroundColor: canAfford ? '#facc15' : '#ef4444', color: canAfford ? '#713f12' : 'white'
+                }, String(t.cost));
+
+                // Icon
+                const iconEl = this.el('div', { fontSize: isL ? '22px' : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, t.icon);
+
+                // Name
+                const nameEl = this.el('div', {
+                    backgroundColor:'#f1f5f9', color:'#475569', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
+                    fontSize:'8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #cbd5e1'
+                }, t.name);
+
+                // Cooldown overlay
+                if (isCooldown) {
+                    const overlay = this.el('div', { position:'absolute', inset:'0', borderRadius:'12px', backgroundColor:'rgba(0,0,0,0.6)', zIndex:'3', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' });
+                    const fill = this.el('div', { position:'absolute', top:'0', left:'0', right:'0', backgroundColor:'rgba(30,41,59,0.5)', transition:'height 0.1s', height: `${(1 - cooldown) * 100}%` });
+                    overlay.appendChild(fill);
+                    btnEl.appendChild(overlay);
+                }
+
+                btnEl.append(badge, iconEl, nameEl);
+                btnEl.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!isCooldown && this.onSelectTower) this.onSelectTower(isSelected ? null : t.id);
+                };
+                inner.appendChild(btnEl);
+            });
+
+            inner.className = 'hide-scrollbar';
+            bar.appendChild(inner);
+            return bar;
+        }
+
+        renderHUD() {
+            const isL = this.isLandscape;
+            if (isL || this.phase !== 'td') return null;
+            // Portrait top bar
+            const bar = this.el('div', {
+                position:'absolute', top:'0', left:'0', right:'0', padding:'16px',
+                display:'flex', justifyContent:'space-between', alignItems:'flex-start', pointerEvents:'none'
+            });
+            const left = this.el('div', { display:'flex', flexDirection:'column', gap:'4px' });
+            const lvlBadge = this.el('div', { backgroundColor:'rgba(15,23,42,0.9)', color:'white', padding:'8px 20px', borderRadius:'16px', border:'2px solid #334155', fontWeight:'bold', display:'flex', alignItems:'center', gap:'12px' });
+            lvlBadge.append(this.el('span', { color:'#34d399', fontSize:'18px' }, '🗺️'), this.el('span', {}, (this.stats.levelName||'').split('：')[1]||''));
+            const waveBadge = this.el('div', { backgroundColor:'rgba(30,41,59,0.9)', color:'#e2e8f0', fontSize:'14px', padding:'4px 12px', borderRadius:'12px', border:'1px solid #475569', fontWeight:'bold', marginLeft:'8px' }, `Wave ${this.stats.wave}`);
+            left.append(lvlBadge, waveBadge);
+
+            const right = this.el('div', { display:'flex', gap:'16px' });
+            const mpBox = this.el('div', { backgroundColor:'rgba(15,23,42,0.9)', color:'white', padding:'8px 16px', borderRadius:'16px', border:'2px solid #334155', display:'flex', alignItems:'center', gap:'12px' });
+            mpBox.append(this.el('span', { fontSize:'22px' }, '☀️'), this.el('span', { color:'#fde68a', fontWeight:'900', fontSize:'22px' }, String(Math.floor(this.stats.mp))));
+            const hpBox = this.el('div', { backgroundColor:'rgba(15,23,42,0.9)', color:'white', padding:'8px 16px', borderRadius:'16px', border:'2px solid #334155', display:'flex', alignItems:'center', gap:'12px' });
+            hpBox.append(this.el('span', { fontSize:'22px' }, '❤️'), this.el('span', { color: this.stats.hp <= 1 ? '#fc8181' : '#fca5a5', fontWeight:'900', fontSize:'22px' }, String(this.stats.hp)));
+            right.append(mpBox, hpBox);
+            bar.append(left, right);
+            return bar;
+        }
+
+        renderLandscapeInfo() {
+            if (!this.isLandscape || this.phase !== 'td') return null;
+            const wrap = this.el('div', { position:'absolute', top:'16px', right:'16px', display:'flex', flexDirection:'column', alignItems:'flex-end', pointerEvents:'none', opacity:'0.85', zIndex:'20' });
+            const lvl = this.el('div', { backgroundColor:'rgba(0,0,0,0.5)', color:'white', padding:'4px 12px', borderRadius:'999px', fontSize:'14px', fontWeight:'bold', marginBottom:'4px', border:'1px solid rgba(255,255,255,0.2)', backdropFilter:'blur(4px)' }, (this.stats.levelName||'').split('：')[1]||'');
+            const wave = this.el('div', { color:'white', fontSize:'12px', fontWeight:'bold', fontFamily:'monospace', backgroundColor:'rgba(0,0,0,0.3)', padding:'2px 8px', borderRadius:'4px' }, `Wave ${this.stats.wave}`);
+            wrap.append(lvl, wave);
+            return wrap;
+        }
+
+        renderMazeHint() {
+            if (this.phase !== 'maze') return null;
+            const wrap = this.el('div', { position:'absolute', bottom:'40px', left:'50%', transform:'translateX(-50%)', pointerEvents:'none' });
+            const hint = this.el('div', { backgroundColor:'rgba(0,0,0,0.6)', color:'white', padding:'12px 24px', borderRadius:'999px', backdropFilter:'blur(8px)', animation:'pulse 2s infinite', fontWeight:'bold', fontSize:'18px', border:'1px solid rgba(255,255,255,0.2)', whiteSpace:'nowrap' }, '👆 点击空地，角色自动走向 ❓ 答题');
+            wrap.appendChild(hint);
+            return wrap;
+        }
+
+        renderLoading() {
+            if (!this.isLoading) return null;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', zIndex:'100' });
+            const box = this.el('div', { backgroundColor:'white', padding:'24px', borderRadius:'24px', boxShadow:'0 20px 60px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', alignItems:'center', border:'4px solid #e0e7ff' });
+            box.append(this.el('div', { fontSize:'60px', animation:'bounce 1s infinite', marginBottom:'8px' }, '🧠'), this.el('div', { color:'#4f46e5', fontSize:'20px', fontWeight:'bold' }, '准备题目中...'));
+            overlay.appendChild(box);
+            return overlay;
+        }
+
+        renderExplanation() {
+            if (!this.explanationData) return null;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(0,0,0,0.8)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'60', pointerEvents:'auto' });
+            const box = this.el('div', { position:'relative', width:'100%', maxWidth:'440px' });
+            box.className = 'chalkboard';
+            box.style.cssText += '; padding:24px; borderRadius:8px; display:flex; flex-direction:column; align-items:center;';
+            const titleEl = this.el('div', { fontSize:'28px', fontWeight:'bold', borderBottom:'2px dashed rgba(200,200,200,0.5)', paddingBottom:'8px', width:'100%', textAlign:'center', color:'#fde68a', marginBottom:'16px' }, this.explanationData.title);
+            const content = this.el('div', { display:'flex', flexDirection:'column', gap:'16px', fontSize:'18px', lineHeight:'1.6', width:'100%' });
+            this.explanationData.content.forEach(line => content.appendChild(this.el('div', {}, line)));
+            const dismissBtn = this.btn('我懂了，再来一题！', {
+                marginTop:'32px', padding:'12px 32px', backgroundColor:'#059669', color:'white', fontWeight:'bold', borderRadius:'8px',
+                border:'2px solid rgba(255,255,255,0.2)', fontSize:'16px', cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit'
+            }, () => this.onExplanationDismiss && this.onExplanationDismiss());
+            box.append(titleEl, content, dismissBtn);
+            overlay.appendChild(box);
+            return overlay;
+        }
+
+        renderQuiz() {
+            if (!this.quizData || this.explanationData) return null;
+            const { q, a, isRescue, canSOS, canHint, hint } = this.quizData;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'50', pointerEvents:'auto' });
+            const box = this.el('div', { position:'relative', backgroundColor:'#fffdf5', borderRadius:'16px', padding:'32px', maxWidth:'380px', width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', border:'1px solid #e7e5e4' });
+
+            if (isRescue) {
+                const badge = this.el('div', { position:'absolute', top:'-24px', left:'50%', transform:'translateX(-50%)', backgroundColor:'#ef4444', color:'white', padding:'8px 24px', borderRadius:'999px', fontWeight:'900', fontSize:'18px', boxShadow:'0 4px 12px rgba(0,0,0,0.3)', border:'2px solid white', whiteSpace:'nowrap', animation:'bounce 1s infinite', zIndex:'5' }, '🚨 紧急救援 🚨');
+                box.appendChild(badge);
+            }
+
+            const qEl = this.el('h2', { fontSize:'22px', fontWeight:'900', color:'#1c1917', marginBottom:'24px', textAlign:'center' }, q);
+            const answerList = this.el('div', { display:'flex', flexDirection:'column', gap:'12px' });
+            a.forEach((opt, i) => {
+                const optBtn = this.el('button', {
+                    width:'100%', textAlign:'left', padding:'16px', borderRadius:'12px', display:'flex', gap:'12px', alignItems:'center',
+                    backgroundColor:'white', border:'2px solid #e7e5e4', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', color:'#44403c',
+                    fontWeight:'bold', fontSize:'18px', cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit'
+                });
+                if (hint && opt.ok === 1) optBtn.className = 'answer-correct';
+                const letter = this.el('span', { backgroundColor:'#f5f5f4', color:'#a8a29e', width:'32px', height:'32px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:'900', flexShrink:'0' }, String.fromCharCode(65+i));
+                optBtn.append(letter, document.createTextNode(opt.t));
+                optBtn.onclick = () => this.onQuizAnswer && this.onQuizAnswer(opt.ok === 1);
+                answerList.appendChild(optBtn);
+            });
+
+            box.append(qEl, answerList);
+
+            if (!isRescue) {
+                const actionRow = this.el('div', { display:'flex', gap:'12px', marginTop:'24px' });
+                if (canSOS) {
+                    const sosBtn = this.btn('🆘 求救', {
+                        flex:'1', padding:'12px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+                        fontWeight:'bold', backgroundColor:'#fee2e2', color:'#dc2626', border:'1px solid #fecaca', cursor:'pointer', fontSize:'15px', fontFamily:'inherit'
+                    }, () => this.onSOS && this.onSOS());
+                    actionRow.appendChild(sosBtn);
+                }
+                if (canHint) {
+                    const hintDisabled = this.stats.hp <= 1 || hint;
+                    const hintBtn = this.btn('💡 提示', {
+                        flex:'1', padding:'12px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+                        fontWeight:'bold', fontSize:'15px', fontFamily:'inherit', cursor: hintDisabled ? 'not-allowed' : 'pointer',
+                        backgroundColor: hintDisabled ? '#f5f5f4' : '#e0e7ff', color: hintDisabled ? '#a8a29e' : '#3730a3',
+                        border: hintDisabled ? '1px solid #e7e5e4' : '1px solid #c7d2fe'
+                    }, () => { if (!hintDisabled) this.onHint && this.onHint(); });
+                    hintBtn.disabled = hintDisabled;
+                    const hpCost = this.el('span', { fontSize:'12px', backgroundColor:'rgba(0,0,0,0.1)', padding:'2px 8px', borderRadius:'4px' }, '-1 ❤️');
+                    hintBtn.appendChild(hpCost);
+                    actionRow.appendChild(hintBtn);
+                }
+                box.appendChild(actionRow);
+            }
+
+            if (isRescue) {
+                box.appendChild(this.el('div', { marginTop:'16px', textAlign:'center', color:'#dc2626', fontWeight:'bold', fontSize:'14px', backgroundColor:'#fef2f2', padding:'8px', borderRadius:'8px' }, '连续答对2题即可复活！'));
+            }
+
+            overlay.appendChild(box);
+            return overlay;
+        }
+
+        renderLevelComplete() {
+            if (this.phase !== 'level_complete') return null;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.9)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px', zIndex:'50', pointerEvents:'auto' });
+            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'32px', maxWidth:'380px', width:'100%', textAlign:'center', borderBottom:'8px solid #a7f3d0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' });
+            const nextBtn = this.btn('前往下一章 ➤', {
+                width:'100%', padding:'16px', borderRadius:'16px', backgroundColor:'#10b981', color:'white', fontWeight:'900', fontSize:'20px',
+                boxShadow:'0 6px 0 #065f46', border:'2px solid #34d399', cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit'
+            }, () => this.onStartLevel && this.onStartLevel(999));
+            box.append(this.el('div', { fontSize:'80px', marginBottom:'24px', animation:'bounce 1s infinite' }, '🌟'), this.el('h2', { fontSize:'36px', fontWeight:'900', color:'#10b981', marginBottom:'8px' }, '章节完成！'), this.el('p', { color:'#64748b', marginBottom:'32px', fontSize:'18px' }, '太棒了！休息一下，准备迎接下一章！'), nextBtn);
+            overlay.appendChild(box);
+            return overlay;
+        }
+
+        renderGameOver() {
+            if (this.phase !== 'over' || !this.gameOverData) return null;
+            const { win, title, msg } = this.gameOverData;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.9)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px', zIndex:'50', pointerEvents:'auto' });
+            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'32px', maxWidth:'380px', width:'100%', textAlign:'center', borderBottom:'8px solid #e2e8f0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' });
+            const restartBtn = this.btn('返回标题画面', {
+                width:'100%', padding:'16px', borderRadius:'16px', backgroundColor:'#6366f1', color:'white', fontWeight:'900', fontSize:'20px',
+                boxShadow:'0 6px 0 #3730a3', border:'2px solid #818cf8', cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit'
+            }, () => this.onRestart && this.onRestart());
+            const msgEl = this.el('div', { backgroundColor:'#f8fafc', padding:'16px', borderRadius:'12px', border:'1px solid #f1f5f9', marginBottom:'32px', color:'#64748b', fontSize:'18px', lineHeight:'1.6' }, msg);
+            box.append(this.el('div', { fontSize:'80px', marginBottom:'24px', animation:'bounce 1s infinite' }, win ? '🏆' : '🥀'), this.el('h2', { fontSize:'36px', fontWeight:'900', color: win ? '#f59e0b' : '#334155', marginBottom:'8px' }, title), msgEl, restartBtn);
+            overlay.appendChild(box);
+            return overlay;
+        }
+
+        render() {
+            this.root.innerHTML = '';
+            this.root.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:10;';
+
+            if (this.phase === 'menu') {
+                const menu = this.renderMenu();
+                if (menu) this.root.appendChild(menu);
+                return;
+            }
+
+            const loading = this.renderLoading();
+            if (loading) this.root.appendChild(loading);
+
+            const hud = this.renderHUD();
+            if (hud) this.root.appendChild(hud);
+
+            const lInfo = this.renderLandscapeInfo();
+            if (lInfo) this.root.appendChild(lInfo);
+
+            const towerBar = this.renderTowerBar();
+            if (towerBar) this.root.appendChild(towerBar);
+
+            const mazeHint = this.renderMazeHint();
+            if (mazeHint) this.root.appendChild(mazeHint);
+
+            const expl = this.renderExplanation();
+            if (expl) this.root.appendChild(expl);
+
+            const quiz = this.renderQuiz();
+            if (quiz) this.root.appendChild(quiz);
+
+            const lc = this.renderLevelComplete();
+            if (lc) this.root.appendChild(lc);
+
+            const go = this.renderGameOver();
+            if (go) this.root.appendChild(go);
+        }
+    }
+
+    // ==================== MAIN APP ====================
+    const canvas = document.getElementById('gameCanvas');
+    const ui = new UIManager();
+
+    let selectedTower = null;
+    let stats = { mp: 0, hp: 0, wave: 0, levelName: '', cooldowns: {} };
+    let phase = 'menu';
+    let quizData = null;
+    let explanationData = null;
+    let gameOverData = null;
+    let isLoading = false;
+    let unlockedLevel = loadGameSave().unlockedLevel || 0;
+    let isLandscape = window.innerWidth > window.innerHeight;
+
+    const callbacks = {
+        onStatsUpdate: (mp, hp, wave, lvlName, progress, cooldowns) => {
+            stats = { mp, hp, wave, levelName: lvlName, waveProgress: progress, cooldowns };
+            ui.update({ stats });
+        },
+        onPhaseChange: (p) => {
+            phase = p;
+            if (p !== 'td') { selectedTower = null; engine.setSelectedTower(null); }
+            ui.update({ phase, selectedTower });
+        },
+        onQuizOpen: (q, a, isRescue, canSOS, canHint) => {
+            quizData = { q, a, hint: false, isRescue, canSOS, canHint };
+            ui.update({ quizData });
+        },
+        onExplanation: (data) => {
+            explanationData = data;
+            ui.update({ explanationData });
+        },
+        onGameOver: (win, title, msg) => {
+            gameOverData = { win, title, msg };
+            ui.update({ gameOverData });
+        },
+        onLoading: (l) => {
+            isLoading = l;
+            ui.update({ isLoading });
+        },
+        onSelectTower: (t) => {
+            selectedTower = t;
+            ui.update({ selectedTower });
+        },
+        onLevelComplete: (completedLevelIdx) => {
+            unlockedLevel = Math.max(unlockedLevel, completedLevelIdx + 1);
+            ui.update({ unlockedLevel });
+        }
+    };
+
+    const engine = new GameEngine(callbacks);
+    engine.mount(canvas);
+
+    // Wire UI events
+    ui.onSelectTower = (t) => {
+        selectedTower = t;
+        engine.setSelectedTower(t);
+        ui.update({ selectedTower });
+    };
+    ui.onStartLevel = (idx) => {
+        if (idx > 100) {
+            // next level
+            const currentLevelIdx = LEVELS.findIndex(l => l.name === stats.levelName);
+            if (currentLevelIdx !== -1 && currentLevelIdx < LEVELS.length - 1) engine.startLevel(currentLevelIdx + 1);
+        } else {
+            engine.startLevel(idx);
+            gameOverData = null;
+            ui.update({ gameOverData });
+        }
+    };
+    ui.onRestart = () => {
+        phase = 'menu';
+        gameOverData = null;
+        ui.update({ phase, gameOverData });
+    };
+    ui.onQuizAnswer = (ok) => {
+        quizData = null;
+        ui.update({ quizData });
+        engine.resolveQuiz(ok);
+    };
+    ui.onHint = () => {
+        if (engine.useHint()) {
+            quizData = { ...quizData, hint: true };
+            ui.update({ quizData });
+            setTimeout(() => {
+                quizData = null;
+                ui.update({ quizData });
+                engine.resolveQuiz(true);
+            }, 2000);
+        }
+    };
+    ui.onSOS = () => { engine.triggerSOS(); };
+    ui.onExplanationDismiss = () => {
+        explanationData = null;
+        ui.update({ explanationData });
+        engine.proceedToFollowUp();
+    };
+
+    // Input handling
+    function handleInput(type, x, y) {
+        engine.handleInput(type, x, y);
+    }
+
+    canvas.addEventListener('mousedown', e => handleInput('start', e.clientX, e.clientY));
+    canvas.addEventListener('mousemove', e => handleInput('move', e.clientX, e.clientY));
+    canvas.addEventListener('mouseup', e => handleInput('end', e.clientX, e.clientY));
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput('start', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); handleInput('move', e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); handleInput('end', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+
+    // Resize handling
+    window.addEventListener('resize', () => {
+        isLandscape = window.innerWidth > window.innerHeight;
+        ui.update({ isLandscape });
+    });
+    </script>
+</body>
+</html>
