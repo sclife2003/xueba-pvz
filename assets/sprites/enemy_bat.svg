@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="batBody" cx="42%" cy="32%" r="75%">
+      <stop offset="0%" stop-color="#d6bcfa"/>
+      <stop offset="50%" stop-color="#9f7aea"/>
+      <stop offset="100%" stop-color="#553c9a"/>
+    </radialGradient>
+    <linearGradient id="batWing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#805ad5"/>
+      <stop offset="100%" stop-color="#44337a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="112" rx="28" ry="7" fill="#000000" opacity="0.18"/>
+  <path d="M48 60 C28 44 14 52 12 70 C24 64 34 70 40 80 C30 82 24 92 26 100 C40 90 50 86 56 76 Z" fill="url(#batWing)" stroke="#3c2c6e" stroke-width="1.5"/>
+  <path d="M80 60 C100 44 114 52 116 70 C104 64 94 70 88 80 C98 82 104 92 102 100 C88 90 78 86 72 76 Z" fill="url(#batWing)" stroke="#3c2c6e" stroke-width="1.5"/>
+  <polygon points="50,30 44,12 60,26" fill="#7c5cc4" stroke="#44337a" stroke-width="1.5"/>
+  <polygon points="78,30 84,12 68,26" fill="#7c5cc4" stroke="#44337a" stroke-width="1.5"/>
+  <ellipse cx="64" cy="64" rx="26" ry="28" fill="url(#batBody)" stroke="#44337a" stroke-width="2"/>
+  <ellipse cx="64" cy="74" rx="14" ry="16" fill="#c6b0ee" opacity="0.5"/>
+  <ellipse cx="54" cy="48" rx="9" ry="6" fill="#ffffff" opacity="0.4"/>
+  <ellipse cx="55" cy="60" rx="7" ry="8" fill="#ffffff"/>
+  <ellipse cx="73" cy="60" rx="7" ry="8" fill="#ffffff"/>
+  <circle cx="56" cy="61" r="3.5" fill="#f6ad37"/>
+  <circle cx="74" cy="61" r="3.5" fill="#f6ad37"/>
+  <circle cx="56" cy="61" r="1.6" fill="#1a202c"/>
+  <circle cx="74" cy="61" r="1.6" fill="#1a202c"/>
+  <path d="M48 52 L62 56" stroke="#3c2c6e" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M80 52 L66 56" stroke="#3c2c6e" stroke-width="2.2" stroke-linecap="round"/>
+  <polygon points="58,74 61,82 64,74" fill="#ffffff"/>
+  <polygon points="64,74 67,82 70,74" fill="#ffffff"/>
+  <path d="M56 72 Q64 78 72 72" stroke="#3c2c6e" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

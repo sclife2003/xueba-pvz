@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="elfGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fefcbf" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#faf089" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#faf089" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="elfCore" cx="42%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#fffff0"/>
+      <stop offset="60%" stop-color="#faf089"/>
+      <stop offset="100%" stop-color="#d69e2e"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="64" cy="112" rx="22" ry="6" fill="#b7791f" opacity="0.2"/>
+  <circle cx="64" cy="60" r="46" fill="url(#elfGlow)"/>
+  <ellipse cx="40" cy="58" rx="18" ry="9" fill="#ffffff" opacity="0.55" transform="rotate(-25 40 58)"/>
+  <ellipse cx="88" cy="58" rx="18" ry="9" fill="#ffffff" opacity="0.55" transform="rotate(25 88 58)"/>
+  <circle cx="64" cy="60" r="24" fill="url(#elfCore)" stroke="#b7791f" stroke-width="1.5"/>
+  <ellipse cx="55" cy="50" rx="8" ry="5" fill="#ffffff" opacity="0.7"/>
+  <ellipse cx="56" cy="58" rx="5" ry="6.5" fill="#7b5410"/>
+  <ellipse cx="72" cy="58" rx="5" ry="6.5" fill="#7b5410"/>
+  <circle cx="57.5" cy="56" r="1.8" fill="#ffffff"/>
+  <circle cx="73.5" cy="56" r="1.8" fill="#ffffff"/>
+  <path d="M57 68 Q64 73 71 68" stroke="#7b5410" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <text x="64" y="90" font-family="Arial" font-size="20" font-weight="bold" fill="#b7791f" text-anchor="middle">$</text>
+  <path d="M30 38 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="#fffff0"/>
+  <path d="M96 44 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z" fill="#fffff0"/>
+  <circle cx="84" cy="86" r="2.5" fill="#fffff0"/>
+</svg>

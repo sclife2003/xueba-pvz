@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bookCover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6e05e"/>
+      <stop offset="100%" stop-color="#d69e2e"/>
+    </linearGradient>
+    <linearGradient id="bookPages" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="116" rx="34" ry="8" fill="#000000" opacity="0.2"/>
+  <circle cx="64" cy="60" r="40" fill="#f6e05e" opacity="0.14"/>
+  <path d="M92 38 L100 44 L100 100 L92 96 Z" fill="url(#bookPages)" stroke="#a0aec0" stroke-width="1.5"/>
+  <path d="M92 44 L100 50 M92 54 L100 60 M92 64 L100 70 M92 74 L100 80 M92 84 L100 90" stroke="#cbd5e1" stroke-width="1"/>
+  <path d="M30 96 L92 96 L100 100 L38 100 Z" fill="#b7791f"/>
+  <rect x="30" y="34" width="62" height="62" rx="4" fill="url(#bookCover)" stroke="#a9772a" stroke-width="2"/>
+  <rect x="30" y="34" width="8" height="62" rx="2" fill="#c05621" opacity="0.6"/>
+  <rect x="42" y="38" width="6" height="54" rx="3" fill="#ffffff" opacity="0.3"/>
+  <rect x="46" y="42" width="38" height="7" rx="2" fill="#ffffff" opacity="0.7"/>
+  <rect x="50" y="84" width="28" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <ellipse cx="55" cy="64" rx="5.5" ry="7" fill="#ffffff"/>
+  <ellipse cx="71" cy="64" rx="5.5" ry="7" fill="#ffffff"/>
+  <circle cx="56" cy="65" r="2.8" fill="#1a202c"/>
+  <circle cx="72" cy="65" r="2.8" fill="#1a202c"/>
+  <circle cx="55" cy="64" r="1" fill="#ffffff"/>
+  <circle cx="71" cy="64" r="1" fill="#ffffff"/>
+  <path d="M57 74 Q63 79 69 74" stroke="#7a5b1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M84 30 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z" fill="#fffff0"/>
+</svg>

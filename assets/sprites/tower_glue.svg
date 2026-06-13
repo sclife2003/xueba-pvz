@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="glueBottle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="35%" stop-color="#63b3ed"/>
+      <stop offset="60%" stop-color="#90cdf4"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="116" rx="28" ry="7" fill="#000000" opacity="0.2"/>
+  <ellipse cx="64" cy="110" rx="24" ry="6" fill="#bfdbfe" opacity="0.7"/>
+  <path d="M46 56 L82 56 L84 104 Q84 110 78 110 L50 110 Q44 110 44 104 Z" fill="url(#glueBottle)" stroke="#1e40af" stroke-width="2"/>
+  <path d="M52 56 L76 56 L72 42 L56 42 Z" fill="url(#glueBottle)" stroke="#1e40af" stroke-width="2"/>
+  <polygon points="58,42 70,42 66,20 62,20" fill="#f6ad55" stroke="#c05621" stroke-width="1.5"/>
+  <rect x="60" y="16" width="8" height="6" rx="2" fill="#dd6b20"/>
+  <path d="M64 20 q-3 8 0 14 q3 -6 0 -14 z" fill="#bfdbfe"/>
+  <rect x="50" y="68" width="28" height="22" rx="3" fill="#ffffff" opacity="0.9" stroke="#cbd5e1" stroke-width="1"/>
+  <rect x="50" y="58" width="5" height="48" rx="2.5" fill="#ffffff" opacity="0.4"/>
+  <circle cx="58" cy="78" r="3" fill="#1a202c"/>
+  <circle cx="70" cy="78" r="3" fill="#1a202c"/>
+  <circle cx="57" cy="77" r="1" fill="#ffffff"/>
+  <circle cx="69" cy="77" r="1" fill="#ffffff"/>
+  <path d="M58 84 Q64 88 70 84" stroke="#1e40af" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
