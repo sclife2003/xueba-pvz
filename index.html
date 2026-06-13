@@ -182,6 +182,28 @@
     }
     const HP_CAP = 15; // 存档生命上限，防止数值爆表
 
+    // 存档码：跨装置/浏览器手动搬运进度（纯前端，无需后端、不依赖 cookie）
+    function exportSave() {
+        const code = 'XBPVZ1:' + btoa(JSON.stringify(loadGameSave()));
+        window.prompt('复制下面这段存档码，在别的装置/浏览器点「导入存档」贴上即可恢复进度：', code);
+    }
+    function importSave() {
+        const raw = window.prompt('请贴上存档码：', '');
+        if (!raw) return;
+        try {
+            const data = JSON.parse(atob(raw.trim().replace(/^XBPVZ1:/, '')));
+            const clean = {
+                unlockedLevel: Math.max(0, Math.min(LEVELS.length - 1, parseInt(data.unlockedLevel) || 0)),
+                hp: Math.max(0, Math.min(HP_CAP, parseInt(data.hp) || 0))
+            };
+            writeGameSave(clean);
+            window.alert('导入成功！已解锁到第 ' + (clean.unlockedLevel + 1) + ' 章。');
+            location.reload();
+        } catch (e) {
+            window.alert('存档码无效，请检查是否完整复制。');
+        }
+    }
+
     // ==================== QUIZ POOL ====================
     const generateMathQuestion = () => {
         const type = Math.floor(Math.random() * 3);
@@ -968,6 +990,13 @@
                 else if(document.exitFullscreen) document.exitFullscreen();
             });
 
+            const saveRow = this.el('div', { width:'100%', display:'flex', gap:'8px', marginBottom:'20px' });
+            const saveBtnStyle = { flex:'1', padding:'8px 12px', borderRadius:'999px', border:'1px solid rgba(255,255,255,0.3)', color:'rgba(255,255,255,0.85)', fontSize:'13px', background:'rgba(255,255,255,0.08)', cursor:'pointer', fontFamily:'inherit' };
+            saveRow.append(
+                this.btn('📤 导出存档', saveBtnStyle, () => exportSave()),
+                this.btn('📥 导入存档', saveBtnStyle, () => importSave())
+            );
+
             const lvlList = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'16px' });
             const colors = [
                 { bg:'#10b981', shadow:'#065f46', icon:'🌱' },
@@ -994,7 +1023,7 @@
                 b.append(iconEl, textWrap);
                 lvlList.appendChild(b);
             });
-            inner.append(icon, title, fsBtn, lvlList);
+            inner.append(icon, title, fsBtn, saveRow, lvlList);
             wrap.appendChild(inner);
             return wrap;
         }
