@@ -78,6 +78,31 @@
 
       button { cursor: pointer; font-family: inherit; }
       button:disabled { cursor: not-allowed; }
+
+      /* ===== 校园主题视觉 (Phase 1 first-pass) — palette: chalkboard #2F6B4F / book yellow #F6D365 / school blue #4A90E2 / red pen #E85D5D / chalk #F7F3E8 / desk brown #B9825B ===== */
+      .pencil-box {
+        background: linear-gradient(180deg, #c2895f 0%, #8a5638 100%) !important;
+        border-right: 4px solid #5e3a22 !important;
+        box-shadow: inset 0 3px 8px rgba(255,255,255,0.18), inset 0 -3px 8px rgba(0,0,0,0.22), 4px 0 14px rgba(0,0,0,0.35) !important;
+      }
+      .pencil-box-portrait {
+        background: linear-gradient(180deg, #c2895f 0%, #8a5638 100%) !important;
+        border-top: 4px solid #5e3a22 !important;
+        box-shadow: inset 0 3px 8px rgba(255,255,255,0.18), 0 -4px 18px rgba(0,0,0,0.4) !important;
+      }
+      .pencil-box-label {
+        color: #F7F3E8; font-weight: 900; font-size: 11px; text-align: center;
+        letter-spacing: 2px; padding: 2px 0 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        border-bottom: 1px dashed rgba(247,243,232,0.35); margin: 0 4px 4px;
+      }
+      .chalk-card {
+        background: #2F6B4F !important; color: #F7F3E8 !important;
+        border: 2px solid #B9825B !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
+      }
+      .sticky-note {
+        background: #F6D365 !important; color: #5b4636 !important;
+        border: 1px solid #d9a93f !important; box-shadow: 0 4px 12px rgba(0,0,0,0.22) !important;
+      }
     </style>
 </head>
 <body>
@@ -118,12 +143,12 @@
     }
 
     const TOWERS = {
-      textbook: { id: 'textbook', name: '知识课本', cost: 50, type: 'producer', range: 0, rate: 240, dmg: 100, color: '#F6E05E', icon: '📒', recharge: 180 },
-      pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100 },
-      watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100 },
-      glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150 },
-      eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 600 },
-      teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900 }
+      textbook: { id: 'textbook', name: '知识课本', cost: 50, type: 'producer', range: 0, rate: 240, dmg: 100, color: '#F6E05E', icon: '📒', recharge: 180, desc: '定期产出能量', use: '开局优先放 2-3 个攒经济', counter: '—（经济单位）' },
+      pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100, desc: '稳定攻击单一路线敌人', use: '主力输出，每条路至少一个', counter: '普通敌人' },
+      watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100, desc: '高攻速低伤，连续扫射', use: '对付成群的小怪', counter: '蝙蝠等小怪群' },
+      glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150, desc: '命中后减速敌人', use: '放在快速敌人的来路前段', counter: '高速敌人' },
+      eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 600, desc: '高血量肉盾，阻挡推进', use: '挡在主力塔前方拖延', counter: '铁桶怪 / 魔王压线' },
+      teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
 
     const ENEMIES = {
@@ -347,6 +372,7 @@
             this.savedTowers = []; this.towerCooldowns = {};
             this.frame = 0; this.R = 5;
             this.waitNextWave = null;
+            this.laneWarnings = []; // 路线预警（敌人出现前闪红）
             this.touchStart = null;
             this.mazeMoveTimer = 0;
             this.selectedTower = null;
@@ -595,13 +621,25 @@
 
         startTD() {
             this.phase = 'td'; this.callbacks.onPhaseChange('td'); this.waitNextWave = null;
+            this.laneWarnings = [];
             if (this.savedTowers.length > 0) { this.objs = [...this.savedTowers]; this.savedTowers = []; }
             else if (this.waveIdx === 0) this.objs = [];
             const lvl = LEVELS[this.levelIdx];
             const waveData = lvl.waves[this.waveIdx];
             if (!waveData) { return; }
-            this.spawnState = { active: true, groupIdx: 0, mobsLeftInGroup: waveData.groups[0].n, timer: waveData.groups[0].preDelay, totalGroups: waveData.groups.length };
-            this.floatText(`第 ${this.waveIdx + 1} 波`, this.w / 2, this.h / 2, '#fff', 120, 50);
+            this.spawnState = { active: true, groupIdx: 0, mobsLeftInGroup: waveData.groups[0].n, timer: waveData.groups[0].preDelay, totalGroups: waveData.groups.length, nextRow: null };
+            // 本波敌人预告 + 关卡提示（让玩家开局就明白策略与即将面对的敌人）
+            const tally = {};
+            waveData.groups.forEach(g => { tally[g.e] = (tally[g.e] || 0) + g.n; });
+            const enemies = Object.keys(tally).map(id => ({ id, name: (ENEMIES[id] && ENEMIES[id].name) || id, color: (ENEMIES[id] && ENEMIES[id].color) || '#ffffff', count: tally[id] }));
+            this.callbacks.onWaveIntro({
+                wave: this.waveIdx + 1,
+                totalWaves: lvl.waves.length,
+                enemies,
+                tip: lvl.tip || '',
+                showTip: this.waveIdx === 0,
+                isLastWave: this.waveIdx === lvl.waves.length - 1
+            });
         }
 
         startMaze() {
@@ -756,11 +794,21 @@
                 if (this.frame % 10 === 0) this.updateStats();
                 this.naturalSunTimer--;
                 if (this.naturalSunTimer <= 0) { this.spawnOrb(this.OX + Math.random()*(this.C*this.G), this.OY + Math.random()*(this.R*this.G), 40); this.naturalSunTimer = 300; }
+                for (let i = this.laneWarnings.length - 1; i >= 0; i--) { if (--this.laneWarnings[i].life <= 0) this.laneWarnings.splice(i, 1); }
                 if (this.spawnState.active) {
                     this.spawnState.timer--;
+                    // 敌人生成前预先确定出现路线并闪红预警（让玩家来得及部署该路）
+                    if (this.spawnState.timer <= 75 && this.spawnState.nextRow == null) {
+                        const wr = Math.floor(Math.random() * this.R);
+                        this.spawnState.nextRow = wr;
+                        const wlife = Math.max(40, this.spawnState.timer + 12);
+                        this.laneWarnings.push({ r: wr, life: wlife, max: wlife });
+                    }
                     if (this.spawnState.timer <= 0) {
                         const grp = LEVELS[this.levelIdx].waves[this.waveIdx].groups[this.spawnState.groupIdx];
-                        const eDef = ENEMIES[grp.e], r = Math.floor(Math.random() * this.R);
+                        const eDef = ENEMIES[grp.e];
+                        const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : Math.floor(Math.random() * this.R);
+                        this.spawnState.nextRow = null;
                         const difficulty = LEVELS[this.levelIdx].difficulty || 1.0;
                         const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2), dmg = eDef.dmg * difficulty;
                         this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
@@ -908,6 +956,20 @@
                     ctx.fillStyle = (r + c) % 2 === 0 ? '#38A169' : '#2F855A';
                     ctx.fillRect(this.OX + c * this.G, this.OY + r * this.G, this.G, this.G);
                 }
+                // 路线预警：敌人即将出现的那一路，右侧闪红 + ⚠️
+                this.laneWarnings.forEach(w => {
+                    const blink = 0.3 + 0.4 * Math.abs(Math.sin(this.frame * 0.3));
+                    const ry = this.OY + w.r * this.G;
+                    const gridRight = this.OX + this.C * this.G;
+                    const grad = ctx.createLinearGradient(gridRight - this.G * 2, 0, gridRight, 0);
+                    grad.addColorStop(0, 'rgba(229,62,62,0)');
+                    grad.addColorStop(1, 'rgba(229,62,62,' + blink + ')');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(gridRight - this.G * 2, ry, this.G * 2, this.G);
+                    ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, blink + 0.25) + ')';
+                    ctx.font = 'bold ' + Math.max(16, Math.floor(this.G * 0.5)) + 'px Arial';
+                    ctx.fillText('⚠️', gridRight - this.G * 0.95, ry + this.G * 0.64);
+                });
                 this.objs.forEach(o => {
                     if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
                     if(o.type==='tower') {
@@ -976,6 +1038,7 @@
             this.quizData = null;
             this.explanationData = null;
             this.gameOverData = null;
+            this.waveIntro = null;
             this.isLoading = false;
             this.unlockedLevel = 0;
             this.isLandscape = window.innerWidth > window.innerHeight;
@@ -1097,14 +1160,17 @@
                 })
             });
 
-            // Landscape stats
+            // Landscape：文具盒标签 + 黑板小卡 HUD（知识星 / 专注值）
             if (isL) {
-                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', padding:'6px', background:'rgba(0,0,0,0.2)', borderRadius:'8px', margin:'2px 4px 4px', flexShrink:'0' });
-                const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center' });
-                mpRow.append(this.el('span', { fontSize:'18px' }, '☀️'), this.el('span', { color:'#fde68a', fontWeight:'900', fontSize:'16px' }, String(Math.floor(this.stats.mp))));
-                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', color:'white', justifyContent:'center', borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop:'2px' });
-                const hpColor = this.stats.hp <= 1 ? '#fc8181' : '#fca5a5';
-                hpRow.append(this.el('span', { fontSize:'18px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
+                const boxLabel = this.el('div', {}, '✏️ 文具盒');
+                boxLabel.className = 'pencil-box-label';
+                inner.appendChild(boxLabel);
+                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', padding:'6px', background:'#2F6B4F', border:'1px solid #B9825B', borderRadius:'8px', margin:'0 4px 4px', flexShrink:'0' });
+                const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'6px', color:'#F7F3E8', justifyContent:'center' });
+                mpRow.append(this.el('span', { fontSize:'16px' }, '⭐'), this.el('span', { color:'#F6D365', fontWeight:'900', fontSize:'16px' }, String(Math.floor(this.stats.mp))));
+                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'6px', color:'#F7F3E8', justifyContent:'center', borderTop:'1px solid rgba(247,243,232,0.18)', paddingTop:'2px' });
+                const hpColor = this.stats.hp <= 1 ? '#E85D5D' : '#F2A6A6';
+                hpRow.append(this.el('span', { fontSize:'16px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
                 stats.append(mpRow, hpRow);
                 inner.appendChild(stats);
             }
@@ -1119,8 +1185,8 @@
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                     overflow:'hidden', transition:'all 0.15s', border:'4px solid', fontFamily:'inherit',
                     ...(isL ? { width:'100%', height: landscapeButtonSize + 'px', minHeight:'42px', flex:'0 0 auto', margin:'0' } : { width:'64px', height:'80px', flexShrink:'0' }),
-                    backgroundColor: isSelected ? '#fef9c3' : (canAfford ? 'white' : '#e5e7eb'),
-                    borderColor: isSelected ? '#eab308' : '#e2e8f0',
+                    backgroundColor: isSelected ? '#F6D365' : (canAfford ? '#F7F3E8' : '#c7b89e'),
+                    borderColor: isSelected ? '#E8B84B' : '#8a5638',
                     transform: isSelected ? (isL ? 'translateX(8px) scale(1.05)' : 'translateY(-16px) scale(1.1)') : 'none',
                     boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.3)' : 'none',
                     cursor: isCooldown ? 'not-allowed' : 'pointer',
@@ -1139,8 +1205,8 @@
 
                 // Name
                 const nameEl = this.el('div', {
-                    backgroundColor:'#f1f5f9', color:'#475569', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
-                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #cbd5e1'
+                    backgroundColor:'#efe7d3', color:'#6b4a2f', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
+                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #c9a06a'
                 }, t.name);
 
                 // Cooldown overlay
@@ -1159,7 +1225,7 @@
                 inner.appendChild(btnEl);
             });
 
-            inner.className = 'hide-scrollbar';
+            inner.className = 'hide-scrollbar ' + (isL ? 'pencil-box' : 'pencil-box-portrait');
             bar.appendChild(inner);
             return bar;
         }
@@ -1190,9 +1256,9 @@
 
         renderLandscapeInfo() {
             if (!this.isLandscape || this.phase !== 'td') return null;
-            const wrap = this.el('div', { position:'absolute', top:'16px', right:'16px', display:'flex', flexDirection:'column', alignItems:'flex-end', pointerEvents:'none', opacity:'0.85', zIndex:'20' });
-            const lvl = this.el('div', { backgroundColor:'rgba(0,0,0,0.5)', color:'white', padding:'4px 12px', borderRadius:'999px', fontSize:'14px', fontWeight:'bold', marginBottom:'4px', border:'1px solid rgba(255,255,255,0.2)', backdropFilter:'blur(4px)' }, (this.stats.levelName||'').split('：')[1]||'');
-            const wave = this.el('div', { color:'white', fontSize:'12px', fontWeight:'bold', fontFamily:'monospace', backgroundColor:'rgba(0,0,0,0.3)', padding:'2px 8px', borderRadius:'4px' }, `Wave ${this.stats.wave}`);
+            const wrap = this.el('div', { position:'absolute', top:'calc(8px + env(safe-area-inset-top))', right:'calc(12px + env(safe-area-inset-right))', display:'flex', flexDirection:'column', alignItems:'flex-end', pointerEvents:'none', zIndex:'20', gap:'3px' });
+            const lvl = this.el('div', { background:'#2F6B4F', color:'#F7F3E8', padding:'3px 12px', borderRadius:'999px', fontSize:'13px', fontWeight:'bold', border:'1px solid #B9825B' }, '📚 ' + ((this.stats.levelName||'').split('：')[1]||''));
+            const wave = this.el('div', { background:'#F6D365', color:'#5b4636', fontSize:'11px', fontWeight:'900', padding:'2px 10px', borderRadius:'999px', border:'1px solid #d9a93f' }, '第 ' + this.stats.wave + ' 波');
             wrap.append(lvl, wave);
             return wrap;
         }
@@ -1244,6 +1310,79 @@
             );
             overlay.appendChild(card);
             return overlay;
+        }
+
+        renderWaveIntro() {
+            if (this.phase !== 'td' || !this.waveIntro) return null;
+            const wi = this.waveIntro;
+            const wrap = this.el('div', {
+                position:'absolute', top:'calc(6px + env(safe-area-inset-top))', left:'50%', transform:'translateX(-50%)',
+                pointerEvents:'none', zIndex:'45', maxWidth:'92%', display:'flex', flexDirection:'column', alignItems:'center', gap:'4px'
+            });
+            // 黑板风小卡：本波 + 来袭敌人
+            const head = this.el('div', {
+                display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', justifyContent:'center',
+                padding:'6px 16px', borderRadius:'12px', fontSize:'13px', fontWeight:'bold'
+            });
+            head.className = 'chalk-card';
+            head.append(this.el('span', { color: wi.isLastWave ? '#E85D5D' : '#F6D365', fontWeight:'900' },
+                wi.isLastWave ? `⚠️ 最后一波 (第${wi.wave}/${wi.totalWaves}波)` : `第 ${wi.wave}/${wi.totalWaves} 波`));
+            head.append(this.el('span', { color:'rgba(247,243,232,0.6)' }, '｜来袭'));
+            (wi.enemies || []).forEach(en => {
+                const chip = this.el('span', { display:'inline-flex', alignItems:'center', gap:'4px', color:'#F7F3E8' });
+                chip.append(
+                    this.el('span', { width:'10px', height:'10px', borderRadius:'3px', background: en.color, display:'inline-block', border:'1px solid rgba(247,243,232,0.7)' }),
+                    this.el('span', {}, `${en.name}×${en.count}`)
+                );
+                head.appendChild(chip);
+            });
+            wrap.appendChild(head);
+            // 便条纸风：关卡策略提示
+            if (wi.showTip && wi.tip) {
+                const note = this.el('div', {
+                    padding:'6px 16px', borderRadius:'4px 12px 4px 12px', fontSize:'12px', fontWeight:'bold',
+                    maxWidth:'100%', textAlign:'center'
+                }, '💡 ' + wi.tip);
+                note.className = 'sticky-note';
+                wrap.appendChild(note);
+            }
+            return wrap;
+        }
+
+        renderTowerInfo() {
+            if (this.phase !== 'td' || !this.selectedTower) return null;
+            const t = TOWERS[this.selectedTower];
+            if (!t) return null;
+            const isL = this.isLandscape;
+            const wrap = this.el('div', {
+                position:'absolute', pointerEvents:'none', zIndex:'46',
+                ...(isL
+                    ? { left: 'calc(' + (SIDEBAR_WIDTH_LANDSCAPE + 16) + 'px + env(safe-area-inset-left))', bottom:'calc(12px + env(safe-area-inset-bottom))' }
+                    : { left:'50%', transform:'translateX(-50%)', bottom:'calc(118px + env(safe-area-inset-bottom))' })
+            });
+            const card = this.el('div', {
+                background:'#2F6B4F', color:'#F7F3E8', borderRadius:'14px', padding:'10px 14px',
+                border:'2px solid ' + t.color, boxShadow:'0 8px 24px rgba(0,0,0,0.4)', maxWidth:'264px'
+            });
+            const title = this.el('div', { display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' });
+            title.append(
+                this.el('span', { fontSize:'22px' }, t.icon),
+                this.el('span', { fontWeight:'900', fontSize:'15px' }, t.name),
+                this.el('span', { marginLeft:'auto', background:'#facc15', color:'#713f12', fontWeight:'900', fontSize:'12px', padding:'1px 8px', borderRadius:'999px' }, '☀️' + t.cost)
+            );
+            card.appendChild(title);
+            const row = (label, val, color) => {
+                const r = this.el('div', { display:'flex', gap:'6px', fontSize:'12px', lineHeight:'1.55' });
+                r.append(this.el('span', { color:'rgba(247,243,232,0.6)', flexShrink:'0' }, label), this.el('span', { color: color || '#F7F3E8' }, val));
+                return r;
+            };
+            card.append(
+                row('功能', t.desc || '—'),
+                row('推荐', t.use || '—', '#F6D365'),
+                row('克制', t.counter || '—', '#F2A6A6')
+            );
+            wrap.appendChild(card);
+            return wrap;
         }
 
         renderExplanation() {
@@ -1375,6 +1514,12 @@
             const towerBar = this.renderTowerBar();
             if (towerBar) this.root.appendChild(towerBar);
 
+            const towerInfo = this.renderTowerInfo();
+            if (towerInfo) this.root.appendChild(towerInfo);
+
+            const waveIntro = this.renderWaveIntro();
+            if (waveIntro) this.root.appendChild(waveIntro);
+
             const mazeHint = this.renderMazeHint();
             if (mazeHint) this.root.appendChild(mazeHint);
 
@@ -1405,6 +1550,8 @@
     let quizData = null;
     let explanationData = null;
     let gameOverData = null;
+    let waveIntro = null;
+    let waveIntroTimeout = null;
     let isLoading = false;
     let unlockedLevel = loadGameSave().unlockedLevel || 0;
     let isLandscape = window.innerWidth > window.innerHeight;
@@ -1442,6 +1589,13 @@
         onLevelComplete: (completedLevelIdx) => {
             unlockedLevel = Math.max(unlockedLevel, completedLevelIdx + 1);
             ui.update({ unlockedLevel });
+        },
+        onWaveIntro: (info) => {
+            waveIntro = info;
+            ui.update({ waveIntro });
+            if (waveIntroTimeout) clearTimeout(waveIntroTimeout);
+            const dur = (info && info.showTip) ? 5200 : 3600; // 含关卡提示的首波多停一会
+            waveIntroTimeout = setTimeout(() => { waveIntro = null; ui.update({ waveIntro }); }, dur);
         }
     };
 
