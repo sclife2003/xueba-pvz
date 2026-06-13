@@ -205,6 +205,16 @@
       }
     ];
 
+    // ==================== COMBAT REWARDS (Phase 2) ====================
+    // 战斗中点击知识星答题，答对后三选一立即生效的战斗奖励
+    const REWARDS = [
+      { id: 'energy', icon: '💡', name: '灵感爆发', effect: '立即获得 150 能量', color: '#F6D365' },
+      { id: 'focus',  icon: '🧠', name: '全班专注', effect: '全场敌人减速 5 秒', color: '#4A90E2' },
+      { id: 'chalk',  icon: '✏️', name: '粉笔风暴', effect: '对敌人最多的一路造成范围伤害', color: '#E85D5D' },
+      { id: 'heal',   icon: '🩹', name: '紧急补课', effect: '所有防御单位回满生命', color: '#48bb78' },
+      { id: 'free',   icon: '🎁', name: '免费布置', effect: '下一个防御单位免费部署', color: '#B9825B' }
+    ];
+
     // ==================== UTILS ====================
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -373,6 +383,9 @@
             this.frame = 0; this.R = 5;
             this.waitNextWave = null;
             this.laneWarnings = []; // 路线预警（敌人出现前闪红）
+            this.combatPaused = false; // 战斗答题/选奖励时暂停战场
+            this.freeNextTower = false; // 「免费布置」奖励：下一个塔免费
+            this.starTimer = 600; // 知识星掉落计时
             this.touchStart = null;
             this.mazeMoveTimer = 0;
             this.selectedTower = null;
@@ -487,6 +500,7 @@
                 this.questionsAnswered = 0;
             }
             this.objs = []; this.particles = []; this.savedTowers = []; this.towerCooldowns = {};
+            this.combatPaused = false; this.freeNextTower = false; this.starTimer = 600;
             this.phase = 'td'; this.naturalSunTimer = 200;
             this.startTD();
             this.callbacks.onPhaseChange('td');
@@ -576,7 +590,7 @@
         }
 
         handleClick(x, y) {
-            if (this.phase !== 'td') return false;
+            if (this.phase !== 'td' || this.combatPaused) return false;
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
@@ -584,6 +598,13 @@
             const cy = (y - rect.top) * scaleY;
             for (let i = this.objs.length - 1; i >= 0; i--) {
                 const o = this.objs[i];
+                if (o.type === 'star') {
+                    if ((cx-o.x)**2 + (cy-o.y)**2 < 55**2) {
+                        this.objs.splice(i, 1);
+                        this.openCombatQuiz();
+                        return true;
+                    }
+                }
                 if (o.type === 'orb') {
                     if ((cx-o.x)**2 + (cy-o.y)**2 < 50**2) {
                         this.mp += (o.val || 25);
@@ -604,12 +625,13 @@
                     (o.type === 'enemy' && o.r === r && Math.abs(o.x - (this.OX + c * this.G)) < 20)
                 )) {
                     const tData = TOWERS[uiSelected];
-                    if (this.mp >= tData.cost) {
-                        this.mp -= tData.cost;
+                    const isFree = this.freeNextTower;
+                    if (isFree || this.mp >= tData.cost) {
+                        if (isFree) this.freeNextTower = false; else this.mp -= tData.cost;
                         this.objs.push({ type: 'tower', id: uiSelected, c, r, x: this.OX + c * this.G, y: this.OY + r * this.G, hp: tData.dmg, maxHp: tData.dmg, data: tData, cd: 0, fire: 0 });
                         this.towerCooldowns[uiSelected] = tData.recharge;
                         this.spawnParticles(cx, cy, '#fff', 8);
-                        this.floatText(`-${tData.cost}`, cx, cy, '#fbbf24');
+                        this.floatText(isFree ? '免费!' : `-${tData.cost}`, cx, cy, isFree ? '#48bb78' : '#fbbf24');
                         this.updateStats();
                         this.callbacks.onSelectTower(null);
                         this.selectedTower = null; return true;
@@ -718,6 +740,20 @@
 
         resolveQuiz(correct) {
             this.questionsAnswered++;
+            if (this.combatPaused) {
+                // 战斗答题：答对 → 三选一奖励（战场维持暂停，待选奖励）；答错 → 扣少量能量 + 简短解析，立即恢复
+                if (correct) {
+                    this.callbacks.onRewardPicker(this.rollRewards());
+                } else {
+                    const penalty = 30 + Math.round(((LEVELS[this.levelIdx].difficulty || 1) - 1) * 40);
+                    this.mp = Math.max(0, this.mp - penalty);
+                    const tip = (this.currentQuestionObj && this.currentQuestionObj.visual && this.currentQuestionObj.visual.content && this.currentQuestionObj.visual.content[0]) || '仔细审题，下次一定行！';
+                    this.callbacks.onToast('答错 -' + penalty + ' 能量 ｜ ' + tip);
+                    this.combatPaused = false;
+                    this.updateStats();
+                }
+                return;
+            }
             if (this.phase === 'rescue_quiz') {
                 if (correct) { this.hp = 4; this.phase = 'td'; this.callbacks.onPhaseChange('td'); this.updateStats(); this.syncSave(); }
                 else { this.phase = 'over'; this.callbacks.onPhaseChange('over'); this.callbacks.onGameOver(false, "复活失败", "下次再接再厉！"); }
@@ -765,6 +801,54 @@
 
         spawnOrb(x, y, val = 25) { this.objs.push({ type: 'orb', x, y, val, life: 400, maxLife: 400 }); }
 
+        spawnStar() {
+            const x = this.OX + this.G + Math.random() * Math.max(1, (this.C - 2) * this.G);
+            const y = this.OY + this.G / 2 + Math.random() * Math.max(1, (this.R - 1) * this.G);
+            this.objs.push({ type: 'star', x, y, life: 600, maxLife: 600 });
+            this.floatText('💡 知识星出现！', x, y - 24, '#F6D365', 70, 20);
+        }
+
+        // 点击知识星 → 暂停战场并开启战斗答题（区别于迷宫出口答题）
+        openCombatQuiz() {
+            if (this.combatPaused) return;
+            this.combatPaused = true;
+            const q = this.getQuestion();
+            this.currentQuestionObj = q;
+            const answersWithIndex = q.a.map((ans, idx) => ({ ...ans, originalIndex: idx }));
+            const canHint = this.questionsAnswered > 0;
+            this.callbacks.onQuizOpen(q.q, answersWithIndex, false, false, canHint, true);
+        }
+
+        rollRewards() {
+            const pool = REWARDS.map((_, i) => i);
+            shuffleArray(pool);
+            return pool.slice(0, 3).map(i => REWARDS[i]);
+        }
+
+        applyReward(id) {
+            if (id === 'energy') {
+                this.mp += 150; this.floatText('+150 能量', this.w/2, this.h/2, '#F6D365', 70, 34);
+            } else if (id === 'focus') {
+                this.objs.forEach(o => { if (o.type === 'enemy') o.slowTimer = 300; });
+                this.floatText('全班专注！敌人减速', this.w/2, this.h/2, '#4A90E2', 70, 30);
+            } else if (id === 'chalk') {
+                const counts = new Array(this.R).fill(0);
+                this.objs.forEach(o => { if (o.type === 'enemy') counts[o.r]++; });
+                let best = 0; for (let r = 1; r < this.R; r++) if (counts[r] > counts[best]) best = r;
+                this.objs.forEach(o => { if (o.type === 'enemy' && o.r === best) { o.hp -= 400; o.hitFlash = 5; this.spawnParticles(o.x, o.y, '#E85D5D', 8); } });
+                this.floatText('粉笔风暴！', this.OX + this.C*this.G/2, this.OY + best*this.G + this.G/2, '#E85D5D', 80, 30);
+            } else if (id === 'heal') {
+                this.objs.forEach(o => { if (o.type === 'tower') o.hp = o.maxHp; });
+                this.floatText('紧急补课！防御回满', this.w/2, this.h/2, '#48bb78', 70, 30);
+            } else if (id === 'free') {
+                this.freeNextTower = true;
+                this.floatText('下一个防御免费！', this.w/2, this.h/2, '#B9825B', 70, 28);
+            }
+            this.combatPaused = false;
+            this.updateStats();
+            this.syncSave();
+        }
+
         spawnParticles(x, y, color, count) {
             for(let i=0; i<count; i++) {
                 const angle = Math.random() * Math.PI * 2, speed = Math.random() * 3 + 2;
@@ -777,6 +861,7 @@
         update() {
             if (this.phase === 'over' || this.phase === 'level_complete' || this.phase === 'rescue_quiz') return;
             if (isOrientationBlocked(this.phase)) return;
+            if (this.combatPaused) return; // 战斗答题/选奖励时冻结战场
             if (this.phase === 'maze') {
                 this.updateMazeMovement();
                 for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
@@ -795,6 +880,11 @@
                 this.naturalSunTimer--;
                 if (this.naturalSunTimer <= 0) { this.spawnOrb(this.OX + Math.random()*(this.C*this.G), this.OY + Math.random()*(this.R*this.G), 40); this.naturalSunTimer = 300; }
                 for (let i = this.laneWarnings.length - 1; i >= 0; i--) { if (--this.laneWarnings[i].life <= 0) this.laneWarnings.splice(i, 1); }
+                this.starTimer--;
+                if (this.starTimer <= 0) {
+                    if (this.spawnState.active || this.objs.some(o => o.type === 'enemy')) this.spawnStar();
+                    this.starTimer = 720 + Math.floor(Math.random() * 360); // 约 12-18 秒掉一颗
+                }
                 if (this.spawnState.active) {
                     this.spawnState.timer--;
                     // 敌人生成前预先确定出现路线并闪红预警（让玩家来得及部署该路）
@@ -829,7 +919,7 @@
                 }
                 for (let i = this.objs.length - 1; i >= 0; i--) {
                     const o = this.objs[i];
-                    if (o.type === 'orb') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    if (o.type === 'orb' || o.type === 'star') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
                     else if (o.type === 'tower') {
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
@@ -985,6 +1075,18 @@
                     } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
                     else if(o.type==='bullet') { ctx.fillStyle=o.color; ctx.beginPath(); ctx.arc(o.x, o.y, 8, 0, Math.PI*2); ctx.fill(); }
                     else if(o.type==='orb') { ctx.shadowBlur=15; ctx.shadowColor='#F6E05E'; ctx.fillStyle='#F6E05E'; ctx.beginPath(); ctx.arc(o.x, o.y, 25, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#FFFFF0'; ctx.lineWidth=3; ctx.stroke(); ctx.shadowBlur=0; }
+                    else if(o.type==='star') {
+                        const pulse = 1 + Math.sin(this.frame*0.2)*0.12;
+                        ctx.save(); ctx.translate(o.x, o.y); ctx.scale(pulse, pulse);
+                        ctx.shadowBlur=18; ctx.shadowColor='#F6D365';
+                        ctx.fillStyle='#F6D365'; ctx.strokeStyle='#fff7e0'; ctx.lineWidth=2;
+                        ctx.beginPath();
+                        for(let s=0;s<5;s++){ const a=-Math.PI/2 + s*2*Math.PI/5, a2=a+Math.PI/5;
+                            ctx.lineTo(Math.cos(a)*22, Math.sin(a)*22); ctx.lineTo(Math.cos(a2)*10, Math.sin(a2)*10); }
+                        ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+                        ctx.fillStyle='#7a5b1a'; ctx.font='bold 16px Arial'; ctx.textAlign='center'; ctx.fillText('?', 0, 6);
+                        ctx.restore();
+                    }
                 });
             } else if (this.phase === 'maze' && this.maze) {
                 const m = this.maze, cs = m.cs, mx = m.mx, my = m.my;
@@ -1039,6 +1141,8 @@
             this.explanationData = null;
             this.gameOverData = null;
             this.waveIntro = null;
+            this.rewardCards = null;
+            this.combatToast = null;
             this.isLoading = false;
             this.unlockedLevel = 0;
             this.isLandscape = window.innerWidth > window.innerHeight;
@@ -1049,6 +1153,7 @@
             this.onHint = null;
             this.onSOS = null;
             this.onExplanationDismiss = null;
+            this.onRewardPick = null;
             this.render();
         }
 
@@ -1385,6 +1490,41 @@
             return wrap;
         }
 
+        renderRewardPicker() {
+            if (!this.rewardCards) return null;
+            const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.78)', backdropFilter:'blur(4px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'70', pointerEvents:'auto' });
+            overlay.append(
+                this.el('div', { fontSize:'32px', marginBottom:'2px' }, '🎉'),
+                this.el('div', { color:'#F6D365', fontWeight:'900', fontSize:'20px', marginBottom:'14px', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }, '答对啦！选择一项奖励')
+            );
+            const row = this.el('div', { display:'flex', gap:'12px', flexWrap:'wrap', justifyContent:'center', maxWidth:'560px' });
+            (this.rewardCards || []).forEach(rw => {
+                const card = this.el('button', {
+                    width:'150px', minHeight:'150px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px',
+                    background:'#F7F3E8', border:'3px solid ' + rw.color, borderRadius:'16px', padding:'14px 10px',
+                    boxShadow:'0 8px 20px rgba(0,0,0,0.35)', cursor:'pointer', fontFamily:'inherit'
+                });
+                card.append(
+                    this.el('div', { fontSize:'40px' }, rw.icon),
+                    this.el('div', { fontWeight:'900', fontSize:'16px', color:'#3a2c18' }, rw.name),
+                    this.el('div', { fontSize:'12px', color:'#6b5a3f', textAlign:'center', lineHeight:'1.4' }, rw.effect)
+                );
+                card.onclick = () => { if (this.onRewardPick) this.onRewardPick(rw.id); };
+                row.appendChild(card);
+            });
+            overlay.appendChild(row);
+            return overlay;
+        }
+
+        renderCombatToast() {
+            if (!this.combatToast) return null;
+            const wrap = this.el('div', { position:'absolute', top:'calc(12px + env(safe-area-inset-top))', left:'50%', transform:'translateX(-50%)', pointerEvents:'none', zIndex:'68', maxWidth:'92%' });
+            const note = this.el('div', { padding:'8px 18px', borderRadius:'4px 14px 4px 14px', fontSize:'13px', fontWeight:'bold', textAlign:'center' }, this.combatToast);
+            note.className = 'sticky-note';
+            wrap.appendChild(note);
+            return wrap;
+        }
+
         renderExplanation() {
             if (!this.explanationData) return null;
             const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(0,0,0,0.8)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'60', pointerEvents:'auto' });
@@ -1405,13 +1545,20 @@
 
         renderQuiz() {
             if (!this.quizData || this.explanationData) return null;
-            const { q, a, isRescue, canSOS, canHint, hint } = this.quizData;
+            const { q, a, isRescue, canSOS, canHint, hint, isCombat } = this.quizData;
             const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'50', pointerEvents:'auto' });
             const box = this.el('div', { position:'relative', backgroundColor:'#fffdf5', borderRadius:'16px', padding:'32px', maxWidth:'380px', width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', border:'1px solid #e7e5e4' });
 
             if (isRescue) {
                 const badge = this.el('div', { position:'absolute', top:'-24px', left:'50%', transform:'translateX(-50%)', backgroundColor:'#ef4444', color:'white', padding:'8px 24px', borderRadius:'999px', fontWeight:'900', fontSize:'18px', boxShadow:'0 4px 12px rgba(0,0,0,0.3)', border:'2px solid white', whiteSpace:'nowrap', animation:'bounce 1s infinite', zIndex:'5' }, '🚨 紧急救援 🚨');
                 box.appendChild(badge);
+            }
+
+            if (isCombat) {
+                box.appendChild(this.el('div', {
+                    textAlign:'center', marginBottom:'14px', color:'#b45309', fontWeight:'900', fontSize:'13px',
+                    background:'#FEF3C7', border:'1px solid #FBBF24', borderRadius:'999px', padding:'4px 10px'
+                }, '⭐ 答对可获得战斗奖励！'));
             }
 
             const qEl = this.el('h2', { fontSize:'22px', fontWeight:'900', color:'#1c1917', marginBottom:'24px', textAlign:'center' }, q);
@@ -1529,6 +1676,12 @@
             const quiz = this.renderQuiz();
             if (quiz) this.root.appendChild(quiz);
 
+            const rewardPicker = this.renderRewardPicker();
+            if (rewardPicker) this.root.appendChild(rewardPicker);
+
+            const combatToast = this.renderCombatToast();
+            if (combatToast) this.root.appendChild(combatToast);
+
             const lc = this.renderLevelComplete();
             if (lc) this.root.appendChild(lc);
 
@@ -1552,6 +1705,9 @@
     let gameOverData = null;
     let waveIntro = null;
     let waveIntroTimeout = null;
+    let rewardCards = null;
+    let combatToast = null;
+    let combatToastTimeout = null;
     let isLoading = false;
     let unlockedLevel = loadGameSave().unlockedLevel || 0;
     let isLandscape = window.innerWidth > window.innerHeight;
@@ -1566,8 +1722,8 @@
             if (p !== 'td') { selectedTower = null; engine.setSelectedTower(null); }
             ui.update({ phase, selectedTower });
         },
-        onQuizOpen: (q, a, isRescue, canSOS, canHint) => {
-            quizData = { q, a, hint: false, isRescue, canSOS, canHint };
+        onQuizOpen: (q, a, isRescue, canSOS, canHint, isCombat) => {
+            quizData = { q, a, hint: false, isRescue, canSOS, canHint, isCombat };
             ui.update({ quizData });
         },
         onExplanation: (data) => {
@@ -1596,6 +1752,17 @@
             if (waveIntroTimeout) clearTimeout(waveIntroTimeout);
             const dur = (info && info.showTip) ? 5200 : 3600; // 含关卡提示的首波多停一会
             waveIntroTimeout = setTimeout(() => { waveIntro = null; ui.update({ waveIntro }); }, dur);
+        },
+        onRewardPicker: (cards) => {
+            quizData = null; // 关闭答题弹窗，弹出三选一奖励
+            rewardCards = cards;
+            ui.update({ quizData, rewardCards });
+        },
+        onToast: (text) => {
+            combatToast = text;
+            ui.update({ combatToast });
+            if (combatToastTimeout) clearTimeout(combatToastTimeout);
+            combatToastTimeout = setTimeout(() => { combatToast = null; ui.update({ combatToast }); }, 3200);
         }
     };
 
@@ -1642,6 +1809,11 @@
         }
     };
     ui.onSOS = () => { engine.triggerSOS(); };
+    ui.onRewardPick = (id) => {
+        rewardCards = null;
+        ui.update({ rewardCards });
+        engine.applyReward(id);
+    };
     ui.onExplanationDismiss = () => {
         explanationData = null;
         ui.update({ explanationData });
