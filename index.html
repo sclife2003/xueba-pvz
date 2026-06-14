@@ -151,38 +151,38 @@
       teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
 
-    // role: normal/fast/tank/boss/elf — 供 Phase 2.5 关卡前预告与推荐策略推导；hint: 单体应对建议
+    // role: normal/fast/tank/boss/elf；ability 供主线制造一眼可懂的塔防张力。
     const ENEMIES = {
-      slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground', role: 'normal', hint: '铅笔投手主力输出' },
-      bat: { id: 'bat', name: '蝙蝠', hp: 40, spd: 1.5, dmg: 2, val: 0, color: '#9f7aea', type: 'ground', role: 'fast', hint: '胶水陷阱减速拖住' },
-      tank: { id: 'tank', name: '铁桶怪', hp: 400, spd: 0.35, dmg: 10, val: 0, color: '#a0aec0', type: 'ground', role: 'tank', hint: '橡皮盾挡路 + 集火' },
-      boss: { id: 'boss', name: '魔王', hp: 2200, spd: 0.25, dmg: 50, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', hint: '橡皮盾顶住 + 班主任技能' },
+      slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground', role: 'normal', ability: 'none', hint: '铅笔射手能稳定处理' },
+      bat: { id: 'bat', name: '迟到怪', hp: 45, spd: 1.35, dmg: 2, val: 0, color: '#9f7aea', type: 'ground', role: 'fast', ability: 'schoolRush', hint: '冲刺前用胶水黏住' },
+      tank: { id: 'tank', name: '作业山', hp: 420, spd: 0.34, dmg: 10, val: 0, color: '#a0aec0', type: 'ground', role: 'tank', ability: 'paperShield', hint: '前半血更硬，用橡皮盾拖住集火' },
+      boss: { id: 'boss', name: '监考怪', hp: 1800, spd: 0.24, dmg: 45, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', ability: 'focusDrain', hint: '会点名拆防线，留班主任技能' },
       elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground', role: 'elf', hint: '击杀可得能量' }
     };
 
     const LEVELS = [
       {
         id: '1-1', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
-        enemyPreviewHint: '熟悉摆放与收集能量，先把经济铺起来',
+        enemyPreviewHint: '先学会课本产能、铅笔防守、橡皮救急',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第二章：操场激战' },
         name: "第一章：初入校园 (简单)",
         bg: "#2f855a", difficulty: 1.0,
-        tip: "主要任务：熟悉操作，多收集阳光！",
+        tip: "先放课本攒能量，再给每一路放铅笔。橡皮只在快被突破时救急。",
         waves: [
             { groups: [{ e: 'slime', n: 3, interval: 200, preDelay: 50 }, { e: 'elf', n: 1, interval: 0, preDelay: 100 }] },
-            { groups: [{ e: 'slime', n: 5, interval: 150, preDelay: 50 }, { e: 'tank', n: 1, interval: 0, preDelay: 200 }] },
-            { groups: [{ e: 'tank', n: 1, interval: 200, preDelay: 100 }, { e: 'slime', n: 10, interval: 100, preDelay: 100 }, { e: 'boss', n: 1, interval: 0, preDelay: 300 }] }
+            { groups: [{ e: 'slime', n: 6, interval: 150, preDelay: 50 }] },
+            { groups: [{ e: 'slime', n: 8, interval: 105, preDelay: 100 }, { e: 'tank', n: 1, interval: 0, preDelay: 220 }] }
         ]
       },
       {
         id: '2-1', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
-        enemyPreviewHint: '蝙蝠很快，带胶水陷阱减速、稳住快速路线',
+        enemyPreviewHint: '迟到怪会突然冲刺，胶水能让它慢下来',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第三章：期末大考' },
         name: "第二章：操场激战 (中等)",
         bg: "#c05621", difficulty: 1.25,
-        tip: "蝙蝠速度很快但血量少，用胶水减速它们！",
+        tip: "看到迟到怪就先铺胶水，它冲刺前被黏住会安全很多！",
         waves: [
             { groups: [{ e: 'slime', n: 5, interval: 100, preDelay: 50 }, { e: 'bat', n: 3, interval: 150, preDelay: 150 }] },
             { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 50 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
@@ -192,12 +192,12 @@
       },
       {
         id: '3-1', chapterId: 'library', archetype: 'tank-check', isBoss: false,
-        enemyPreviewHint: '铁桶怪硬：橡皮盾挡路 + 集火，必要时班主任清群',
+        enemyPreviewHint: '作业山前半血很硬，橡皮挡住后集中火力',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第四章：毕业典礼' },
         name: "第三章：期末大考 (困难)",
         bg: "#4c1d95", difficulty: 1.45,
-        tip: "这是真正的考验！使用「班主任」炸掉成群的敌人！",
+        tip: "作业山很耐打，先用橡皮挡路，再用铅笔和喷壶一起处理。",
         waves: [
             { groups: [{ e: 'slime', n: 6, interval: 70, preDelay: 50 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
             { groups: [{ e: 'tank', n: 3, interval: 140, preDelay: 50 }, { e: 'bat', n: 6, interval: 70, preDelay: 100 }] },
@@ -207,12 +207,12 @@
       },
       {
         id: '4-1', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
-        enemyPreviewHint: '监考魔王压线：留好橡皮盾，攒满班主任技能化解红笔点名',
+        enemyPreviewHint: '监考怪会点名拆防线，班主任技能是最后答案',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
         reward: { type: 'badge', text: '🎓 毕业徽章' },
         name: "第四章：毕业典礼 (炼狱)",
         bg: "#7f1d1d", difficulty: 1.7,
-        tip: "最终的试炼！活下来！",
+        tip: "综合练习：挡住作业山、黏住迟到怪，监考怪靠班主任化解。",
         waves: [
             { groups: [{ e: 'bat', n: 7, interval: 60, preDelay: 50 }, { e: 'elf', n: 4, interval: 40, preDelay: 50 }] },
             { groups: [{ e: 'tank', n: 6, interval: 120, preDelay: 50 }, { e: 'slime', n: 15, interval: 45, preDelay: 100 }] },
@@ -254,7 +254,23 @@
     });
 
     // ==================== CHILD-FRIENDLY MAINLINE (Phase A) ====================
-    // 主线推荐文具：仅作友善 intro 的「推荐」提示，实际开战会给全部文具，降低小学生选择负担（不限制 loadout）
+    // 主线文具采用关卡自动解锁，不让小学生做配装选择。
+    const MAINLINE_LOADOUTS = {
+      '1-1': ['textbook', 'pencil', 'eraser'],
+      '2-1': ['textbook', 'pencil', 'glue', 'eraser'],
+      '3-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
+      '4-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser', 'teacher'],
+      'challenge-speed': ['textbook', 'pencil', 'glue', 'eraser']
+    };
+    // 进关前只讲一个本关重点，避免看起来像装备选择页。
+    const LESSON_BEATS = {
+      '1-1': { tool: 'textbook', title: '先放课本', text: '课本会产能量；有能量，后面才放得出铅笔。' },
+      '2-1': { tool: 'glue', title: '胶水黏住冲刺', text: '迟到怪快冲到前排时，胶水会把节奏拉回来。' },
+      '3-1': { tool: 'eraser', title: '橡皮挡住作业山', text: '硬怪先挡住，再让后排文具慢慢解决。' },
+      '4-1': { tool: 'teacher', title: '班主任救关键一波', text: '监考怪点名时，班主任技能可以稳住全场。' },
+      'challenge-speed': { tool: 'glue', title: '快节奏复习', text: '敌人来得更快，先控速再补输出。' }
+    };
+    // 主线推荐文具：只用于收藏/提示，真正可用文具由 MAINLINE_LOADOUTS 自动决定。
     const RECOMMENDED_TOOLS = {
       '1-1': ['textbook', 'pencil', 'eraser'],
       '2-1': ['glue', 'pencil', 'eraser'],
@@ -272,6 +288,8 @@
     };
     LEVELS.forEach(l => {
       l.recommendedTools = RECOMMENDED_TOOLS[l.id] || Object.keys(TOWERS);
+      l.mainlineLoadout = MAINLINE_LOADOUTS[l.id] || Object.keys(TOWERS);
+      l.lessonBeat = LESSON_BEATS[l.id] || null;
       l.goal = LEVEL_GOALS[l.id] || (l.tip || '守住校门就过关！');
     });
 
@@ -589,6 +607,7 @@
             this.frame = 0; this.R = 5;
             this.waitNextWave = null;
             this.laneWarnings = []; // 路线预警（敌人出现前闪红）
+            this.laneRescueUsed = {}; // 每一路一次自动救场，让压线有戏剧性但不直接失败
             this.combatPaused = false; // 战斗答题/选奖励时暂停战场
             this.freeNextTower = false; // 「免费布置」奖励：下一个塔免费
             this.starTimer = 600; // 知识星掉落计时
@@ -706,8 +725,8 @@
         startLevel(idx, loadout) {
             const isContinuation = (this.phase === 'level_complete' && idx === this.levelIdx + 1);
             this.levelIdx = idx; this.waveIdx = 0;
-            // 套用本关 loadout（第一章固定全配；第二章起由备战画面选 4 件）
-            this.activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
+            // 主线由关卡自动给文具，不出现配装选择；研究所未来可继续传入 loadout。
+            this.activeLoadout = (loadout && loadout.length) ? loadout.slice() : ((LEVELS[idx] && LEVELS[idx].mainlineLoadout) || Object.keys(TOWERS)).slice();
             const startMp = 400 + Math.round(((LEVELS[idx].difficulty || 1) - 1) * 300);
             if (isContinuation) {
                 this.mp = Math.max(startMp, this.mp);
@@ -718,7 +737,7 @@
                 this.questionsAnswered = 0;
             }
             this.objs = []; this.particles = []; this.savedTowers = []; this.towerCooldowns = {};
-            this.combatPaused = false; this.freeNextTower = false; this.starTimer = 600;
+            this.combatPaused = false; this.freeNextTower = false; this.starTimer = 600; this.laneRescueUsed = {};
             this.teacherCharge = 0; this.teacherReady = false; this.freezeTimer = 0; this.clearField();
             // Phase 4：重置星级计数与 Boss/挑战状态
             this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
@@ -884,7 +903,14 @@
             // 本波敌人预告 + 关卡提示（让玩家开局就明白策略与即将面对的敌人）
             const tally = {};
             waveData.groups.forEach(g => { tally[g.e] = (tally[g.e] || 0) + g.n; });
-            const enemies = Object.keys(tally).map(id => ({ id, name: (ENEMIES[id] && ENEMIES[id].name) || id, color: (ENEMIES[id] && ENEMIES[id].color) || '#ffffff', count: tally[id] }));
+            const enemies = Object.keys(tally).map(id => ({
+                id,
+                name: (ENEMIES[id] && ENEMIES[id].name) || id,
+                color: (ENEMIES[id] && ENEMIES[id].color) || '#ffffff',
+                count: tally[id],
+                hint: (ENEMIES[id] && ENEMIES[id].hint) || '',
+                ability: (ENEMIES[id] && ENEMIES[id].ability) || 'none'
+            }));
             this.callbacks.onWaveIntro({
                 wave: this.waveIdx + 1,
                 totalWaves: lvl.waves.length,
@@ -1036,6 +1062,37 @@
             if (!this.save.stickers[key]) { this.save.stickers[key] = true; writeGameSave(this.save); }
         }
 
+        damageEnemy(enemy, dmg, sourceColor) {
+            if (!enemy || enemy.type !== 'enemy') return;
+            let finalDmg = dmg;
+            if (enemy.data && enemy.data.ability === 'paperShield' && enemy.hp > enemy.maxHp * 0.55) {
+                finalDmg = Math.max(1, Math.round(dmg * 0.55));
+                enemy.shieldFlash = 12;
+            }
+            enemy.hp -= finalDmg;
+            enemy.hitFlash = Math.max(enemy.hitFlash || 0, 5);
+            if (sourceColor) this.spawnParticles(enemy.x, enemy.y, sourceColor, 4);
+        }
+
+        triggerLaneRescue(enemy) {
+            if (!enemy || enemy.id === 'elf') return false;
+            if (!this.laneRescueUsed) this.laneRescueUsed = {};
+            if (this.laneRescueUsed[enemy.r]) return false;
+            this.laneRescueUsed[enemy.r] = true;
+            const y = this.OY + enemy.r * this.G + this.G / 2;
+            this.floatText('值日生救场！', this.OX + this.G * 1.2, y, '#F6D365', 80, 28);
+            this.spawnParticles(this.OX + this.G * 0.9, y, '#F6D365', 26);
+            this.objs.forEach(e => {
+                if (e.type === 'enemy' && e.r === enemy.r) {
+                    e.x = Math.max(e.x, this.OX + this.G * 0.85);
+                    e.slowTimer = Math.max(e.slowTimer || 0, 140);
+                    this.damageEnemy(e, 420, '#F6D365');
+                }
+            });
+            this.pushCombatState();
+            return true;
+        }
+
         // Phase 4：结算星级并保存最佳成绩
         computeAndSaveStars() {
             const lvl = LEVELS[this.levelIdx];
@@ -1134,7 +1191,7 @@
                 const counts = new Array(this.R).fill(0);
                 this.objs.forEach(o => { if (o.type === 'enemy') counts[o.r]++; });
                 let best = 0; for (let r = 1; r < this.R; r++) if (counts[r] > counts[best]) best = r;
-                this.objs.forEach(o => { if (o.type === 'enemy' && o.r === best) { o.hp -= 400; o.hitFlash = 5; this.spawnParticles(o.x, o.y, '#E85D5D', 8); } });
+                this.objs.forEach(o => { if (o.type === 'enemy' && o.r === best) this.damageEnemy(o, 400, '#E85D5D'); });
                 this.floatText('粉笔风暴！', this.OX + this.C*this.G/2, this.OY + best*this.G + this.G/2, '#E85D5D', 80, 30);
             } else if (id === 'heal') {
                 this.objs.forEach(o => { if (o.type === 'tower') o.hp = o.maxHp; });
@@ -1167,12 +1224,19 @@
                 levelIdx: idx, id: lvl.id || ('L' + idx), name: lvl.name, enemies, strategies, isFixed: idx === 0, loadoutSize: LOADOUT_SIZE,
                 archetype: lvl.archetype || '', hint: lvl.enemyPreviewHint || '', starGoals: lvl.starGoals || {},
                 isBoss: !!lvl.isBoss, isChallenge: !!lvl.isChallenge, chapterId: lvl.chapterId || '',
-                goal: lvl.goal || lvl.tip || '', recommendedTools: lvl.recommendedTools || Object.keys(TOWERS) // Phase A 友善 intro 用
+                goal: lvl.goal || lvl.tip || '',
+                recommendedTools: lvl.recommendedTools || Object.keys(TOWERS),
+                mainlineLoadout: lvl.mainlineLoadout || Object.keys(TOWERS),
+                lessonBeat: lvl.lessonBeat || null
             };
         }
 
         // ----- Phase 2.5 System 3: 班主任技能槽 -----
+        canUseTeacherSkill() {
+            return !!(this.activeLoadout && this.activeLoadout.includes('teacher'));
+        }
         chargeTeacher(amt) {
+            if (!this.canUseTeacherSkill()) return;
             if (this.teacherReady) return;
             this.teacherCharge = Math.min(this.teacherMax, this.teacherCharge + amt);
             if (this.teacherCharge >= this.teacherMax) {
@@ -1182,6 +1246,7 @@
             }
         }
         releaseTeacherSkill() {
+            if (!this.canUseTeacherSkill()) return;
             if (!this.teacherReady || this.phase !== 'td' || this.combatPaused) return;
             this.teacherReady = false; this.teacherCharge = 0;
             this.freezeTimer = 180; // 全班安静：定身 3 秒
@@ -1357,7 +1422,7 @@
                     else if (o.type === 'tower') {
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
-                            this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { e.hp -= o.data.dmg; this.spawnParticles(e.x, e.y, '#F56565', 10); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
+                            this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { this.damageEnemy(e, o.data.dmg, '#F56565'); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
                             this.spawnParticles(o.x, o.y, '#F56565', 50); this.objs.splice(i, 1); continue;
                         }
                         if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, 40); o.cd=0; } }
@@ -1379,22 +1444,31 @@
                     }
                     else if (o.type === 'enemy') {
                         if(o.hitFlash>0) o.hitFlash--;
+                        if(o.shieldFlash>0) o.shieldFlash--;
                         const frozen = this.freezeTimer > 0;
                         let spd = Math.abs(o.vx);
+                        if(o.data && o.data.ability === 'schoolRush' && !o.rushUsed && o.x < this.OX + this.C * this.G * 0.66) {
+                            o.rushUsed = true; o.rushTimer = 90;
+                            this.floatText('冲刺！', o.x, o.y, '#E85D5D', 45, 24);
+                        }
+                        if(o.rushTimer > 0) { spd *= 1.75; o.rushTimer--; }
                         if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
                         let move = true;
                         const eating = this.objs.find(t=>t.type==='tower' && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
                         if(eating) { move=false; o.isEating=true; if(this.frame%30===0 && !frozen) eating.hp-=o.dmg; } else o.isEating=false;
                         if(frozen) move=false; // 全班安静：定身
                         if(move) o.x -= spd;
-                        if(o.x < this.OX-20) { this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e'); }
+                        if(o.x < this.OX-20) {
+                            if (this.triggerLaneRescue(o)) continue;
+                            this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e');
+                        }
                         else if(o.hp<=0) { this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); if(o.id!=='elf') this.chargeTeacher(3); this.objs.splice(i,1); }
                     }
                     else if (o.type === 'bullet') {
                         let dx = o.vx, dy = o.vy;
                         if(o.target && o.target.hp>0) {
                             const dist = Math.sqrt(((o.target.x+this.G/2)-o.x)**2 + ((o.target.y+this.G/2)-o.y)**2);
-                            if(dist<30) { o.target.hp-=o.dmg; o.target.hitFlash=5; if(o.isSlow) o.target.slowTimer=Math.max(o.target.slowTimer||0, o.slowDur||180); this.spawnParticles(o.x,o.y,o.color,4); this.objs.splice(i,1); continue; }
+                            if(dist<30) { this.damageEnemy(o.target, o.dmg, o.color); if(o.isSlow) o.target.slowTimer=Math.max(o.target.slowTimer||0, o.slowDur||180); this.objs.splice(i,1); continue; }
                             else { const ang = Math.atan2((o.target.y+this.G/2)-o.y,(o.target.x+this.G/2)-o.x); o.vx=Math.cos(ang)*15; o.vy=Math.sin(ang)*15; dx=o.vx; dy=o.vy; }
                         }
                         o.x+=dx; o.y+=dy;
@@ -1420,6 +1494,8 @@
             ctx.drawImage(sprite, -size/2, -size/2, size, size);
             if (o.hitFlash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(sprite, -size/2, -size/2, size, size); }
             ctx.restore();
+            if (o.rushTimer > 0) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('冲!', o.x + G * 0.15, o.y - 8); }
+            if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(o.x + 10, o.y + 10, G - 20, G - 20); }
             if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
             if (o.hp < o.maxHp) {
                 const barY = o.y - 6;
@@ -1490,6 +1566,8 @@
                 ctx.fillStyle = '#B7791F'; ctx.font = `${Math.max(10, G*0.25)}px Arial`; ctx.fillText('$', cx - 4, cy + 5);
             }
             if (o.isEating) { ctx.fillStyle = 'red'; ctx.font = `bold ${Math.max(12, G*0.3)}px Arial`; ctx.fillText('咬!', x, y); }
+            if (o.rushTimer > 0) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('冲!', x + G * 0.15, y - 8); }
+            if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(x + 10, y + 10, G - 20, G - 20); }
             ctx.restore();
             if (o.hp < o.maxHp) {
                 const barY = y - 10;
@@ -1955,7 +2033,7 @@
             const roleTag = { normal: '普通', fast: '好快', tank: '好硬', boss: '魔王', elf: '能量' };
             const roleColor = { normal: '#48bb78', fast: '#E85D5D', tank: '#a0aec0', boss: '#e53e3e', elf: '#F6D365' };
             const fname = friendlyName(pd.name);
-            const recs = pd.recommendedTools || [];
+            const beat = pd.lessonBeat || null;
             const bestStars = (this.results[pd.id] && this.results[pd.id].stars) || 0;
 
             const wrap = this.el('div', {
@@ -1996,24 +2074,21 @@
             if (pd.hint) enemyBox.appendChild(this.el('div', { fontSize:'12px', color:'#F7F3E8', marginTop:'6px', opacity:'0.92', lineHeight:'1.5' }, '💡 ' + pd.hint));
             card.appendChild(enemyBox);
 
-            // 推荐文具（仅展示、不需挑选；开战后全部都能用）
-            const toolBox = this.el('div', { borderRadius:'12px', padding:'10px 12px' });
-            toolBox.className = 'chalk-card';
-            toolBox.appendChild(this.el('div', { fontWeight:'900', fontSize:'13px', color:'#F6D365', marginBottom:'8px' }, '✏️ 推荐文具'));
-            const grid = this.el('div', { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'8px' });
-            Object.values(TOWERS).forEach(t => {
-                const rec = recs.includes(t.id);
-                const c = this.el('div', {
-                    display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'8px 4px', borderRadius:'10px',
-                    border:'3px solid ' + (rec ? '#F6D365' : 'transparent'), background: rec ? '#F7F3E8' : 'rgba(247,243,232,0.45)',
-                    color:'#5b4636', opacity: rec ? '1' : '0.6'
-                });
-                c.append(this.el('div', { fontSize:'22px' }, t.icon), this.el('div', { fontSize:'11px', fontWeight:'900' }, t.name));
-                grid.appendChild(c);
-            });
-            toolBox.appendChild(grid);
-            toolBox.appendChild(this.el('div', { fontSize:'11px', color:'rgba(247,243,232,0.85)', marginTop:'6px', textAlign:'center', lineHeight:'1.5' }, '开战后所有文具都能用，金色框是这关的好帮手 ⭐'));
-            card.appendChild(toolBox);
+            // 本关小诀窍：只讲一个玩法重点，避免进关前像装备选择。
+            if (beat && TOWERS[beat.tool]) {
+                const t = TOWERS[beat.tool];
+                const lesson = this.el('div', { borderRadius:'12px', padding:'12px 14px', display:'grid', gridTemplateColumns:'54px 1fr', gap:'10px', alignItems:'center' });
+                lesson.className = 'chalk-card';
+                lesson.appendChild(this.el('div', {
+                    width:'50px', height:'50px', borderRadius:'14px', background:'#F7F3E8', color:'#5b4636',
+                    display:'flex', alignItems:'center', justifyContent:'center', fontSize:'27px', border:'3px solid #F6D365'
+                }, t.icon));
+                const copy = this.el('div', { display:'flex', flexDirection:'column', gap:'4px' });
+                copy.appendChild(this.el('div', { fontWeight:'900', fontSize:'14px', color:'#F6D365' }, '💡 本关小诀窍：' + beat.title));
+                copy.appendChild(this.el('div', { fontSize:'12px', color:'#F7F3E8', lineHeight:'1.45' }, beat.text));
+                lesson.appendChild(copy);
+                card.appendChild(lesson);
+            }
 
             // 星星鼓励（不卡主线进度）
             card.appendChild(this.el('div', { textAlign:'center', fontSize:'13px', color:'#FDE68A', fontWeight:'bold', lineHeight:'1.5' },
@@ -2031,7 +2106,7 @@
             btnRow.appendChild(this.btn('开始上课 ▶', {
                 flex:'1', padding:'12px', borderRadius:'12px', border:'2px solid #34d399', background:'#10b981', color:'white',
                 fontWeight:'900', fontSize:'18px', fontFamily:'inherit', cursor:'pointer', boxShadow:'0 5px 0 #065f46'
-            }, () => { if (this.onConfirmPrep) this.onConfirmPrep(this.prepLevelIdx, Object.keys(TOWERS)); }));
+            }, () => { if (this.onConfirmPrep) this.onConfirmPrep(this.prepLevelIdx, pd.mainlineLoadout || Object.keys(TOWERS)); }));
             card.appendChild(btnRow);
 
             wrap.appendChild(card);
@@ -2081,25 +2156,26 @@
                 hpRow.append(this.el('span', { fontSize:'16px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
                 stats.append(mpRow, hpRow);
                 inner.appendChild(stats);
-                // 班主任技能槽（Phase 2.5）
-                const pct = Math.round((this.teacherCharge || 0) * 100);
-                const skill = this.el('button', {
-                    margin:'0 4px 4px', padding:'5px 4px', borderRadius:'8px', border:'1px solid ' + (this.teacherReady ? '#F6D365' : '#B9825B'),
-                    background: this.teacherReady ? '#4A90E2' : '#23463a', color:'#F7F3E8', fontFamily:'inherit',
-                    cursor: this.teacherReady ? 'pointer' : 'default', flexShrink:'0', display:'flex', flexDirection:'column', gap:'2px',
-                    animation: this.teacherReady ? 'pulse 1.4s infinite' : ''
-                });
-                skill.appendChild(this.el('div', { fontSize:'9px', fontWeight:'900', textAlign:'center', letterSpacing:'1px' }, '👩‍🏫 班主任'));
-                if (this.teacherReady) {
-                    skill.appendChild(this.el('div', { fontSize:'10px', fontWeight:'900', textAlign:'center', color:'#F6D365' }, '⚡就绪·点击'));
-                } else {
-                    const track = this.el('div', { height:'7px', background:'rgba(0,0,0,0.35)', borderRadius:'999px', overflow:'hidden' });
-                    track.appendChild(this.el('div', { height:'100%', width: pct + '%', background:'linear-gradient(90deg,#4A90E2,#F6D365)', borderRadius:'999px', transition:'width 0.2s' }));
-                    skill.appendChild(track);
-                    skill.appendChild(this.el('div', { fontSize:'9px', textAlign:'center', color:'rgba(247,243,232,0.7)' }, pct + '%'));
+                if (ids.includes('teacher')) {
+                    const pct = Math.round((this.teacherCharge || 0) * 100);
+                    const skill = this.el('button', {
+                        margin:'0 4px 4px', padding:'5px 4px', borderRadius:'8px', border:'1px solid ' + (this.teacherReady ? '#F6D365' : '#B9825B'),
+                        background: this.teacherReady ? '#4A90E2' : '#23463a', color:'#F7F3E8', fontFamily:'inherit',
+                        cursor: this.teacherReady ? 'pointer' : 'default', flexShrink:'0', display:'flex', flexDirection:'column', gap:'2px',
+                        animation: this.teacherReady ? 'pulse 1.4s infinite' : ''
+                    });
+                    skill.appendChild(this.el('div', { fontSize:'9px', fontWeight:'900', textAlign:'center', letterSpacing:'1px' }, '👩‍🏫 班主任'));
+                    if (this.teacherReady) {
+                        skill.appendChild(this.el('div', { fontSize:'10px', fontWeight:'900', textAlign:'center', color:'#F6D365' }, '⚡就绪·点击'));
+                    } else {
+                        const track = this.el('div', { height:'7px', background:'rgba(0,0,0,0.35)', borderRadius:'999px', overflow:'hidden' });
+                        track.appendChild(this.el('div', { height:'100%', width: pct + '%', background:'linear-gradient(90deg,#4A90E2,#F6D365)', borderRadius:'999px', transition:'width 0.2s' }));
+                        skill.appendChild(track);
+                        skill.appendChild(this.el('div', { fontSize:'9px', textAlign:'center', color:'rgba(247,243,232,0.7)' }, pct + '%'));
+                    }
+                    if (this.teacherReady) skill.onclick = (e) => { e.stopPropagation(); this.onTeacherSkill && this.onTeacherSkill(); };
+                    inner.appendChild(skill);
                 }
-                if (this.teacherReady) skill.onclick = (e) => { e.stopPropagation(); this.onTeacherSkill && this.onTeacherSkill(); };
-                inner.appendChild(skill);
             }
 
             towerList.forEach(t => {
@@ -2272,6 +2348,14 @@
                 }, '💡 ' + wi.tip);
                 note.className = 'sticky-note';
                 wrap.appendChild(note);
+            }
+            const focusEnemy = (wi.enemies || []).find(en => en.ability && en.ability !== 'none' && en.id !== 'elf');
+            if (focusEnemy && focusEnemy.hint) {
+                const danger = this.el('div', {
+                    padding:'5px 12px', borderRadius:'999px', fontSize:'11px', fontWeight:'900',
+                    background:'rgba(30,41,59,0.9)', color:'#FDE68A', border:'1px solid rgba(253,230,138,0.55)'
+                }, '小心：' + focusEnemy.name + ' - ' + focusEnemy.hint);
+                wrap.appendChild(danger);
             }
             return wrap;
         }
