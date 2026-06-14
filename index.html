@@ -862,7 +862,7 @@
             this.questionBag = [];
             this.refillQuestions();
             this.currentQuestionObj = null;
-            this.classroomStageCache = null;
+            this.stageCache = null; // Phase D 离屏舞台缓存（key 含 chapterId）
         }
 
         refillQuestions() {
@@ -1913,108 +1913,121 @@
             ctx.quadraticCurveTo(x, y, x + rr, y);
         }
 
-        getClassroomStageCacheKey(G) {
-            return [this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100)].join(':');
+        // ----- Phase D 通用舞台：每章一个场景，离屏缓存（key 含 chapterId，切关不串场） -----
+        getStageCacheKey(G, chapterId) {
+            return [chapterId, this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100)].join(':');
         }
 
-        renderClassroomStageCache(G) {
-            const canvas = document.createElement('canvas');
-            canvas.width = this.w;
-            canvas.height = this.h;
-            const ctx = canvas.getContext('2d');
-            const p = CLASSROOM_PALETTE;
+        // 共用：每格主题地砖（圆角 + 渐层 + 描边 + 可选点缀）+ 格线
+        paintTiles(ctx, G, colA, colA2, colB, colB2, edge, accent) {
             const gridX = this.OX, gridY = this.OY, gridW = this.C * G, gridH = this.R * G;
-            const wall = ctx.createLinearGradient(0, 0, 0, Math.max(1, gridY + gridH));
-            wall.addColorStop(0, p.wallTop);
-            wall.addColorStop(0.52, p.wallBottom);
-            wall.addColorStop(0.53, p.floor);
-            wall.addColorStop(1, p.floorDark);
-            ctx.fillStyle = wall;
-            ctx.fillRect(0, 0, this.w, this.h);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.12)';
-            for (let x = gridX - G; x < gridX + gridW + G; x += Math.max(42, G * 0.72)) {
-                ctx.fillRect(x, gridY + gridH + 4, 2, this.h - gridY - gridH);
-            }
-            ctx.fillStyle = 'rgba(75,45,25,0.18)';
-            ctx.fillRect(0, gridY + gridH + 3, this.w, 5);
-
-            const boardH = Math.min(58, Math.max(34, gridY - 18));
-            const bx = gridX + G * 0.45, by = Math.max(8, gridY - boardH - 7), bw = Math.min(gridW * 0.46, this.w - bx - 18);
-            if (boardH > 28) {
-                ctx.fillStyle = p.chalkTrim;
-                this.drawRoundedRect(ctx, bx - 7, by - 7, bw + 14, boardH + 14, 10); ctx.fill();
-                ctx.fillStyle = p.chalkboard;
-                this.drawRoundedRect(ctx, bx, by, bw, boardH, 7); ctx.fill();
-
-                const wx = bx + bw + 18, ww = Math.min(G * 1.4, this.w - wx - 16);
-                if (ww > 36) {
-                    ctx.fillStyle = '#f7f3e8';
-                    this.drawRoundedRect(ctx, wx, by + 2, ww, boardH - 2, 8); ctx.fill();
-                    ctx.fillStyle = p.window;
-                    this.drawRoundedRect(ctx, wx + 5, by + 7, ww - 10, boardH - 12, 5); ctx.fill();
-                    ctx.strokeStyle = 'rgba(36,87,63,0.35)'; ctx.lineWidth = 3;
-                    ctx.beginPath(); ctx.moveTo(wx + ww / 2, by + 8); ctx.lineTo(wx + ww / 2, by + boardH - 7);
-                    ctx.moveTo(wx + 7, by + boardH / 2); ctx.lineTo(wx + ww - 7, by + boardH / 2); ctx.stroke();
-                }
-            }
-
             ctx.save();
-            ctx.shadowColor = 'rgba(37,23,12,0.22)';
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetY = 3;
-            for (let r = 0; r < this.R; r++) {
-                for (let c = 0; c < this.C; c++) {
-                    const x = gridX + c * G, y = gridY + r * G;
-                    const pad = Math.max(3, G * 0.055);
-                    const grad = ctx.createLinearGradient(x, y, x, y + G);
-                    grad.addColorStop(0, (r + c) % 2 === 0 ? p.deskTop : '#d29358');
-                    grad.addColorStop(1, (r + c) % 2 === 0 ? p.deskAlt : '#aa6836');
-                    ctx.fillStyle = grad;
-                    this.drawRoundedRect(ctx, x + pad, y + pad, G - pad * 2, G - pad * 2, Math.max(7, G * 0.12));
-                    ctx.fill();
-                    ctx.strokeStyle = p.deskEdge; ctx.lineWidth = Math.max(1, G * 0.025); ctx.stroke();
-                    ctx.fillStyle = 'rgba(255,236,196,0.24)';
-                    ctx.fillRect(x + pad + 8, y + pad + 7, Math.max(10, G * 0.34), 3);
-                    if ((r + c) % 3 === 0) {
-                        ctx.fillStyle = p.paper;
-                        ctx.fillRect(x + G * 0.58, y + G * 0.18, G * 0.22, G * 0.16);
-                        ctx.fillStyle = 'rgba(74,144,226,0.38)';
-                        ctx.fillRect(x + G * 0.6, y + G * 0.24, G * 0.15, 2);
-                    }
-                }
+            ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 7; ctx.shadowOffsetY = 3;
+            for (let r = 0; r < this.R; r++) for (let c = 0; c < this.C; c++) {
+                const x = gridX + c * G, y = gridY + r * G, pad = Math.max(3, G * 0.055), even = (r + c) % 2 === 0;
+                const grad = ctx.createLinearGradient(x, y, x, y + G);
+                grad.addColorStop(0, even ? colA : colB); grad.addColorStop(1, even ? colA2 : colB2);
+                ctx.fillStyle = grad;
+                this.drawRoundedRect(ctx, x + pad, y + pad, G - pad * 2, G - pad * 2, Math.max(7, G * 0.12)); ctx.fill();
+                ctx.strokeStyle = edge; ctx.lineWidth = Math.max(1, G * 0.025); ctx.stroke();
+                if (accent) accent(ctx, x, y, r, c);
             }
             ctx.restore();
-
-            ctx.strokeStyle = 'rgba(247,243,232,0.38)';
-            ctx.lineWidth = 2;
-            for (let r = 0; r <= this.R; r++) {
-                ctx.beginPath(); ctx.moveTo(gridX, gridY + r * G); ctx.lineTo(gridX + gridW, gridY + r * G); ctx.stroke();
-            }
-            for (let c = 0; c <= this.C; c++) {
-                ctx.beginPath(); ctx.moveTo(gridX + c * G, gridY); ctx.lineTo(gridX + c * G, gridY + gridH); ctx.stroke();
-            }
-            return { canvas, key: this.getClassroomStageCacheKey(G), chalk: boardH > 28 ? { bx, by, bw, boardH } : null };
+            ctx.strokeStyle = 'rgba(247,243,232,0.34)'; ctx.lineWidth = 2;
+            for (let r = 0; r <= this.R; r++) { ctx.beginPath(); ctx.moveTo(gridX, gridY + r * G); ctx.lineTo(gridX + gridW, gridY + r * G); ctx.stroke(); }
+            for (let c = 0; c <= this.C; c++) { ctx.beginPath(); ctx.moveTo(gridX + c * G, gridY); ctx.lineTo(gridX + c * G, gridY + gridH); ctx.stroke(); }
         }
 
-        drawClassroomStage(ctx, G) {
-            const key = this.getClassroomStageCacheKey(G);
-            if (!this.classroomStageCache || this.classroomStageCache.key !== key) {
-                this.classroomStageCache = this.renderClassroomStageCache(G);
-            }
-            const cache = this.classroomStageCache;
-            ctx.drawImage(cache.canvas, 0, 0);
-            if (cache.chalk) {
-                const { bx, by, bw, boardH } = cache.chalk;
-                ctx.strokeStyle = 'rgba(247,243,232,0.26)';
-                ctx.lineWidth = 3;
-                for (let i = 0; i < 3; i++) {
-                    const yy = by + 15 + i * Math.max(8, boardH * 0.2);
-                    ctx.beginPath();
-                    ctx.moveTo(bx + 16, yy);
-                    ctx.lineTo(bx + bw * (0.42 + i * 0.11), yy + Math.sin(this.frame * 0.02 + i) * 2);
-                    ctx.stroke();
+        renderStageCache(G, chapterId) {
+            const canvas = document.createElement('canvas');
+            canvas.width = this.w; canvas.height = this.h;
+            const ctx = canvas.getContext('2d');
+            const gridX = this.OX, gridY = this.OY, gridW = this.C * G, gridH = this.R * G;
+            let overlay = null;
+
+            if (chapterId === 'playground') {
+                // 操场：天空 + 草地 + 红色跑道（5 排 = 跑道），白色跑道线
+                const sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, gridY));
+                sky.addColorStop(0, '#bfe3ff'); sky.addColorStop(1, '#e9f6d8');
+                ctx.fillStyle = sky; ctx.fillRect(0, 0, this.w, this.h);
+                ctx.fillStyle = '#8fc55f'; ctx.fillRect(0, gridY - 6, this.w, this.h - gridY + 6); // 草地带
+                // 小旗
+                if (gridY > 24) { ctx.strokeStyle = '#94703f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(gridX + 14, gridY - 8); ctx.lineTo(gridX + 14, Math.max(6, gridY - 40)); ctx.stroke(); ctx.fillStyle = '#E85D5D'; ctx.beginPath(); ctx.moveTo(gridX + 16, Math.max(8, gridY - 38)); ctx.lineTo(gridX + 16 + G * 0.5, Math.max(14, gridY - 31)); ctx.lineTo(gridX + 16, Math.max(20, gridY - 24)); ctx.fill(); }
+                this.paintTiles(ctx, G, '#d6a062', '#bf8347', '#cf9657', '#b27a3f', '#8a5a2f', (cx, x, y, r) => {
+                    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(x + 2, y + G - 3, G - 4, 2); // 跑道线
+                });
+            } else if (chapterId === 'library') {
+                // 图书馆：暖墙 + 书架（彩色书脊）+ 走道地砖 + 阅读灯
+                const wall = ctx.createLinearGradient(0, 0, 0, Math.max(1, gridY + gridH));
+                wall.addColorStop(0, '#e7d6b8'); wall.addColorStop(0.5, '#d2b88e'); wall.addColorStop(0.52, '#8a6b45'); wall.addColorStop(1, '#6b4f31');
+                ctx.fillStyle = wall; ctx.fillRect(0, 0, this.w, this.h);
+                if (gridY > 26) { // 顶部书架
+                    const shelfBooks = ['#c0584f', '#4a7a9c', '#caa24a', '#5b8c5a', '#9c5b86'];
+                    ctx.fillStyle = '#7a4a28'; ctx.fillRect(gridX, 6, gridW, gridY - 12);
+                    let bxp = gridX + 4;
+                    for (let i = 0; bxp < gridX + gridW - 6; i++) { const bw = 8 + (i * 7 % 12); const bh = (gridY - 18) * (0.6 + (i % 3) * 0.13); ctx.fillStyle = shelfBooks[i % shelfBooks.length]; ctx.fillRect(bxp, gridY - 6 - bh, bw, bh); bxp += bw + 3; }
                 }
+                this.paintTiles(ctx, G, '#caa775', '#b08a55', '#c0985f', '#a67c45', '#5b3d22', null);
+                overlay = { lamp: { x: gridX + gridW - G * 0.6, y: Math.max(10, gridY - 18) } };
+            } else if (chapterId === 'exam') {
+                // 考场：冷色紧张 + 监考台 + 时钟 + 座位（桌格 + 试卷）
+                const wall = ctx.createLinearGradient(0, 0, 0, Math.max(1, gridY + gridH));
+                wall.addColorStop(0, '#dfe6ef'); wall.addColorStop(0.5, '#bcc7d6'); wall.addColorStop(0.52, '#9aa3b2'); wall.addColorStop(1, '#7c8694');
+                ctx.fillStyle = wall; ctx.fillRect(0, 0, this.w, this.h);
+                const clock = { x: gridX + gridW * 0.5, y: Math.max(16, gridY - 22), r: Math.min(16, Math.max(10, gridY * 0.3)) };
+                if (gridY > 30) { ctx.fillStyle = '#f7f3e8'; ctx.beginPath(); ctx.arc(clock.x, clock.y, clock.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#5b6675'; ctx.lineWidth = 2; ctx.stroke(); }
+                this.paintTiles(ctx, G, '#e2e8f1', '#cfd8e4', '#d6deea', '#c2cdda', '#8893a4', (cx, x, y, r, c) => {
+                    if ((r + c) % 2 === 0) { cx.fillStyle = '#fbfcff'; cx.fillRect(x + G * 0.56, y + G * 0.2, G * 0.24, G * 0.18); cx.strokeStyle = 'rgba(120,130,150,0.5)'; cx.lineWidth = 1; cx.strokeRect(x + G * 0.56, y + G * 0.2, G * 0.24, G * 0.18); }
+                });
+                overlay = { clock };
+            } else {
+                // classroom（保留原教室画法）
+                const p = CLASSROOM_PALETTE;
+                const wall = ctx.createLinearGradient(0, 0, 0, Math.max(1, gridY + gridH));
+                wall.addColorStop(0, p.wallTop); wall.addColorStop(0.52, p.wallBottom); wall.addColorStop(0.53, p.floor); wall.addColorStop(1, p.floorDark);
+                ctx.fillStyle = wall; ctx.fillRect(0, 0, this.w, this.h);
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                for (let x = gridX - G; x < gridX + gridW + G; x += Math.max(42, G * 0.72)) ctx.fillRect(x, gridY + gridH + 4, 2, this.h - gridY - gridH);
+                ctx.fillStyle = 'rgba(75,45,25,0.18)'; ctx.fillRect(0, gridY + gridH + 3, this.w, 5);
+                const boardH = Math.min(58, Math.max(34, gridY - 18));
+                const bx = gridX + G * 0.45, by = Math.max(8, gridY - boardH - 7), bw = Math.min(gridW * 0.46, this.w - bx - 18);
+                if (boardH > 28) {
+                    ctx.fillStyle = p.chalkTrim; this.drawRoundedRect(ctx, bx - 7, by - 7, bw + 14, boardH + 14, 10); ctx.fill();
+                    ctx.fillStyle = p.chalkboard; this.drawRoundedRect(ctx, bx, by, bw, boardH, 7); ctx.fill();
+                    const wx = bx + bw + 18, ww = Math.min(G * 1.4, this.w - wx - 16);
+                    if (ww > 36) {
+                        ctx.fillStyle = '#f7f3e8'; this.drawRoundedRect(ctx, wx, by + 2, ww, boardH - 2, 8); ctx.fill();
+                        ctx.fillStyle = p.window; this.drawRoundedRect(ctx, wx + 5, by + 7, ww - 10, boardH - 12, 5); ctx.fill();
+                        ctx.strokeStyle = 'rgba(36,87,63,0.35)'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(wx + ww / 2, by + 8); ctx.lineTo(wx + ww / 2, by + boardH - 7);
+                        ctx.moveTo(wx + 7, by + boardH / 2); ctx.lineTo(wx + ww - 7, by + boardH / 2); ctx.stroke();
+                    }
+                }
+                this.paintTiles(ctx, G, p.deskTop, p.deskAlt, '#d29358', '#aa6836', p.deskEdge, (cx, x, y, r, c) => {
+                    cx.fillStyle = 'rgba(255,236,196,0.24)'; cx.fillRect(x + Math.max(3, G * 0.055) + 8, y + Math.max(3, G * 0.055) + 7, Math.max(10, G * 0.34), 3);
+                    if ((r + c) % 3 === 0) { cx.fillStyle = p.paper; cx.fillRect(x + G * 0.58, y + G * 0.18, G * 0.22, G * 0.16); cx.fillStyle = 'rgba(74,144,226,0.38)'; cx.fillRect(x + G * 0.6, y + G * 0.24, G * 0.15, 2); }
+                });
+                overlay = boardH > 28 ? { chalk: { bx, by, bw, boardH } } : null;
+            }
+            return { canvas, key: this.getStageCacheKey(G, chapterId), overlay: overlay };
+        }
+
+        drawChapterStage(ctx, G, chapterId) {
+            const key = this.getStageCacheKey(G, chapterId);
+            if (!this.stageCache || this.stageCache.key !== key) this.stageCache = this.renderStageCache(G, chapterId);
+            const cache = this.stageCache, ov = cache.overlay;
+            ctx.drawImage(cache.canvas, 0, 0);
+            if (!ov) return;
+            if (ov.chalk) { // 教室：动态粉笔线
+                const { bx, by, bw, boardH } = ov.chalk;
+                ctx.strokeStyle = 'rgba(247,243,232,0.26)'; ctx.lineWidth = 3;
+                for (let i = 0; i < 3; i++) { const yy = by + 15 + i * Math.max(8, boardH * 0.2); ctx.beginPath(); ctx.moveTo(bx + 16, yy); ctx.lineTo(bx + bw * (0.42 + i * 0.11), yy + Math.sin(this.frame * 0.02 + i) * 2); ctx.stroke(); }
+            } else if (ov.clock) { // 考场：时钟秒针
+                const c = ov.clock, a = (this.frame * 0.03) % (Math.PI * 2);
+                ctx.strokeStyle = '#E85D5D'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + Math.sin(a) * c.r * 0.8, c.y - Math.cos(a) * c.r * 0.8); ctx.stroke();
+            } else if (ov.lamp) { // 图书馆：阅读灯暖光呼吸
+                const l = ov.lamp, glow = 0.18 + 0.1 * Math.abs(Math.sin(this.frame * 0.04));
+                ctx.fillStyle = 'rgba(246,211,101,' + glow + ')'; ctx.beginPath(); ctx.arc(l.x, l.y, G * 0.5, 0, Math.PI * 2); ctx.fill();
             }
         }
 
@@ -2024,8 +2037,8 @@
             ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, this.w, this.h);
             if (this.phase === 'td') {
                 const chapterId = (LEVELS[this.levelIdx] && LEVELS[this.levelIdx].chapterId) || '';
-                if (chapterId === 'classroom') {
-                    this.drawClassroomStage(ctx, G);
+                if (chapterId === 'classroom' || chapterId === 'playground' || chapterId === 'library' || chapterId === 'exam') {
+                    this.drawChapterStage(ctx, G, chapterId);
                 } else {
                     for (let r = 0; r < this.R; r++) for (let c = 0; c < this.C; c++) {
                         ctx.fillStyle = (r + c) % 2 === 0 ? '#38A169' : '#2F855A';
