@@ -371,6 +371,30 @@
       waves: (LEVELS.find(l => l.id === '2-1') || LEVELS[0]).waves
     });
 
+    // ==================== 研究所进阶区（通关大学部后开放；重启 deferred 进阶系统）====================
+    // advanced:true → 备战可自选 4 件文具 + 战斗中可提前上课 / 关卡内升级。纯进阶选修，不影响主线。
+    LEVELS.push({
+      id: 'r-1', chapterId: 'research', archetype: 'mixed-wave-exam', isBoss: true, advanced: true, loadoutSize: 4,
+      enemyPreviewHint: '自由配装实验：自己挑 4 件文具，善用关卡内升级与提前上课',
+      starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 7, maxWrongAnswers: 1 } },
+      reward: { type: 'badge', text: '🔬 研究员徽章' },
+      name: '研究所：自由配装实验室',
+      bg: '#134e4a', difficulty: 1.6,
+      tip: '进阶模式：自己选 4 件文具上场，战斗中可点单位升级、可提前上课。',
+      waves: (LEVELS.find(l => l.id === '4-1') || LEVELS[0]).waves
+    });
+    LEVELS.push({
+      id: 'r-2', chapterId: 'research', archetype: 'challenge', isBoss: false, advanced: true, loadoutSize: 4,
+      isChallenge: true, rule: 'speed',
+      enemyPreviewHint: '极速研究：节奏更快，配装 + 提前上课 + 技能时机一起考验',
+      starGoals: { twoStar: { minHp: 3 }, threeStar: { minHp: 5, maxWrongAnswers: 1 } },
+      reward: { type: 'badge', text: '🚀 极速研究员' },
+      name: '研究所：极速研究',
+      bg: '#0f3d3a', difficulty: 1.6,
+      tip: '进阶模式 + 极速：先控速再补输出，抓准升级与提前上课。',
+      waves: (LEVELS.find(l => l.id === '3-3') || LEVELS[0]).waves
+    });
+
     // ==================== CHILD-FRIENDLY MAINLINE (Phase A) ====================
     // 主线文具采用关卡自动解锁，不让小学生做配装选择。
     const MAINLINE_LOADOUTS = {
@@ -453,9 +477,14 @@
         nodes:[ { levelIdx:levelIndexById('3-1') }, { levelIdx:levelIndexById('3-2') }, { levelIdx:levelIndexById('3-3') }, { name:'实验课', placeholder:true } ] },
       { id:'university', name:'大学部', icon:'🎓', desc:'考场决战，综合运用学过的招式', color:'#ef4444', shadow:'#7f1d1d',
         nodes:[ { levelIdx:levelIndexById('4-1') }, { levelIdx:levelIndexById('4-2') }, { name:'毕业专题', placeholder:true }, { name:'毕业典礼', placeholder:true } ] },
-      { id:'research', name:'研究所', icon:'🔬', desc:'进阶研究区 · 即将开放', color:'#0d9488', shadow:'#134e4a', locked:true,
-        nodes:[ { name:'课外挑战：速度课堂', placeholder:true }, { name:'高阶试炼', placeholder:true } ] }
+      { id:'research', name:'研究所', icon:'🔬', desc:'进阶研究区（通关大学部后开放）：自选配装 + 进阶操作', color:'#0d9488', shadow:'#134e4a', advanced:true,
+        nodes:[ { levelIdx:levelIndexById('r-1') }, { levelIdx:levelIndexById('r-2') }, { levelIdx:levelIndexById('challenge-speed') }, { name:'更多研究', placeholder:true } ] }
     ];
+    // 研究所解锁条件：通关大学部（最后一关 campaign）。供 UI 判定。
+    function isCampaignCleared(results) {
+        const last = LEVELS[CAMPAIGN_COUNT - 1];
+        return !!(last && results && results[last.id] && (results[last.id].stars || 0) > 0);
+    }
     // 取关卡友善显示名（去掉「第N章：」前缀与「(难度)」括号）
     // 友善关卡名：去掉「第N章：」前缀与「(难度)」括号，避免「困难/炼狱」等压迫词出现在小学生面前
     function friendlyName(fullName) {
@@ -980,6 +1009,7 @@
             this.subjectsLearned = {}; this.wrongList = []; this.enemiesSeen = {};
             this.shardsEarnedThisLevel = 0; // 本关获得的知识碎片（结算展示用）
             this.challengeRule = LEVELS[idx].isChallenge ? (LEVELS[idx].rule || null) : null;
+            this.advancedMode = !!(LEVELS[idx] && LEVELS[idx].advanced); // 研究所进阶关：开放提前上课 + 关卡内升级
             this.phase = 'td'; this.naturalSunTimer = 200;
             this.startTD();
             this.callbacks.onPhaseChange('td');
@@ -1475,13 +1505,14 @@
             if (roles.has('tank')) strategies.push('铁桶怪硬：橡皮盾挡路 + 集火破甲');
             if (roles.has('boss')) strategies.push('有魔王压线：留好橡皮盾与班主任技能');
             return {
-                levelIdx: idx, id: lvl.id || ('L' + idx), name: lvl.name, enemies, strategies, isFixed: idx === 0, loadoutSize: LOADOUT_SIZE,
+                levelIdx: idx, id: lvl.id || ('L' + idx), name: lvl.name, enemies, strategies, isFixed: idx === 0, loadoutSize: lvl.loadoutSize || LOADOUT_SIZE,
                 archetype: lvl.archetype || '', hint: lvl.enemyPreviewHint || '', starGoals: lvl.starGoals || {},
                 isBoss: !!lvl.isBoss, isChallenge: !!lvl.isChallenge, chapterId: lvl.chapterId || '',
                 goal: lvl.goal || lvl.tip || '',
                 recommendedTools: lvl.recommendedTools || Object.keys(TOWERS),
                 mainlineLoadout: lvl.mainlineLoadout || Object.keys(TOWERS),
-                lessonBeat: lvl.lessonBeat || null
+                lessonBeat: lvl.lessonBeat || null,
+                advanced: !!lvl.advanced // 研究所进阶关：备战自选配装
             };
         }
 
@@ -2276,8 +2307,11 @@
                 const r = id && this.results[id];
                 if (r && r.stars > 0) { cleared++; stars += r.stars; }
             });
-            const unlocked = !world.locked && firstReal <= (this.unlockedLevel || 0);
-            return { realCount: realNodes.length, total: world.nodes.length, cleared, stars, unlocked, firstReal };
+            // 主线世界：按解锁进度；研究所（advanced）：通关大学部后开放
+            const unlocked = world.advanced
+                ? isCampaignCleared(this.results)
+                : (!world.locked && firstReal <= (this.unlockedLevel || 0));
+            return { realCount: realNodes.length, total: world.nodes.length, cleared, stars, unlocked, firstReal, advanced: !!world.advanced };
         }
 
         // ----- Phase B：学校世界地图（取代旧的直向关卡清单） -----
@@ -2331,7 +2365,8 @@
                     );
                     textWrap.appendChild(prog);
                 } else if (!world.locked) {
-                    textWrap.appendChild(this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'12px', fontWeight:'bold', marginTop:'4px' }, '先通过前一个学校就能解锁！'));
+                    textWrap.appendChild(this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'12px', fontWeight:'bold', marginTop:'4px' },
+                        world.advanced ? '🎓 通关大学部后开放（进阶选修）' : '先通过前一个学校就能解锁！'));
                 }
                 card.append(iconEl, textWrap);
                 card.appendChild(this.el('div', { fontSize:'22px', color:'rgba(255,255,255,0.85)', flexShrink:'0' }, playable ? '▸' : ''));
@@ -2396,7 +2431,8 @@
                 const isReal = node.levelIdx != null;
                 if (isReal) {
                     const lvl = LEVELS[node.levelIdx];
-                    const unlocked = node.levelIdx <= (this.unlockedLevel || 0);
+                    // 研究所（advanced）：通关大学部后所有节点开放；主线：按解锁进度
+                    const unlocked = world.advanced ? isCampaignCleared(this.results) : (node.levelIdx <= (this.unlockedLevel || 0));
                     const id = lvl.id;
                     const st = (this.results[id] && this.results[id].stars) || 0;
                     const card = this.el('button', {
@@ -2412,7 +2448,7 @@
                     const tw = this.el('div', { flex:'1', minWidth:'0' });
                     tw.append(
                         this.el('div', { color: unlocked ? '#3a2c18' : 'white', fontWeight:'900', fontSize:'17px' }, friendlyLevelName(lvl)),
-                        this.el('div', { color: unlocked ? '#6b5a3f' : 'rgba(255,255,255,0.85)', fontSize:'12px', fontWeight:'bold', lineHeight:'1.4' }, unlocked ? (lvl.goal || '') : '通过上一关就能解锁')
+                        this.el('div', { color: unlocked ? '#6b5a3f' : 'rgba(255,255,255,0.85)', fontSize:'12px', fontWeight:'bold', lineHeight:'1.4' }, unlocked ? (lvl.goal || lvl.tip || '') : (world.advanced ? '通关大学部后开放' : '通过上一关就能解锁'))
                     );
                     if (unlocked) tw.appendChild(this.el('div', { fontSize:'15px', letterSpacing:'2px', color:'#E8B84B', marginTop:'2px' }, '★★★☆☆☆'.slice(3 - st, 6 - st)));
                     card.appendChild(tw);
@@ -2638,11 +2674,42 @@
                 card.appendChild(lesson);
             }
 
+            // 研究所进阶关：自选 N 件文具（重启 deferred loadout 选择，仅进阶区）
+            const adv = !!pd.advanced;
+            const size = pd.loadoutSize || LOADOUT_SIZE;
+            if (adv) {
+                if (!Array.isArray(this.prepLoadout)) this.prepLoadout = [];
+                const box = this.el('div', { borderRadius:'12px', padding:'10px 12px' });
+                box.className = 'chalk-card';
+                box.appendChild(this.el('div', { fontWeight:'900', fontSize:'13px', color:'#7CF0E0', marginBottom:'8px' },
+                    '🔧 进阶：自选 ' + size + ' 件文具（已选 ' + this.prepLoadout.length + '/' + size + '）'));
+                const grid = this.el('div', { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'8px' });
+                Object.values(TOWERS).forEach(t => {
+                    const sel = this.prepLoadout.includes(t.id);
+                    const c = this.el('button', {
+                        display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'8px 4px', borderRadius:'10px',
+                        border:'3px solid ' + (sel ? '#34d399' : '#5e3a22'), background: sel ? '#F7F3E8' : '#c7b89e',
+                        color:'#5b4636', fontFamily:'inherit', cursor:'pointer', opacity: sel ? '1' : '0.7'
+                    });
+                    c.append(this.el('div', { fontSize:'22px' }, t.icon), this.el('div', { fontSize:'11px', fontWeight:'900' }, t.name), this.el('div', { fontSize:'10px', color:'#8a6a45' }, '☀️' + t.cost));
+                    c.onclick = () => {
+                        const i = this.prepLoadout.indexOf(t.id);
+                        if (i >= 0) this.prepLoadout.splice(i, 1);
+                        else { if (this.prepLoadout.length >= size) return; this.prepLoadout.push(t.id); }
+                        this.render();
+                    };
+                    grid.appendChild(c);
+                });
+                box.appendChild(grid);
+                card.appendChild(box);
+            }
+
             // 星星鼓励（不卡主线进度）
             card.appendChild(this.el('div', { textAlign:'center', fontSize:'13px', color:'#FDE68A', fontWeight:'bold', lineHeight:'1.5' },
                 '★★★☆☆☆'.slice(3 - bestStars, 6 - bestStars) + '　拿到 1 颗星就能前进，多拿是额外奖励～'));
 
-            // 按钮（开始永远可点；返回回到该学校）
+            // 按钮（主线开始永远可点；进阶须选满 N 件；返回回到该学校）
+            const ready = !adv || (this.prepLoadout && this.prepLoadout.length === size);
             const btnRow = this.el('div', { display:'flex', gap:'10px', marginTop:'2px' });
             btnRow.appendChild(this.btn('返回', {
                 padding:'12px 18px', borderRadius:'12px', border:'2px solid rgba(247,243,232,0.4)', background:'rgba(0,0,0,0.25)',
@@ -2651,10 +2718,13 @@
                 const wi = WORLDS.findIndex(w => w.nodes.some(n => n.levelIdx === this.prepLevelIdx));
                 if (wi >= 0 && this.onOpenWorld) this.onOpenWorld(wi); else if (this.onRestart) this.onRestart();
             }));
-            btnRow.appendChild(this.btn('开始上课 ▶', {
-                flex:'1', padding:'12px', borderRadius:'12px', border:'2px solid #34d399', background:'#10b981', color:'white',
-                fontWeight:'900', fontSize:'18px', fontFamily:'inherit', cursor:'pointer', boxShadow:'0 5px 0 #065f46'
-            }, () => { if (this.onConfirmPrep) this.onConfirmPrep(this.prepLevelIdx, pd.mainlineLoadout || Object.keys(TOWERS)); }));
+            const startBtn = this.btn(adv ? '开始研究 ▶' : '开始上课 ▶', {
+                flex:'1', padding:'12px', borderRadius:'12px', border:'2px solid ' + (ready ? '#34d399' : '#94a3b8'),
+                background: ready ? '#10b981' : '#475569', color:'white', fontWeight:'900', fontSize:'18px', fontFamily:'inherit',
+                cursor: ready ? 'pointer' : 'not-allowed', boxShadow: ready ? '0 5px 0 #065f46' : 'none'
+            }, () => { if (ready && this.onConfirmPrep) this.onConfirmPrep(this.prepLevelIdx, adv ? this.prepLoadout.slice() : (pd.mainlineLoadout || Object.keys(TOWERS))); });
+            startBtn.disabled = !ready;
+            btnRow.appendChild(startBtn);
             card.appendChild(btnRow);
 
             wrap.appendChild(card);
@@ -3333,7 +3403,7 @@
     let isLandscape = window.innerWidth > window.innerHeight;
     // ----- Phase B 世界地图 / Phase A 友善化 状态 -----
     let worldIdx = 0;
-    const advancedMode = false; // 主线小学生模式：研究所进阶系统本版不开放
+    let advancedMode = false; // 主线 false；研究所进阶关进入时设 true（开放提前上课/关卡内升级）
     let stickers = loadGameSave().stickers || {};
     let badges = loadGameSave().badges || {};
     let shards = loadGameSave().shards || 0;
@@ -3480,15 +3550,18 @@
         prepData = engine.getLevelPreview(idx);
         prepLevelIdx = idx;
         phase = 'prep';
-        ui.update({ phase, prepData, prepLevelIdx });
+        // 研究所进阶关：备战预选一组泛用文具（玩家可改）；主线无需选
+        const prepLoadout = prepData.advanced ? ['textbook', 'pencil', 'glue', 'eraser'].slice(0, prepData.loadoutSize || 4) : [];
+        ui.update({ phase, prepData, prepLevelIdx, prepLoadout });
     };
-    // intro 完成 → 进入战斗（主线一律全配文具，最低选择负担）
+    // intro/备战 完成 → 进入战斗（主线全配；研究所用自选 loadout）
     ui.onConfirmPrep = (idx, loadout) => {
         requestLandscapeMode();
         activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
+        advancedMode = !!(LEVELS[idx] && LEVELS[idx].advanced); // 研究所开放提前上课 / 关卡内升级
         const fresh = loadGameSave(); toolUpgrades = fresh.toolUpgrades || {}; // 道具栏显示升级后外观
         gameOverData = null;
-        ui.update({ activeLoadout, toolUpgrades, gameOverData });
+        ui.update({ activeLoadout, toolUpgrades, advancedMode, gameOverData });
         engine.startLevel(idx, activeLoadout);
     };
     // 兼容旧入口（直接开始指定关）
