@@ -728,7 +728,40 @@
         '英语','英语','英语','英语','英语','英语','英语',   // Yesterday ~ Sun
         '科学','科学','科学','科学','科学','科学','科学','科学','科学','科学','科学' // 水常温 ~ 企鹅
     ];
-    STATIC_QUESTIONS.forEach((q, i) => { q.subject = STATIC_SUBJECTS[i] || '常识'; });
+    // 概念型快速原创题（GDD §0.1.1：3-8 秒概念检查、原创非抄题；含 inline subject）
+    const EXTRA_QUESTIONS = [
+        // 数学
+        { q: "一个正方形有几条边？", a: [{t:"4",ok:1},{t:"3",ok:0},{t:"5",ok:0}], subject: '数学' },
+        { q: "12 是双数还是单数？", a: [{t:"双数",ok:1},{t:"单数",ok:0},{t:"都不是",ok:0}], subject: '数学' },
+        { q: "半小时是多少分钟？", a: [{t:"30",ok:1},{t:"15",ok:0},{t:"60",ok:0}], subject: '数学' },
+        { q: "1 元等于多少角？", a: [{t:"10",ok:1},{t:"100",ok:0},{t:"5",ok:0}], subject: '数学' },
+        { q: "三角形有几个角？", a: [{t:"3",ok:1},{t:"4",ok:0},{t:"2",ok:0}], subject: '数学' },
+        { q: "10 的一半是？", a: [{t:"5",ok:1},{t:"2",ok:0},{t:"20",ok:0}], subject: '数学' },
+        // 语文
+        { q: "「大」的反义词是？", a: [{t:"小",ok:1},{t:"多",ok:0},{t:"高",ok:0}], subject: '语文' },
+        { q: "「上」的反义词是？", a: [{t:"下",ok:1},{t:"左",ok:0},{t:"前",ok:0}], subject: '语文' },
+        { q: "「快」的反义词是？", a: [{t:"慢",ok:1},{t:"高",ok:0},{t:"远",ok:0}], subject: '语文' },
+        { q: "「明」字由哪两个字组成？", a: [{t:"日和月",ok:1},{t:"目和月",ok:0},{t:"日和目",ok:0}], subject: '语文' },
+        { q: "「开」的反义词是？", a: [{t:"关",ok:1},{t:"走",ok:0},{t:"停",ok:0}], subject: '语文' },
+        { q: "「白」的反义词是？", a: [{t:"黑",ok:1},{t:"红",ok:0},{t:"蓝",ok:0}], subject: '语文' },
+        // 英语
+        { q: "Cat 的中文是？", a: [{t:"猫",ok:1},{t:"狗",ok:0},{t:"鸟",ok:0}], subject: '英语' },
+        { q: "数字 3 的英文是？", a: [{t:"three",ok:1},{t:"tree",ok:0},{t:"free",ok:0}], subject: '英语' },
+        { q: "Big 的反义词是？", a: [{t:"small",ok:1},{t:"tall",ok:0},{t:"long",ok:0}], subject: '英语' },
+        { q: "Dog 的复数是？", a: [{t:"dogs",ok:1},{t:"doges",ok:0},{t:"dog",ok:0}], subject: '英语' },
+        { q: "Good morning 用在？", a: [{t:"早上",ok:1},{t:"晚上",ok:0},{t:"中午",ok:0}], subject: '英语' },
+        { q: "颜色 red 的中文是？", a: [{t:"红色",ok:1},{t:"蓝色",ok:0},{t:"绿色",ok:0}], subject: '英语' },
+        // 科学
+        { q: "蜜蜂采花酿出什么？", a: [{t:"蜂蜜",ok:1},{t:"牛奶",ok:0},{t:"面包",ok:0}], subject: '科学' },
+        { q: "植物生长需要？", a: [{t:"阳光和水",ok:1},{t:"只要黑暗",ok:0},{t:"只要石头",ok:0}], subject: '科学' },
+        { q: "影子是怎么形成的？", a: [{t:"光被挡住",ok:1},{t:"风吹来的",ok:0},{t:"水变的",ok:0}], subject: '科学' },
+        { q: "一年有几个季节？", a: [{t:"4",ok:1},{t:"3",ok:0},{t:"5",ok:0}], subject: '科学' },
+        { q: "鱼用什么呼吸？", a: [{t:"鳃",ok:1},{t:"肺",ok:0},{t:"鼻子",ok:0}], subject: '科学' },
+        { q: "下雨前天空通常？", a: [{t:"乌云密布",ok:1},{t:"万里无云",ok:0},{t:"满天星星",ok:0}], subject: '科学' }
+    ];
+    STATIC_QUESTIONS.push(...EXTRA_QUESTIONS);
+    // 既有题用平行 STATIC_SUBJECTS 对齐；新题自带 inline subject（优先采用）
+    STATIC_QUESTIONS.forEach((q, i) => { q.subject = q.subject || STATIC_SUBJECTS[i] || '常识'; });
 
     const MASTER_QUESTIONS = [...STATIC_QUESTIONS, ...MATH_POOL];
     const DEFAULT_VISUAL = { type: "text", title: "提示", content: ["仔细审题，找出关键词。", "相信自己，下次一定行！"] };
