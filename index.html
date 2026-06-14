@@ -226,11 +226,13 @@
         name: "第二章：操场激战 (中等)",
         bg: "#c05621", difficulty: 1.25,
         tip: "看到迟到怪就先铺胶水，它冲刺前被黏住会安全很多！",
+        // 平衡 2026-06-14：作为初中部「开场关」，移除原 boss（boss 留给本世界压轴 2-3）并减量，
+        // 让世界开场不再是前一关的 2 倍陡坡（effHP ~8500→~5100）。
         waves: [
             { groups: [{ e: 'slime', n: 5, interval: 100, preDelay: 50 }, { e: 'bat', n: 3, interval: 150, preDelay: 150 }] },
             { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 50 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
-            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 100 }, { e: 'slime', n: 12, interval: 60, preDelay: 50 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 200 }, { e: 'tank', n: 2, interval: 300, preDelay: 100 }] }
+            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'slime', n: 8, interval: 70, preDelay: 50 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 220, preDelay: 100 }, { e: 'bat', n: 4, interval: 110, preDelay: 100 }] }
         ]
       },
       {
@@ -269,11 +271,13 @@
         name: "第三章：期末大考 (困难)",
         bg: "#4c1d95", difficulty: 1.45,
         tip: "作业山很耐打，先用橡皮挡路，再用铅笔和喷壶一起处理。",
+        // 平衡 2026-06-14：作为高中部「开场关」，2 boss→1 boss、减坦克。原 effHP ~15182（且此关 loadout 无班主任炸弹）
+        // 是 7th 关的巨大墙；调到 ~8900，压轴留给世界后段（3-3）。
         waves: [
             { groups: [{ e: 'slime', n: 6, interval: 70, preDelay: 50 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
-            { groups: [{ e: 'tank', n: 3, interval: 140, preDelay: 50 }, { e: 'bat', n: 6, interval: 70, preDelay: 100 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 100 }, { e: 'tank', n: 4, interval: 160, preDelay: 100 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 300, preDelay: 200 }, { e: 'tank', n: 4, interval: 170, preDelay: 100 }, { e: 'slime', n: 12, interval: 45, preDelay: 50 }] }
+            { groups: [{ e: 'tank', n: 2, interval: 140, preDelay: 50 }, { e: 'bat', n: 6, interval: 70, preDelay: 100 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 300, preDelay: 200 }, { e: 'tank', n: 2, interval: 170, preDelay: 100 }, { e: 'slime', n: 6, interval: 60, preDelay: 50 }] }
         ]
       },
       {
