@@ -771,6 +771,64 @@
       get(id) { return this.images[id]; }
     };
 
+    // ==================== AUDIO + VOICE (P0 多感官回馈，纯前端、无素材) ====================
+    // 全程 feature-detect + try/catch：无 AudioContext / SpeechSynthesis（旧浏览器、headless）也不报错。
+    const SETTINGS_KEY = 'xueba_pvz_settings';
+    function loadSettings() {
+        try { const r = localStorage.getItem(SETTINGS_KEY); if (r) { const d = JSON.parse(r); return { sound: d.sound !== false, voice: d.voice !== false }; } } catch (e) {}
+        return { sound: true, voice: true };
+    }
+    function saveSettings(s) { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {} }
+
+    const SOUND = {
+        ctx: null, enabled: true,
+        init() {
+            if (this.ctx) return;
+            try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); } catch (e) {}
+        },
+        arm() { this.init(); try { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); } catch (e) {} },
+        blip(freq, dur, type, vol) {
+            if (!this.enabled || !this.ctx) return;
+            try {
+                const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+                o.type = type || 'sine'; o.frequency.value = freq;
+                g.gain.setValueAtTime(vol || 0.16, t);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
+                o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + (dur || 0.12) + 0.02);
+            } catch (e) {}
+        },
+        seq(notes, type, gap, vol) { notes.forEach((f, i) => setTimeout(() => this.blip(f, (gap || 90) / 1000 + 0.04, type, vol), i * (gap || 90))); },
+        play(name) {
+            if (!this.enabled || !this.ctx) return;
+            switch (name) {
+                case 'place':   this.blip(330, 0.1, 'triangle', 0.18); break;
+                case 'star':    this.seq([880, 1180], 'sine', 90, 0.16); break;
+                case 'correct': this.seq([523, 659, 784], 'sine', 95, 0.18); break;
+                case 'wrong':   this.seq([300, 240], 'sine', 130, 0.13); break;
+                case 'reward':  this.seq([659, 880, 1046], 'triangle', 85, 0.17); break;
+                case 'clear':   this.seq([523, 659, 784, 1046], 'sine', 120, 0.18); break;
+                case 'upgrade': this.seq([440, 660, 990], 'triangle', 75, 0.18); break;
+                case 'lose':    this.seq([260, 200, 150], 'sine', 170, 0.15); break;
+                case 'tap':     this.blip(520, 0.05, 'sine', 0.08); break;
+            }
+        }
+    };
+    const VOICE = {
+        enabled: true,
+        speak(text) {
+            if (!this.enabled || !text) return;
+            try {
+                if (!('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(String(text));
+                u.lang = 'zh-CN'; u.rate = 0.95; u.pitch = 1.05;
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        },
+        stop() { try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {} }
+    };
+    (function initAV(){ const s = loadSettings(); SOUND.enabled = s.sound; VOICE.enabled = s.voice; })();
+
     // ==================== GAME ENGINE ====================
     class GameEngine {
         constructor(callbacks) {
@@ -1022,6 +1080,7 @@
                 if (o.type === 'star') {
                     if ((cx-o.x)**2 + (cy-o.y)**2 < 55**2) {
                         this.objs.splice(i, 1);
+                        SOUND.play('star');
                         this.openCombatQuiz();
                         return true;
                     }
@@ -1062,6 +1121,7 @@
                         if (permUp) { tw.upgradedPermanent = true; tw.up = permUp; permUp.apply(tw); }
                         this.objs.push(tw);
                         this.towerCooldowns[uiSelected] = Math.round(tData.recharge * ((permUp && permUp.recharge) || 1));
+                        SOUND.play('place');
                         this.spawnParticles(cx, cy, '#fff', 8);
                         this.floatText(isFree ? '免费!' : `-${tData.cost}`, cx, cy, isFree ? '#48bb78' : '#fbbf24');
                         this.updateStats();
@@ -1184,6 +1244,7 @@
             if (!correct) this.wrongAnswers++; // Phase 4：星级评定计数
             // Phase C：学科统计（答对）+ 错题收集（答错，本关 session 内，去重、限量）
             const cq = this.currentQuestionObj;
+            SOUND.play(correct ? 'correct' : 'wrong');
             if (correct) {
                 const subj = (cq && cq.subject) || '常识';
                 this.subjectsLearned[subj] = (this.subjectsLearned[subj] || 0) + 1;
@@ -1201,10 +1262,9 @@
                     this.chargeTeacher(35); // 答对题：班主任技能槽大幅充能
                     this.callbacks.onRewardPicker(this.rollRewards());
                 } else {
-                    const penalty = 30 + Math.round(((LEVELS[this.levelIdx].difficulty || 1) - 1) * 40);
-                    this.mp = Math.max(0, this.mp - penalty);
-                    const tip = (this.currentQuestionObj && this.currentQuestionObj.visual && this.currentQuestionObj.visual.content && this.currentQuestionObj.visual.content[0]) || '仔细审题，下次一定行！';
-                    this.callbacks.onToast('答错 -' + penalty + ' 能量 ｜ ' + tip);
+                    // 儿童友善：答错不扣能量、不惩罚，只给鼓励 + 简短解析（研究 P0：只前进不惩罚）
+                    const tip = (this.currentQuestionObj && this.currentQuestionObj.visual && this.currentQuestionObj.visual.content && this.currentQuestionObj.visual.content[0]) || '没关系，下次一定行！';
+                    this.callbacks.onToast('没关系～ ' + tip);
                     this.combatPaused = false;
                     this.updateStats();
                 }
@@ -1338,7 +1398,7 @@
                 if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) this.syncSave({ unlockedLevel: this.levelIdx + 1 });
                 else this.syncSave();
                 this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign }, result));
-                this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete');
+                this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete'); SOUND.play('clear');
                 this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);
             } else { this.startTD(); }
         }
@@ -1375,6 +1435,7 @@
         }
 
         applyReward(id) {
+            SOUND.play('reward');
             if (id === 'energy') {
                 this.mp += 150; this.floatText('+150 能量', this.w/2, this.h/2, '#F6D365', 70, 34);
             } else if (id === 'focus') {
@@ -1529,7 +1590,7 @@
             }
             if (this.hp <= 0 && this.phase !== 'rescue_quiz') {
                 this.phase = 'over'; this.callbacks.onPhaseChange('over');
-                this.callbacks.onGameOver(false, "游戏结束", "生命值耗尽！"); return;
+                SOUND.play('lose'); this.callbacks.onGameOver(false, "游戏结束", "生命值耗尽！"); return;
             }
             this.frame++;
             if (this.phase === 'td') {
@@ -2157,6 +2218,8 @@
             this.onOpenCollection = null; // 打开收藏馆
             this.onOpenWorkshop = null;   // 打开装备工坊
             this.onUpgradeTool = null;    // 在工坊升级某文具
+            this.soundOn = true; this.voiceOn = true; // 音效 / 语音开关（菜单显示用）
+            this.onToggleSound = null; this.onToggleVoice = null;
             this.onOpenPrep = null;     // 进入关卡 intro
             this.onConfirmPrep = null;  // intro 完成 → 开始战斗
             this.onEarlyCall = null;    // 提前上课
@@ -2264,8 +2327,15 @@
             inner.appendChild(list);
 
             // 存档 + 全屏（放底部，对小朋友不抢焦点）
-            const saveRow = this.el('div', { width:'100%', display:'flex', gap:'8px', marginTop:'16px' });
             const saveBtnStyle = { flex:'1', padding:'9px 12px', borderRadius:'999px', border:'1px solid rgba(255,255,255,0.3)', color:'rgba(255,255,255,0.85)', fontSize:'13px', background:'rgba(255,255,255,0.08)', cursor:'pointer', fontFamily:'inherit' };
+            // 音效 / 语音 开关
+            const toggleRow = this.el('div', { width:'100%', display:'flex', gap:'8px', marginTop:'16px' });
+            toggleRow.append(
+                this.btn((this.soundOn ? '🔊' : '🔇') + ' 音效', { ...saveBtnStyle }, () => this.onToggleSound && this.onToggleSound()),
+                this.btn((this.voiceOn ? '🗣️' : '🔇') + ' 朗读', { ...saveBtnStyle }, () => this.onToggleVoice && this.onToggleVoice())
+            );
+            inner.appendChild(toggleRow);
+            const saveRow = this.el('div', { width:'100%', display:'flex', gap:'8px', marginTop:'8px' });
             saveRow.append(
                 this.btn('📤 导出存档', saveBtnStyle, () => exportSave()),
                 this.btn('📥 导入存档', saveBtnStyle, () => importSave()),
@@ -3278,6 +3348,7 @@
         onQuizOpen: (q, a, isRescue, canSOS, canHint, isCombat) => {
             quizData = { q, a, hint: false, isRescue, canSOS, canHint, isCombat };
             ui.update({ quizData });
+            VOICE.speak(q); // 朗读题目（小学生友善；feature-detect 安全）
         },
         onExplanation: (data) => {
             explanationData = data;
@@ -3356,6 +3427,19 @@
         phase = 'collection';
         ui.update({ phase, stickers, badges });
     };
+    // 音效 / 语音 开关（持久化到独立 settings，不动存档 schema）
+    ui.onToggleSound = () => {
+        SOUND.enabled = !SOUND.enabled; SOUND.arm();
+        saveSettings({ sound: SOUND.enabled, voice: VOICE.enabled });
+        if (SOUND.enabled) SOUND.play('tap');
+        ui.update({ soundOn: SOUND.enabled });
+    };
+    ui.onToggleVoice = () => {
+        VOICE.enabled = !VOICE.enabled;
+        saveSettings({ sound: SOUND.enabled, voice: VOICE.enabled });
+        if (VOICE.enabled) VOICE.speak('语音开启'); else VOICE.stop();
+        ui.update({ voiceOn: VOICE.enabled });
+    };
     // 装备工坊：打开（读最新碎片/升级）
     ui.onOpenWorkshop = () => {
         const fresh = loadGameSave();
@@ -3375,6 +3459,7 @@
         writeGameSave(save);
         engine.save = save;                              // 同步引擎，下一关即生效
         shards = save.shards; toolUpgrades = save.toolUpgrades;
+        SOUND.play('upgrade');
         ui.update({ shards, toolUpgrades });            // 仍在 workshop，刷新即可
     };
     // Phase A：进入关卡友善 intro（不需选 loadout，开战给全部文具）
@@ -3443,12 +3528,15 @@
     };
 
     // 启动时把存档进度（解锁关卡 + 星级 + 收集）推到选单，确保返回玩家正确显示
-    ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, advancedMode });
+    ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, advancedMode, soundOn: SOUND.enabled, voiceOn: VOICE.enabled });
 
     // Input handling
     function handleInput(type, x, y) {
+        if (type === 'start') SOUND.arm(); // 首次手势解锁 AudioContext（浏览器 autoplay 政策）
         engine.handleInput(type, x, y);
     }
+    // 菜单等 DOM 按钮的点击也解锁音频
+    document.addEventListener('pointerdown', () => SOUND.arm(), { once: true });
 
     canvas.addEventListener('mousedown', e => handleInput('start', e.clientX, e.clientY));
     canvas.addEventListener('mousemove', e => handleInput('move', e.clientX, e.clientY));
