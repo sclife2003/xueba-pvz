@@ -456,7 +456,7 @@
             { t: String(dist1), ok: 0 },
             { t: String(dist2), ok: 0 }
         ].sort(() => Math.random() - 0.5);
-        return { q, a: answers, visual: { type: "math", title: "快速计算", content: ["细心一点", "算得准比算得快重要！"] } };
+        return { q, a: answers, subject: '数学', visual: { type: "math", title: "快速计算", content: ["细心一点", "算得准比算得快重要！"] } };
     };
 
     const MATH_POOL = Array.from({ length: 150 }, generateMathQuestion);
@@ -496,6 +496,16 @@
         { q: "月亮本身发光吗？", a: [{t:"不发光",ok:1},{t:"发光",ok:0},{t:"有时发光",ok:0}] },
         { q: "企鹅生活在哪里？", a: [{t:"南极",ok:1},{t:"北极",ok:0},{t:"赤道",ok:0}] }
     ];
+
+    // Phase C：替知识题标学科（与 STATIC_QUESTIONS 顺序对齐；用于「今天我学会了」分类统计）
+    const STATIC_SUBJECTS = [
+        '数学','数学','数学','数学','数学','数学','数学',   // 125x8 ~ 正方体
+        '语文','语文','语文','语文','语文','语文','语文',   // 横看成岭 ~ 三人行
+        '语文',                                             // 四大发明（传统文化常识，归语文不归科学）
+        '英语','英语','英语','英语','英语','英语','英语',   // Yesterday ~ Sun
+        '科学','科学','科学','科学','科学','科学','科学','科学','科学','科学','科学' // 水常温 ~ 企鹅
+    ];
+    STATIC_QUESTIONS.forEach((q, i) => { q.subject = STATIC_SUBJECTS[i] || '常识'; });
 
     const MASTER_QUESTIONS = [...STATIC_QUESTIONS, ...MATH_POOL];
     const DEFAULT_VISUAL = { type: "text", title: "提示", content: ["仔细审题，找出关键词。", "相信自己，下次一定行！"] };
@@ -712,6 +722,8 @@
             this.teacherCharge = 0; this.teacherReady = false; this.freezeTimer = 0; this.clearField();
             // Phase 4：重置星级计数与 Boss/挑战状态
             this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
+            // Phase C：本关学科统计 + 本关错题（错题仅本关、不存档）
+            this.subjectsLearned = {}; this.wrongList = []; this.enemiesSeen = {};
             this.challengeRule = LEVELS[idx].isChallenge ? (LEVELS[idx].rule || null) : null;
             this.phase = 'td'; this.naturalSunTimer = 200;
             this.startTD();
@@ -962,6 +974,18 @@
         resolveQuiz(correct) {
             this.questionsAnswered++;
             if (!correct) this.wrongAnswers++; // Phase 4：星级评定计数
+            // Phase C：学科统计（答对）+ 错题收集（答错，本关 session 内，去重、限量）
+            const cq = this.currentQuestionObj;
+            if (correct) {
+                const subj = (cq && cq.subject) || '常识';
+                this.subjectsLearned[subj] = (this.subjectsLearned[subj] || 0) + 1;
+            } else if (cq) {
+                const correctAns = ((cq.a || []).find(o => o.ok === 1) || {}).t || '';
+                const exp = (cq.visual && cq.visual.content && cq.visual.content.join('　')) || '仔细审题，下次一定行！';
+                if (!this.wrongList.some(w => w.q === cq.q) && this.wrongList.length < 8) {
+                    this.wrongList.push({ q: cq.q, ans: correctAns, exp });
+                }
+            }
             if (this.combatPaused) {
                 // 战斗答题：答对 → 三选一奖励（战场维持暂停，待选奖励）；答错 → 扣少量能量 + 简短解析，立即恢复
                 if (correct) {
@@ -1001,6 +1025,17 @@
             }
         }
 
+        // Phase C：敌人贴纸「遇到即收集」— 敌人首次出现就写进收藏（每种只写一次盘，存档保持 ASCII）
+        collectEnemySticker(id) {
+            if (!id || id === 'elf') return; // 知识精灵是友方能量单位，不算敌人贴纸
+            if (this.enemiesSeen && this.enemiesSeen[id]) return;
+            if (!this.enemiesSeen) this.enemiesSeen = {};
+            this.enemiesSeen[id] = true;
+            if (!this.save.stickers) this.save.stickers = {};
+            const key = 'enemy:' + id;
+            if (!this.save.stickers[key]) { this.save.stickers[key] = true; writeGameSave(this.save); }
+        }
+
         // Phase 4：结算星级并保存最佳成绩
         computeAndSaveStars() {
             const lvl = LEVELS[this.levelIdx];
@@ -1027,12 +1062,21 @@
             if (lvl.reward && lvl.reward.type === 'badge' && lvl.reward.text && !this.save.badges[id]) {
                 this.save.badges[id] = true; gotBadge = lvl.reward.text; // 存 presence 旗标即可；显示文字从 LEVELS reward 取，存档保持 ASCII
             }
+            // Phase C：世界完成徽章 — 该关所属世界的所有真实关卡都已通关
+            let gotWorldBadge = '';
+            const world = WORLDS.find(w => !w.locked && w.nodes.some(n => n.levelIdx === this.levelIdx));
+            if (world) {
+                const realNodes = world.nodes.filter(n => n.levelIdx != null);
+                const allCleared = realNodes.every(n => { const lid = LEVELS[n.levelIdx] && LEVELS[n.levelIdx].id; const rr = lid && this.save.results[lid]; return rr && rr.stars > 0; });
+                const wkey = 'world:' + world.id;
+                if (allCleared && !this.save.badges[wkey]) { this.save.badges[wkey] = true; gotWorldBadge = world.name; }
+            }
             writeGameSave(this.save);
             const tags = [];
             if (wrong === 0) tags.push('零失误');
             if (hp >= HP_CAP) tags.push('完美防守');
             const stickerText = isFirstSticker ? ('🏅 收集到「' + friendlyLevelName(lvl) + '」贴纸！') : '';
-            return { levelIdx: this.levelIdx, id, stars, hp, wrong, isNewBest, reward: lvl.reward || null, tags, isChallenge: !!lvl.isChallenge, name: lvl.name, stickerText, gotBadge };
+            return { levelIdx: this.levelIdx, id, stars, hp, wrong, isNewBest, reward: lvl.reward || null, tags, isChallenge: !!lvl.isChallenge, name: lvl.name, stickerText, gotBadge, gotWorldBadge, subjectsLearned: this.subjectsLearned || {}, wrongList: this.wrongList || [] };
         }
 
         nextLevel() {
@@ -1287,6 +1331,7 @@
                         const difficulty = LEVELS[this.levelIdx].difficulty || 1.0;
                         const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2) * (this.challengeRule === 'speed' ? 1.2 : 1), dmg = eDef.dmg * difficulty;
                         this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
+                        this.collectEnemySticker(grp.e); // Phase C：遇到即收集敌人贴纸
                         this.spawnState.mobsLeftInGroup--; this.spawnState.timer = grp.interval;
                         if (this.spawnState.mobsLeftInGroup <= 0) {
                             this.spawnState.groupIdx++;
@@ -1643,6 +1688,7 @@
             this.onExplanationDismiss = null;
             this.onRewardPick = null;
             this.onOpenWorld = null;    // 点世界 → 展开该世界关卡节点
+            this.onOpenCollection = null; // 打开收藏馆
             this.onOpenPrep = null;     // 进入关卡 intro
             this.onConfirmPrep = null;  // intro 完成 → 开始战斗
             this.onEarlyCall = null;    // 提前上课
@@ -1703,7 +1749,13 @@
 
             inner.appendChild(this.el('div', { fontSize:'52px', textAlign:'center', animation:'bounce 1s infinite' }, '🎓'));
             inner.appendChild(this.el('h1', { fontSize:'32px', fontWeight:'900', background:'linear-gradient(to right, #fde68a, #f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', margin:'2px 0', textAlign:'center', letterSpacing:'-1px' }, '学霸校园大冒险'));
-            inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.78)', fontSize:'14px', fontWeight:'bold', marginBottom:'14px', textAlign:'center' }, '选一个学校，开始你的学习冒险吧！'));
+            inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.78)', fontSize:'14px', fontWeight:'bold', marginBottom:'12px', textAlign:'center' }, '选一个学校，开始你的学习冒险吧！'));
+
+            // Phase C：收藏馆入口
+            inner.appendChild(this.btn('🏅 我的收藏馆', {
+                width:'100%', padding:'11px', borderRadius:'14px', border:'2px solid #fbbf24', background:'rgba(251,191,36,0.18)',
+                color:'#fde68a', fontWeight:'900', fontSize:'16px', fontFamily:'inherit', cursor:'pointer', marginBottom:'14px'
+            }, () => this.onOpenCollection && this.onOpenCollection()));
 
             const list = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'12px' });
             WORLDS.forEach((world, wi) => {
@@ -1825,6 +1877,72 @@
                 }
             });
             inner.appendChild(nodeWrap);
+            wrap.appendChild(inner);
+            return wrap;
+        }
+
+        // ----- Phase C：收藏馆（关卡贴纸 / 敌人贴纸 / 世界徽章，自动收集，已得彩色、未得灰底） -----
+        renderCollection() {
+            if (this.phase !== 'collection') return null;
+            const stickers = this.stickers || {};
+            const badges = this.badges || {};
+            const wrap = this.el('div', {
+                position:'absolute', inset:'0', zIndex:'56', overflowY:'auto', overflowX:'hidden', pointerEvents:'auto',
+                background:'linear-gradient(135deg, #312e81 0%, #581c87 50%, #1e293b 100%)',
+                display:'flex', justifyContent:'center', boxSizing:'border-box',
+                padding:'calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))'
+            });
+            wrap.className = 'hide-scrollbar';
+            const inner = this.el('div', { width:'100%', maxWidth:'520px', margin:'auto', display:'flex', flexDirection:'column', gap:'12px' });
+
+            // 收集总进度
+            let total = 0, got = 0;
+            const tally = (have) => { total++; if (have) got++; };
+            const campaign = []; for (let i = 0; i < CAMPAIGN_COUNT; i++) campaign.push(i);
+            const enemyIds = Object.keys(ENEMIES).filter(id => id !== 'elf'); // 排除友方知识精灵
+            campaign.forEach(i => tally(!!stickers[LEVELS[i].id]));
+            enemyIds.forEach(id => tally(!!stickers['enemy:' + id]));
+            WORLDS.filter(w => !w.locked).forEach(w => tally(!!badges['world:' + w.id]));
+
+            const head = this.el('div', { display:'flex', alignItems:'center', gap:'12px' });
+            head.appendChild(this.btn('‹ 地图', {
+                padding:'8px 14px', borderRadius:'999px', border:'2px solid rgba(255,255,255,0.35)', background:'rgba(0,0,0,0.25)',
+                color:'white', fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer', flexShrink:'0'
+            }, () => this.onRestart && this.onRestart()));
+            const ht = this.el('div', { display:'flex', flexDirection:'column' });
+            ht.append(
+                this.el('div', { color:'white', fontWeight:'900', fontSize:'24px' }, '🏅 我的收藏馆'),
+                this.el('div', { color:'#fde68a', fontSize:'13px', fontWeight:'900' }, '已收集 ' + got + ' / ' + total)
+            );
+            head.appendChild(ht);
+            inner.appendChild(head);
+
+            // 通用区块工厂：items = [{have, label, color}]
+            const section = (title, items) => {
+                const sec = this.el('div', { background:'rgba(255,255,255,0.06)', borderRadius:'16px', padding:'12px' });
+                sec.appendChild(this.el('div', { color:'#fde68a', fontWeight:'900', fontSize:'15px', marginBottom:'8px' }, title));
+                const grid = this.el('div', { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(86px, 1fr))', gap:'8px' });
+                items.forEach(it => {
+                    const card = this.el('div', {
+                        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'4px', padding:'10px 4px', borderRadius:'12px',
+                        border:'2px solid ' + (it.have ? '#F6D365' : 'rgba(255,255,255,0.12)'),
+                        background: it.have ? 'rgba(246,211,101,0.16)' : 'rgba(0,0,0,0.22)', opacity: it.have ? '1' : '0.55', minHeight:'72px'
+                    });
+                    card.append(
+                        this.el('div', { width:'30px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', background: it.have ? (it.color || '#F6D365') : 'rgba(255,255,255,0.15)' }, it.have ? (it.emoji || '★') : '❓'),
+                        this.el('div', { color: it.have ? 'white' : 'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:'900', textAlign:'center', lineHeight:'1.25' }, it.have ? it.label : '未收集')
+                    );
+                    grid.appendChild(card);
+                });
+                sec.appendChild(grid);
+                return sec;
+            };
+
+            inner.appendChild(section('🎒 关卡贴纸', campaign.map(i => ({ have: !!stickers[LEVELS[i].id], label: friendlyLevelName(LEVELS[i]), color:'#4A90E2', emoji:'🎒' }))));
+            inner.appendChild(section('👾 敌人贴纸', enemyIds.map(id => ({ have: !!stickers['enemy:' + id], label: ENEMIES[id].name, color: ENEMIES[id].color, emoji:'👾' }))));
+            inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, emoji: w.icon }))));
+
+            inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', marginTop:'2px' }, '通关、遇到新朋友、完成整座学校，就能收集更多贴纸喔！'));
             wrap.appendChild(inner);
             return wrap;
         }
@@ -2376,7 +2494,8 @@
             if (this.phase !== 'level_complete') return null;
             const r = this.levelResult || { stars: 1, tags: [] };
             const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.9)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px', zIndex:'50', pointerEvents:'auto' });
-            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'26px', maxWidth:'400px', width:'100%', textAlign:'center', borderBottom:'8px solid #a7f3d0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', boxSizing:'border-box' });
+            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'24px', maxWidth:'400px', width:'100%', maxHeight:'calc(100% - 8px)', overflowY:'auto', textAlign:'center', borderBottom:'8px solid #a7f3d0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', boxSizing:'border-box' });
+            box.className = 'hide-scrollbar';
 
             box.appendChild(this.el('h2', { fontSize:'28px', fontWeight:'900', color:'#10b981', marginBottom:'4px' },
                 r.isLastCampaign ? '🎓 全部通关！' : (r.isChallenge ? '⚡ 挑战完成！' : '章节完成！')));
@@ -2399,7 +2518,36 @@
             box.appendChild(this.el('div', { color:'#64748b', fontSize:'14px', margin:'6px 0 4px' },
                 '剩余生命 ❤️' + (r.hp != null ? r.hp : '-') + '　答错 ' + (r.wrong != null ? r.wrong : '-')));
             if (r.reward && r.reward.text) box.appendChild(this.el('div', { color:'#0f766e', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '🎁 ' + r.reward.text));
-            if (r.stickerText) box.appendChild(this.el('div', { color:'#9333ea', fontWeight:'900', fontSize:'14px', marginBottom:'8px' }, r.stickerText));
+            if (r.stickerText) box.appendChild(this.el('div', { color:'#9333ea', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, r.stickerText));
+            if (r.gotWorldBadge) box.appendChild(this.el('div', { color:'#b45309', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '🏆 解锁世界徽章：' + r.gotWorldBadge + '！'));
+
+            // Phase C：今天我学会了（学科分类统计）
+            const SUBJ_META = { '数学':'➗ 数学', '语文':'📖 语文', '英语':'🔤 英语', '科学':'🔬 科学', '常识':'💡 常识' };
+            const subj = r.subjectsLearned || {};
+            const subjKeys = Object.keys(subj).filter(k => subj[k] > 0);
+            if (subjKeys.length) {
+                const lbox = this.el('div', { background:'#ecfdf5', border:'1px solid #a7f3d0', borderRadius:'14px', padding:'10px 12px', margin:'8px 0' });
+                lbox.appendChild(this.el('div', { color:'#047857', fontWeight:'900', fontSize:'14px', marginBottom:'6px' }, '📚 今天我学会了'));
+                const chips = this.el('div', { display:'flex', flexWrap:'wrap', gap:'6px', justifyContent:'center' });
+                subjKeys.forEach(k => chips.appendChild(this.el('span', { fontSize:'13px', fontWeight:'900', color:'#065f46', background:'#d1fae5', borderRadius:'999px', padding:'3px 12px' }, (SUBJ_META[k] || ('💡 ' + k)) + ' ×' + subj[k])));
+                lbox.appendChild(chips);
+                box.appendChild(lbox);
+            }
+
+            // Phase C：本关错题回顾卡（仅本关、不存档；教学语气、不惩罚）
+            const wrongs = r.wrongList || [];
+            if (wrongs.length) {
+                const wbox = this.el('div', { background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:'14px', padding:'10px 12px', margin:'4px 0 8px', textAlign:'left' });
+                wbox.appendChild(this.el('div', { color:'#c2410c', fontWeight:'900', fontSize:'14px', marginBottom:'6px', textAlign:'center' }, '📝 这些题再看一眼就懂啦'));
+                wrongs.forEach(w => {
+                    const card = this.el('div', { background:'white', border:'1px solid #fde68a', borderRadius:'10px', padding:'8px 10px', marginBottom:'6px' });
+                    card.appendChild(this.el('div', { color:'#1c1917', fontWeight:'900', fontSize:'13px', lineHeight:'1.4' }, '❓ ' + w.q));
+                    card.appendChild(this.el('div', { color:'#047857', fontWeight:'900', fontSize:'13px', marginTop:'2px' }, '✅ 正解：' + w.ans));
+                    if (w.exp) card.appendChild(this.el('div', { color:'#78716c', fontSize:'12px', marginTop:'2px', lineHeight:'1.5' }, '💡 ' + w.exp));
+                    wbox.appendChild(card);
+                });
+                box.appendChild(wbox);
+            }
 
             // 按钮
             const btnRow = this.el('div', { display:'flex', gap:'10px', marginTop:'14px' });
@@ -2456,6 +2604,12 @@
             if (this.phase === 'world') {
                 const w = this.renderWorld();
                 if (w) this.root.appendChild(w);
+                return;
+            }
+
+            if (this.phase === 'collection') {
+                const c = this.renderCollection();
+                if (c) this.root.appendChild(c);
                 return;
             }
 
@@ -2631,6 +2785,13 @@
         phase = 'world';
         ui.update({ phase, worldIdx });
     };
+    // Phase C：打开收藏馆（读最新存档，含战斗中收集到的敌人贴纸）
+    ui.onOpenCollection = () => {
+        const fresh = loadGameSave();
+        stickers = fresh.stickers || stickers; badges = fresh.badges || badges;
+        phase = 'collection';
+        ui.update({ phase, stickers, badges });
+    };
     // Phase A：进入关卡友善 intro（不需选 loadout，开战给全部文具）
     ui.onOpenPrep = (idx) => {
         prepData = engine.getLevelPreview(idx);
@@ -2658,9 +2819,13 @@
     ui.onTeacherSkill = () => engine.releaseTeacherSkill();
     ui.onUpgrade = () => engine.upgradeSelectedField();
     ui.onRestart = () => {
+        // 回主选单：重新同步存档（含战斗中/失败关收集到的贴纸、最新解锁与星级）
+        const fresh = loadGameSave();
+        unlockedLevel = Math.max(unlockedLevel, fresh.unlockedLevel || 0);
+        results = fresh.results || results; stickers = fresh.stickers || stickers; badges = fresh.badges || badges;
         phase = 'menu';
         gameOverData = null;
-        ui.update({ phase, gameOverData });
+        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges });
     };
     ui.onQuizAnswer = (ok) => {
         quizData = null;

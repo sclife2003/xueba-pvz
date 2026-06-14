@@ -750,6 +750,16 @@ Goal:
 Replace stat-upgrade motivation with visible child-friendly collection.
 ```
 
+Learning interaction constraint:
+
+- This is still a game first, not a homework worksheet or exam simulator.
+- Quiz moments should be fast concept checks that fit the battle rhythm.
+- Target answer time: 3-8 seconds for most questions; avoid long calculation, multi-step proof, or reading-heavy prompts during combat.
+- Questions should test recognition, intuition, and core concepts, for example: choose the right method, spot the pattern, identify the meaning, or apply a simple rule.
+- Provide optional hints before the answer when useful, and friendly explanation after the answer.
+- Wrong answers should guide the next try; they should not block progress, reduce permanent rewards, or make the child feel punished.
+- Shanghai curriculum-aligned question packs must use original questions based on concept coverage and expected progress, not copied textbook or exam questions.
+
 Deliverables:
 
 1. After each level, show:
