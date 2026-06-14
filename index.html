@@ -151,16 +151,21 @@
       teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
 
+    // role: normal/fast/tank/boss/elf — 供 Phase 2.5 关卡前预告与推荐策略推导；hint: 单体应对建议
     const ENEMIES = {
-      slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground' },
-      bat: { id: 'bat', name: '蝙蝠', hp: 40, spd: 1.5, dmg: 2, val: 0, color: '#9f7aea', type: 'ground' },
-      tank: { id: 'tank', name: '铁桶怪', hp: 400, spd: 0.35, dmg: 10, val: 0, color: '#a0aec0', type: 'ground' },
-      boss: { id: 'boss', name: '魔王', hp: 2200, spd: 0.25, dmg: 50, val: 0, color: '#e53e3e', type: 'ground' },
-      elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground' }
+      slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground', role: 'normal', hint: '铅笔投手主力输出' },
+      bat: { id: 'bat', name: '蝙蝠', hp: 40, spd: 1.5, dmg: 2, val: 0, color: '#9f7aea', type: 'ground', role: 'fast', hint: '胶水陷阱减速拖住' },
+      tank: { id: 'tank', name: '铁桶怪', hp: 400, spd: 0.35, dmg: 10, val: 0, color: '#a0aec0', type: 'ground', role: 'tank', hint: '橡皮盾挡路 + 集火' },
+      boss: { id: 'boss', name: '魔王', hp: 2200, spd: 0.25, dmg: 50, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', hint: '橡皮盾顶住 + 班主任技能' },
+      elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground', role: 'elf', hint: '击杀可得能量' }
     };
 
     const LEVELS = [
       {
+        id: '1-1', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        enemyPreviewHint: '熟悉摆放与收集能量，先把经济铺起来',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁第二章：操场激战' },
         name: "第一章：初入校园 (简单)",
         bg: "#2f855a", difficulty: 1.0,
         tip: "主要任务：熟悉操作，多收集阳光！",
@@ -171,6 +176,10 @@
         ]
       },
       {
+        id: '2-1', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        enemyPreviewHint: '蝙蝠很快，带胶水陷阱减速、稳住快速路线',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁第三章：期末大考' },
         name: "第二章：操场激战 (中等)",
         bg: "#c05621", difficulty: 1.25,
         tip: "蝙蝠速度很快但血量少，用胶水减速它们！",
@@ -182,6 +191,10 @@
         ]
       },
       {
+        id: '3-1', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        enemyPreviewHint: '铁桶怪硬：橡皮盾挡路 + 集火，必要时班主任清群',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁第四章：毕业典礼' },
         name: "第三章：期末大考 (困难)",
         bg: "#4c1d95", difficulty: 1.45,
         tip: "这是真正的考验！使用「班主任」炸掉成群的敌人！",
@@ -193,6 +206,10 @@
         ]
       },
       {
+        id: '4-1', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
+        enemyPreviewHint: '监考魔王压线：留好橡皮盾，攒满班主任技能化解红笔点名',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
+        reward: { type: 'badge', text: '🎓 毕业徽章' },
         name: "第四章：毕业典礼 (炼狱)",
         bg: "#7f1d1d", difficulty: 1.7,
         tip: "最终的试炼！活下来！",
@@ -205,6 +222,37 @@
       }
     ];
 
+    // ==================== CAMPAIGN STRUCTURE (Phase 4) ====================
+    // 章节身份：每章一个策略主题（不改既有关卡平衡，只是把现有关卡映射进结构）
+    const CHAPTERS = [
+      { id: 'classroom', name: '教室基础', icon: '🏫', lesson: '经济与基础分路防守' },
+      { id: 'playground', name: '操场冲刺', icon: '🏃', lesson: '减速控制与快速敌人' },
+      { id: 'library',    name: '图书馆专注', icon: '📚', lesson: '坦克处理与集火爆发' },
+      { id: 'exam',       name: '考场决战', icon: '📝', lesson: '混合波次与魔王压线' },
+      { id: 'challenge',  name: '课外挑战', icon: '⚡', lesson: '改变规则的额外试炼' }
+    ];
+    // 关卡原型标签（备战画面与选关展示）
+    const ARCHETYPES = {
+      'tutorial':    { label: '教学关', color: '#48bb78' },
+      'speed-check': { label: '速度考验', color: '#E85D5D' },
+      'tank-check':  { label: '坦克考验', color: '#a0aec0' },
+      'boss-stage':  { label: '魔王关', color: '#e53e3e' },
+      'challenge':   { label: '挑战关', color: '#F6D365' }
+    };
+    // 战役关卡数（不含挑战关）；挑战关追加在 LEVELS 末尾，复用第二章波次（不新增平衡）
+    const CAMPAIGN_COUNT = LEVELS.length;
+    LEVELS.push({
+      id: 'challenge-speed', chapterId: 'challenge', archetype: 'challenge', isBoss: false,
+      isChallenge: true, rule: 'speed', unlockStars: 6, // 累计 6 星解锁
+      enemyPreviewHint: '速度课堂：过波等待极短、敌人更快，考验提前上课与技能时机',
+      starGoals: { twoStar: { minHp: 3 }, threeStar: { minHp: 5, maxWrongAnswers: 1 } },
+      reward: { type: 'badge', text: '⚡ 速度大师' },
+      name: '课外挑战：速度课堂',
+      bg: '#0f766e', difficulty: 1.3,
+      tip: '提前上课会缩短等待，敌人更快——抓准班主任技能与升级时机！',
+      waves: LEVELS[1].waves
+    });
+
     // ==================== COMBAT REWARDS (Phase 2) ====================
     // 战斗中点击知识星答题，答对后三选一立即生效的战斗奖励
     const REWARDS = [
@@ -214,6 +262,20 @@
       { id: 'heal',   icon: '🩹', name: '紧急补课', effect: '所有防御单位回满生命', color: '#48bb78' },
       { id: 'free',   icon: '🎁', name: '免费布置', effect: '下一个防御单位免费部署', color: '#B9825B' }
     ];
+
+    // ==================== STRATEGY DEPTH (Phase 2.5) ====================
+    // 有限工具 loadout：第二章起每关只能带 4 件文具上场（第一章固定全配，教学友善）
+    const LOADOUT_SIZE = 4;
+    const DEFAULT_LOADOUT = ['textbook', 'pencil', 'glue', 'eraser']; // 经济+输出+减速+肉盾，泛用起手
+
+    // 关卡内升级：每件文具 1 个升级效果（点击已放置的单位 → 花能量升级；instant 型「班主任」无场上实体故不可升级）
+    const UPGRADES = {
+      textbook: { name: '高效笔记', desc: '产能更快', cost: 120, apply: o => { o.rateOverride = Math.max(40, Math.round(o.data.rate * 0.55)); } },
+      pencil:   { name: '削尖铅笔', desc: '伤害提升', cost: 150, apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.7); } },
+      watering: { name: '连续墨滴', desc: '攻速提升', cost: 150, apply: o => { o.rateOverride = Math.max(4, Math.round(o.data.rate * 0.55)); } },
+      glue:     { name: '黏性加强', desc: '减速更久', cost: 120, apply: o => { o.slowDurOverride = 300; o.atkOverride = Math.round(o.data.dmg * 1.3); } },
+      eraser:   { name: '厚橡皮',   desc: '血量提升', cost: 100, apply: o => { const add = Math.round(o.maxHp * 0.8); o.maxHp += add; o.hp += add; } }
+    };
 
     // ==================== UTILS ====================
     function shuffleArray(array) {
@@ -231,10 +293,15 @@
             const raw = localStorage.getItem(SAVE_KEY);
             if (raw) {
                 const d = JSON.parse(raw);
-                return { unlockedLevel: d.unlockedLevel || 0, hp: d.hp || 0 };
+                // results: 关卡星级最佳成绩（Phase 4）；旧存档无此字段则为空对象，向后相容
+                return { unlockedLevel: d.unlockedLevel || 0, hp: d.hp || 0, results: (d.results && typeof d.results === 'object') ? d.results : {} };
             }
         } catch (e) {}
-        return { unlockedLevel: 0, hp: 0 };
+        return { unlockedLevel: 0, hp: 0, results: {} };
+    }
+    // 累计星数（用于挑战关解锁判定）
+    function totalStars(results) {
+        let s = 0; for (const k in (results || {})) s += (results[k] && results[k].stars) || 0; return s;
     }
     function writeGameSave(data) {
         try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
@@ -256,9 +323,21 @@
         if (!raw) return;
         try {
             const data = JSON.parse(atob(raw.trim().replace(/^XBPVZ1:/, '')));
+            const cleanResults = {};
+            if (data.results && typeof data.results === 'object') {
+                for (const k in data.results) {
+                    const r = data.results[k] || {};
+                    cleanResults[k] = {
+                        stars: Math.max(0, Math.min(3, parseInt(r.stars) || 0)),
+                        bestHp: Math.max(0, Math.min(HP_CAP, parseInt(r.bestHp) || 0)),
+                        bestWrong: Math.max(0, parseInt(r.bestWrong) || 0)
+                    };
+                }
+            }
             const clean = {
-                unlockedLevel: Math.max(0, Math.min(LEVELS.length - 1, parseInt(data.unlockedLevel) || 0)),
-                hp: Math.max(0, Math.min(HP_CAP, parseInt(data.hp) || 0))
+                unlockedLevel: Math.max(0, Math.min(CAMPAIGN_COUNT - 1, parseInt(data.unlockedLevel) || 0)),
+                hp: Math.max(0, Math.min(HP_CAP, parseInt(data.hp) || 0)),
+                results: cleanResults
             };
             writeGameSave(clean);
             window.alert('导入成功！已解锁到第 ' + (clean.unlockedLevel + 1) + ' 章。');
@@ -418,6 +497,15 @@
             this.combatPaused = false; // 战斗答题/选奖励时暂停战场
             this.freeNextTower = false; // 「免费布置」奖励：下一个塔免费
             this.starTimer = 600; // 知识星掉落计时
+            // ----- Phase 2.5 策略深度状态 -----
+            this.activeLoadout = Object.keys(TOWERS); // 本关可用文具（loadout），默认全配
+            this.teacherCharge = 0; this.teacherMax = 100; this.teacherReady = false; // 班主任技能槽
+            this.freezeTimer = 0;   // 「全班安静」定身计时（帧）
+            this.selectedField = null; // 当前选中的场上单位（用于关卡内升级）
+            // ----- Phase 4 战役 / 星级 / Boss 状态 -----
+            this.wrongAnswers = 0;     // 本关答错次数（星级评定用）
+            this.bossTimer = 0; this.bossMarks = []; // 监考魔王「红笔点名」预警与触发
+            this.challengeRule = null; // 挑战关规则（如 'speed'）
             this.touchStart = null;
             this.mazeMoveTimer = 0;
             this.selectedTower = null;
@@ -452,7 +540,7 @@
             cancelAnimationFrame(this.animationId);
         }
 
-        setSelectedTower(t) { this.selectedTower = t; }
+        setSelectedTower(t) { this.selectedTower = t; if (t) this.clearField(); }
 
         syncSave(extra) {
             this.save.hp = Math.min(HP_CAP, Math.max(0, this.hp));
@@ -519,9 +607,11 @@
             }
         }
 
-        startLevel(idx) {
+        startLevel(idx, loadout) {
             const isContinuation = (this.phase === 'level_complete' && idx === this.levelIdx + 1);
             this.levelIdx = idx; this.waveIdx = 0;
+            // 套用本关 loadout（第一章固定全配；第二章起由备战画面选 4 件）
+            this.activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
             const startMp = 400 + Math.round(((LEVELS[idx].difficulty || 1) - 1) * 300);
             if (isContinuation) {
                 this.mp = Math.max(startMp, this.mp);
@@ -533,6 +623,10 @@
             }
             this.objs = []; this.particles = []; this.savedTowers = []; this.towerCooldowns = {};
             this.combatPaused = false; this.freeNextTower = false; this.starTimer = 600;
+            this.teacherCharge = 0; this.teacherReady = false; this.freezeTimer = 0; this.clearField();
+            // Phase 4：重置星级计数与 Boss/挑战状态
+            this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
+            this.challengeRule = LEVELS[idx].isChallenge ? (LEVELS[idx].rule || null) : null;
             this.phase = 'td'; this.naturalSunTimer = 200;
             this.startTD();
             this.callbacks.onPhaseChange('td');
@@ -647,7 +741,14 @@
                 }
             }
             const uiSelected = this.selectedTower;
-            if (!uiSelected) return false;
+            if (!uiSelected) {
+                // 未选道具：点击场上单位 → 选中以供关卡内升级；点击空地 → 取消选中
+                const fc = Math.floor((cx - this.OX) / this.G);
+                const fr = Math.floor((cy - this.OY) / this.G);
+                const tw = this.objs.find(o => o.type === 'tower' && o.c === fc && o.r === fr);
+                if (tw) { this.selectField(tw); return true; }
+                this.clearField(); return false;
+            }
             if (this.towerCooldowns[uiSelected] > 0) return false;
             const c = Math.floor((cx - this.OX) / this.G);
             const r = Math.floor((cy - this.OY) / this.G);
@@ -694,10 +795,12 @@
                 showTip: this.waveIdx === 0,
                 isLastWave: this.waveIdx === lvl.waves.length - 1
             });
+            this.pushCombatState();
         }
 
         startMaze() {
             this.phase = 'maze'; this.callbacks.onPhaseChange('maze');
+            this.clearField();
             this.savedTowers = this.objs.filter(o => o.type === 'tower');
             this.objs = []; this.particles = [];
             this.mazePath = null; this.currentTouch = null;
@@ -772,9 +875,11 @@
 
         resolveQuiz(correct) {
             this.questionsAnswered++;
+            if (!correct) this.wrongAnswers++; // Phase 4：星级评定计数
             if (this.combatPaused) {
                 // 战斗答题：答对 → 三选一奖励（战场维持暂停，待选奖励）；答错 → 扣少量能量 + 简短解析，立即恢复
                 if (correct) {
+                    this.chargeTeacher(35); // 答对题：班主任技能槽大幅充能
                     this.callbacks.onRewardPicker(this.rollRewards());
                 } else {
                     const penalty = 30 + Math.round(((LEVELS[this.levelIdx].difficulty || 1) - 1) * 40);
@@ -810,19 +915,41 @@
             }
         }
 
+        // Phase 4：结算星级并保存最佳成绩
+        computeAndSaveStars() {
+            const lvl = LEVELS[this.levelIdx];
+            const sg = lvl.starGoals || {};
+            const hp = this.hp, wrong = this.wrongAnswers || 0;
+            let stars = 1;
+            if (sg.twoStar && hp >= (sg.twoStar.minHp || 0)) stars = 2;
+            if (sg.threeStar && hp >= (sg.threeStar.minHp || 0) && wrong <= (sg.threeStar.maxWrongAnswers != null ? sg.threeStar.maxWrongAnswers : 99)) stars = 3;
+            const id = lvl.id || ('L' + this.levelIdx);
+            if (!this.save.results) this.save.results = {};
+            const prev = this.save.results[id] || { stars: 0, bestHp: 0, bestWrong: 99 };
+            const isNewBest = stars > prev.stars;
+            this.save.results[id] = {
+                stars: Math.max(prev.stars, stars),
+                bestHp: Math.max(prev.bestHp, hp),
+                bestWrong: Math.min(prev.bestWrong, wrong)
+            };
+            writeGameSave(this.save);
+            const tags = [];
+            if (wrong === 0) tags.push('零失误');
+            if (hp >= HP_CAP) tags.push('完美防守');
+            return { levelIdx: this.levelIdx, id, stars, hp, wrong, isNewBest, reward: lvl.reward || null, tags, isChallenge: !!lvl.isChallenge, name: lvl.name };
+        }
+
         nextLevel() {
             this.waveIdx++;
             const lvl = LEVELS[this.levelIdx];
             if (this.waveIdx >= lvl.waves.length) {
-                this.callbacks.onLevelComplete(this.levelIdx);
-                this.syncSave({ unlockedLevel: this.levelIdx + 1 });
-                if (this.levelIdx < LEVELS.length - 1) {
-                    this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete');
-                    this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);
-                } else {
-                    this.callbacks.onGameOver(true, "全游戏通关！", "你已经是异世界最强学霸了！");
-                    this.phase = 'over'; this.callbacks.onPhaseChange('over');
-                }
+                const result = this.computeAndSaveStars();
+                const isLastCampaign = !lvl.isChallenge && this.levelIdx >= CAMPAIGN_COUNT - 1;
+                if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) this.syncSave({ unlockedLevel: this.levelIdx + 1 });
+                else this.syncSave();
+                this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign }, result));
+                this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete');
+                this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);
             } else { this.startTD(); }
         }
 
@@ -881,6 +1008,93 @@
             this.syncSave();
         }
 
+        // ----- Phase 2.5 System 1: 关卡前敌人预告 + 推荐策略 -----
+        getLevelPreview(idx) {
+            const lvl = LEVELS[idx];
+            const tally = {};
+            lvl.waves.forEach(w => w.groups.forEach(g => { tally[g.e] = (tally[g.e] || 0) + g.n; }));
+            const enemies = Object.keys(tally).map(id => ({
+                id, name: (ENEMIES[id] && ENEMIES[id].name) || id, color: (ENEMIES[id] && ENEMIES[id].color) || '#ffffff',
+                count: tally[id], role: (ENEMIES[id] && ENEMIES[id].role) || 'normal', hint: (ENEMIES[id] && ENEMIES[id].hint) || ''
+            }));
+            const roles = new Set(enemies.filter(e => e.id !== 'elf').map(e => e.role));
+            const strategies = ['课本发电站优先摆 2-3 个攒能量'];
+            if (roles.has('fast')) strategies.push('快速敌人多：用胶水陷阱减速拖住');
+            if (roles.has('normal')) strategies.push('普通敌人：铅笔投手当主力输出');
+            if (roles.has('tank')) strategies.push('铁桶怪硬：橡皮盾挡路 + 集火破甲');
+            if (roles.has('boss')) strategies.push('有魔王压线：留好橡皮盾与班主任技能');
+            return {
+                levelIdx: idx, id: lvl.id || ('L' + idx), name: lvl.name, enemies, strategies, isFixed: idx === 0, loadoutSize: LOADOUT_SIZE,
+                archetype: lvl.archetype || '', hint: lvl.enemyPreviewHint || '', starGoals: lvl.starGoals || {},
+                isBoss: !!lvl.isBoss, isChallenge: !!lvl.isChallenge, chapterId: lvl.chapterId || ''
+            };
+        }
+
+        // ----- Phase 2.5 System 3: 班主任技能槽 -----
+        chargeTeacher(amt) {
+            if (this.teacherReady) return;
+            this.teacherCharge = Math.min(this.teacherMax, this.teacherCharge + amt);
+            if (this.teacherCharge >= this.teacherMax) {
+                this.teacherReady = true;
+                this.floatText('班主任技能就绪！', this.w / 2, this.h / 2, '#4A90E2', 80, 28);
+                this.pushCombatState();
+            }
+        }
+        releaseTeacherSkill() {
+            if (!this.teacherReady || this.phase !== 'td' || this.combatPaused) return;
+            this.teacherReady = false; this.teacherCharge = 0;
+            this.freezeTimer = 180; // 全班安静：定身 3 秒
+            this.objs.forEach(o => { if (o.type === 'enemy') o.slowTimer = Math.max(o.slowTimer || 0, 180); });
+            this.spawnParticles(this.w / 2, this.h / 2, '#4A90E2', 30);
+            this.floatText('全班安静！敌人定身 3 秒', this.w / 2, this.h / 2, '#4A90E2', 90, 30);
+            this.pushCombatState();
+        }
+
+        // ----- Phase 2.5 System 4: 提前上课（等待下一波时可提前开始，给少量能量） -----
+        callNextWaveEarly() {
+            if (this.phase !== 'td' || this.combatPaused) return;
+            if (this.waitNextWave === null || this.waitNextWave <= 0) return;
+            this.mp += 50;
+            this.floatText('提前上课！+50 灵感值', this.w / 2, this.h / 2, '#F6D365', 70, 28);
+            this.waitNextWave = 1; // 仅缩短等待计时，保留既有过波 flow（迷宫/答题）
+            this.updateStats();
+            this.pushCombatState();
+        }
+
+        // ----- Phase 2.5 System 5: 关卡内升级 -----
+        selectField(tw) {
+            this.selectedField = tw;
+            const up = UPGRADES[tw.id];
+            this.callbacks.onFieldSelect && this.callbacks.onFieldSelect({
+                id: tw.id, name: tw.data.name, icon: tw.data.icon, color: tw.data.color,
+                upgraded: !!tw.upgraded,
+                canUpgrade: !!up && !tw.upgraded,
+                upgradeName: up ? up.name : '', upgradeDesc: up ? up.desc : '', upgradeCost: up ? up.cost : 0
+            });
+        }
+        clearField() {
+            if (this.selectedField) { this.selectedField = null; this.callbacks.onFieldSelect && this.callbacks.onFieldSelect(null); }
+        }
+        upgradeSelectedField() {
+            const tw = this.selectedField; if (!tw) return;
+            const up = UPGRADES[tw.id]; if (!up || tw.upgraded) return;
+            if (this.mp < up.cost) { this.floatText('能量不足', tw.x + this.G / 2, tw.y, '#E85D5D', 50, 22); return; }
+            this.mp -= up.cost; tw.upgraded = true; up.apply(tw);
+            this.spawnParticles(tw.x + this.G / 2, tw.y + this.G / 2, '#F6D365', 14);
+            this.floatText('升级！' + up.name, tw.x + this.G / 2, tw.y, '#48bb78', 60, 22);
+            this.updateStats();
+            this.selectField(tw); // 刷新升级面板状态
+        }
+
+        // 推送战斗 HUD 额外状态（技能槽 / 提前上课按钮）
+        pushCombatState() {
+            this.callbacks.onCombatState && this.callbacks.onCombatState({
+                teacherCharge: this.teacherCharge / this.teacherMax,
+                teacherReady: this.teacherReady,
+                waitWave: this.waitNextWave !== null && this.waitNextWave > 0
+            });
+        }
+
         spawnParticles(x, y, color, count) {
             for(let i=0; i<count; i++) {
                 const angle = Math.random() * Math.PI * 2, speed = Math.random() * 3 + 2;
@@ -926,6 +1140,34 @@
                 this.naturalSunTimer--;
                 if (this.naturalSunTimer <= 0) { this.spawnOrb(this.OX + Math.random()*(this.C*this.G), this.OY + Math.random()*(this.R*this.G), 40); this.naturalSunTimer = 300; }
                 for (let i = this.laneWarnings.length - 1; i >= 0; i--) { if (--this.laneWarnings[i].life <= 0) this.laneWarnings.splice(i, 1); }
+                if (this.freezeTimer > 0) this.freezeTimer--;
+                if (this.frame % 30 === 0) this.pushCombatState(); // 技能槽进度平滑刷新
+                // Phase 4 Boss「红笔点名」：预警一路 → 触发伤害该路最前防御；班主任定身可化解
+                if (LEVELS[this.levelIdx].isBoss) {
+                    if (this.objs.some(o => o.type === 'enemy' && o.id === 'boss')) {
+                        this.bossTimer--;
+                        if (this.bossTimer <= 0) {
+                            const rows = [];
+                            this.objs.forEach(o => { if (o.type === 'tower' && rows.indexOf(o.r) < 0) rows.push(o.r); });
+                            if (rows.length) this.bossMarks.push({ r: rows[Math.floor(Math.random() * rows.length)], life: 95, max: 95, fired: false });
+                            this.bossTimer = 420;
+                        }
+                    }
+                    for (let bi = this.bossMarks.length - 1; bi >= 0; bi--) {
+                        const mk = this.bossMarks[bi];
+                        if (--mk.life <= 0 && !mk.fired) {
+                            mk.fired = true;
+                            if (this.freezeTimer > 0) {
+                                this.floatText('红笔点名被化解！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#4A90E2', 60, 24);
+                            } else {
+                                const ts = this.objs.filter(o => o.type === 'tower' && o.r === mk.r).sort((a, b) => b.x - a.x);
+                                if (ts.length) { const t = ts[0]; t.hp -= 2000; t.hitFlash = 6; this.spawnParticles(t.x + this.G / 2, t.y + this.G / 2, '#E85D5D', 16); this.floatText('红笔点名！', t.x, t.y, '#E85D5D', 60, 26); }
+                                else { this.floatText('红笔点名！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#E85D5D', 60, 24); }
+                            }
+                            this.bossMarks.splice(bi, 1);
+                        }
+                    }
+                }
                 this.starTimer--;
                 if (this.starTimer <= 0) {
                     if (this.spawnState.active || this.objs.some(o => o.type === 'enemy')) this.spawnStar();
@@ -946,7 +1188,7 @@
                         const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : Math.floor(Math.random() * this.R);
                         this.spawnState.nextRow = null;
                         const difficulty = LEVELS[this.levelIdx].difficulty || 1.0;
-                        const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2), dmg = eDef.dmg * difficulty;
+                        const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2) * (this.challengeRule === 'speed' ? 1.2 : 1), dmg = eDef.dmg * difficulty;
                         this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
                         this.spawnState.mobsLeftInGroup--; this.spawnState.timer = grp.interval;
                         if (this.spawnState.mobsLeftInGroup <= 0) {
@@ -959,9 +1201,13 @@
                         }
                     }
                 } else if (!this.spawnState.active && !this.objs.some(o => o.type === 'enemy')) {
-                    if (this.waitNextWave === null) { this.waitNextWave = 300; this.floatText("战场打扫时间...", this.w/2, this.h/2, '#F6E05E', 250, 30); }
+                    if (this.waitNextWave === null) {
+                        this.waitNextWave = (this.challengeRule === 'speed') ? 120 : 300; this.floatText("战场打扫时间...", this.w/2, this.h/2, '#F6E05E', 250, 30);
+                        this.chargeTeacher(15); // 过波存活：技能槽充能
+                        this.pushCombatState(); // 显示「提前上课」按钮
+                    }
                     this.waitNextWave--;
-                    if (this.waitNextWave <= 0) { this.waitNextWave = null; this.startMaze(); }
+                    if (this.waitNextWave <= 0) { this.waitNextWave = null; this.startMaze(); this.pushCombatState(); }
                 }
                 for (let i = this.objs.length - 1; i >= 0; i--) {
                     const o = this.objs[i];
@@ -972,17 +1218,18 @@
                             this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { e.hp -= o.data.dmg; this.spawnParticles(e.x, e.y, '#F56565', 10); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
                             this.spawnParticles(o.x, o.y, '#F56565', 50); this.objs.splice(i, 1); continue;
                         }
-                        if (o.data.type === 'producer') { o.cd++; if(o.cd>=o.data.rate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, 40); o.cd=0; } }
+                        if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, 40); o.cd=0; } }
                         else if (o.data.type === 'shoot') {
+                            const atk = o.atkOverride || o.data.dmg, fireRate = o.rateOverride || o.data.rate, slowDur = o.slowDurOverride || 180;
                             o.cd--; if(o.cd<=0) {
                                 const target = this.objs.find(e => e.type === 'enemy' && e.r === o.r && e.x > o.x);
                                 if (!target) {
                                     const eatingEnemy = this.objs.find(e => e.type === 'enemy' && e.r === o.r && Math.abs(e.x - o.x) < this.G && e.x < this.w);
-                                    if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: o.data.dmg, color: o.data.color, isSlow: o.data.slow, vx: 0, vy: 0 }); o.cd = o.data.rate; }
+                                    if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: 0, vy: 0 }); o.cd = fireRate; }
                                 } else {
                                     const ang = Math.atan2((target.y+this.G/2)-(o.y+this.G/4), (target.x+this.G/2)-(o.x+this.G/2));
-                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: o.data.dmg, color: o.data.color, isSlow: o.data.slow, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
-                                    o.cd = o.data.rate;
+                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
+                                    o.cd = fireRate;
                                 }
                             }
                         }
@@ -990,20 +1237,22 @@
                     }
                     else if (o.type === 'enemy') {
                         if(o.hitFlash>0) o.hitFlash--;
+                        const frozen = this.freezeTimer > 0;
                         let spd = Math.abs(o.vx);
                         if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
                         let move = true;
                         const eating = this.objs.find(t=>t.type==='tower' && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
-                        if(eating) { move=false; o.isEating=true; if(this.frame%30===0) eating.hp-=o.dmg; } else o.isEating=false;
+                        if(eating) { move=false; o.isEating=true; if(this.frame%30===0 && !frozen) eating.hp-=o.dmg; } else o.isEating=false;
+                        if(frozen) move=false; // 全班安静：定身
                         if(move) o.x -= spd;
                         if(o.x < this.OX-20) { this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e'); }
-                        else if(o.hp<=0) { this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); this.objs.splice(i,1); }
+                        else if(o.hp<=0) { this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); if(o.id!=='elf') this.chargeTeacher(3); this.objs.splice(i,1); }
                     }
                     else if (o.type === 'bullet') {
                         let dx = o.vx, dy = o.vy;
                         if(o.target && o.target.hp>0) {
                             const dist = Math.sqrt(((o.target.x+this.G/2)-o.x)**2 + ((o.target.y+this.G/2)-o.y)**2);
-                            if(dist<30) { o.target.hp-=o.dmg; o.target.hitFlash=5; if(o.isSlow) o.target.slowTimer=180; this.spawnParticles(o.x,o.y,o.color,4); this.objs.splice(i,1); continue; }
+                            if(dist<30) { o.target.hp-=o.dmg; o.target.hitFlash=5; if(o.isSlow) o.target.slowTimer=Math.max(o.target.slowTimer||0, o.slowDur||180); this.spawnParticles(o.x,o.y,o.color,4); this.objs.splice(i,1); continue; }
                             else { const ang = Math.atan2((o.target.y+this.G/2)-o.y,(o.target.x+this.G/2)-o.x); o.vx=Math.cos(ang)*15; o.vy=Math.sin(ang)*15; dx=o.vx; dy=o.vy; }
                         }
                         o.x+=dx; o.y+=dy;
@@ -1020,7 +1269,7 @@
             const cx = o.x + G/2, cy = o.y + G/2 + bobY;
             const squish = 1 + Math.sin(this.frame * 0.15) * 0.04;
             const size = G * 1.12;
-            if (o.slowTimer > 0) {
+            if (o.slowTimer > 0 || this.freezeTimer > 0) {
                 ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = '#90CDF4';
                 ctx.beginPath(); ctx.arc(cx, cy, size * 0.52, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             }
@@ -1049,7 +1298,7 @@
             let primaryColor = o.data.color, accColor = '#718096';
             if (levelIdx === 1) { if(o.id==='slime') primaryColor='#4299E1'; if(o.id==='tank') accColor='#ECC94B'; if(o.id==='bat') primaryColor='#F56565'; }
             else if (levelIdx >= 2) { if(o.id==='slime') primaryColor='#805AD5'; if(o.id==='tank') accColor='#1A202C'; if(o.id==='bat') primaryColor='#171923'; }
-            if (o.slowTimer > 0) ctx.fillStyle = '#90CDF4';
+            if (o.slowTimer > 0 || this.freezeTimer > 0) ctx.fillStyle = '#90CDF4';
             else ctx.fillStyle = primaryColor;
             if (o.hitFlash > 0) ctx.fillStyle = 'white';
             const mainColor = ctx.fillStyle;
@@ -1131,6 +1380,25 @@
                     ctx.font = 'bold ' + Math.max(16, Math.floor(this.G * 0.5)) + 'px Arial';
                     ctx.fillText('⚠️', gridRight - this.G * 0.95, ry + this.G * 0.64);
                 });
+                // Phase 4 Boss「红笔点名」预警绘制
+                this.bossMarks.forEach(mk => {
+                    const ry = this.OY + mk.r * this.G;
+                    const prog = 1 - mk.life / mk.max;
+                    const blink = 0.35 + 0.45 * Math.abs(Math.sin(this.frame * 0.4));
+                    ctx.fillStyle = 'rgba(232,93,93,' + (0.12 + prog * 0.25) + ')';
+                    ctx.fillRect(this.OX, ry, this.C * this.G, this.G);
+                    const ts = this.objs.filter(o => o.type === 'tower' && o.r === mk.r).sort((a, b) => b.x - a.x);
+                    const mx = ts.length ? ts[0].x + this.G / 2 : this.OX + this.G * 1.5;
+                    const my = ry + this.G / 2, rad = this.G * (0.55 - prog * 0.18);
+                    ctx.strokeStyle = 'rgba(232,93,93,' + blink + ')'; ctx.lineWidth = 4;
+                    ctx.beginPath(); ctx.arc(mx, my, rad, 0, Math.PI * 2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(mx - rad * 0.6, my - rad * 0.6); ctx.lineTo(mx + rad * 0.6, my + rad * 0.6);
+                    ctx.moveTo(mx + rad * 0.6, my - rad * 0.6); ctx.lineTo(mx - rad * 0.6, my + rad * 0.6); ctx.stroke();
+                    ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, blink + 0.3) + ')';
+                    ctx.font = 'bold ' + Math.max(12, Math.floor(this.G * 0.34)) + 'px Arial'; ctx.textAlign = 'center';
+                    ctx.fillText('红笔点名', this.OX + this.C * this.G * 0.5, ry + this.G * 0.32);
+                    ctx.textAlign = 'left';
+                });
                 this.objs.forEach(o => {
                     if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
                     if(o.type==='tower') {
@@ -1154,6 +1422,9 @@
                         else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(o.data.icon, o.x+G/3.5, o.y+G/1.5); }
                         if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
                         }
+                        // 升级标记 + 选中高亮（Phase 2.5）
+                        if(o.upgraded) { ctx.fillStyle='#F6D365'; ctx.font=`bold ${Math.max(12,G*0.3)}px Arial`; ctx.textAlign='left'; ctx.fillText('⭐', o.x+G-G*0.36, o.y+G*0.36); }
+                        if(o===this.selectedField) { ctx.strokeStyle='#F6D365'; ctx.lineWidth=3; ctx.setLineDash([6,4]); ctx.strokeRect(o.x+4, o.y+4, G-8, G-8); ctx.setLineDash([]); }
                     } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
                     else if(o.type==='bullet') {
                         const sp = Math.hypot(o.vx, o.vy);
@@ -1250,6 +1521,17 @@
             this.isLoading = false;
             this.unlockedLevel = 0;
             this.isLandscape = window.innerWidth > window.innerHeight;
+            // ----- Phase 2.5 UI 状态 -----
+            this.activeLoadout = Object.keys(TOWERS); // 道具栏只渲染 loadout 内的文具
+            this.prepData = null;       // 备战画面数据（敌人预告 + 推荐策略）
+            this.prepLevelIdx = 0;
+            this.prepLoadout = [];      // 备战画面当前勾选的 loadout
+            this.teacherCharge = 0;     // 班主任技能槽进度 0-1
+            this.teacherReady = false;
+            this.waitWave = false;      // 是否显示「提前上课」按钮
+            this.fieldSel = null;       // 选中的场上单位（升级面板）
+            this.results = {};          // Phase 4：关卡星级最佳成绩
+            this.levelResult = null;    // Phase 4：本次结算结果
             this.onSelectTower = null;
             this.onStartLevel = null;
             this.onRestart = null;
@@ -1258,6 +1540,12 @@
             this.onSOS = null;
             this.onExplanationDismiss = null;
             this.onRewardPick = null;
+            this.onOpenPrep = null;     // 进入备战画面
+            this.onConfirmPrep = null;  // 备战完成 → 开始战斗
+            this.onEarlyCall = null;    // 提前上课
+            this.onTeacherSkill = null; // 释放班主任技能
+            this.onUpgrade = null;      // 关卡内升级
+            this.onRetry = null;        // 重玩本关
             this.render();
         }
 
@@ -1310,43 +1598,192 @@
                 this.btn('📥 导入存档', saveBtnStyle, () => importSave())
             );
 
-            const lvlList = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'16px' });
+            const lvlList = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'14px' });
             const colors = [
                 { bg:'#10b981', shadow:'#065f46', icon:'🌱' },
                 { bg:'#f59e0b', shadow:'#92400e', icon:'🔥' },
                 { bg:'#7c3aed', shadow:'#4c1d95', icon:'💀' },
                 { bg:'#ef4444', shadow:'#7f1d1d', icon:'👿' }
             ];
-            LEVELS.forEach((lvl, idx) => {
-                const isLocked = idx > this.unlockedLevel;
-                const c = colors[idx];
+            const starsFor = (id) => { const n = (this.results[id] && this.results[id].stars) || 0; return '★★★☆☆☆'.slice(3 - n, 6 - n); };
+            // 关卡卡片工厂
+            const makeCard = (lvl, idx, c, locked, lockText) => {
                 const b = this.el('button', {
-                    width:'100%', position:'relative', borderRadius:'16px', padding:'16px', display:'flex', alignItems:'center', gap:'16px',
-                    border:'none', borderBottom:`6px solid ${isLocked ? '#1e293b' : c.shadow}`,
-                    background: isLocked ? '#475569' : c.bg,
-                    cursor: isLocked ? 'not-allowed' : 'pointer', opacity: isLocked ? '0.7' : '1',
+                    width:'100%', position:'relative', borderRadius:'16px', padding:'14px 16px', display:'flex', alignItems:'center', gap:'14px',
+                    border:'none', borderBottom:`6px solid ${locked ? '#1e293b' : c.shadow}`,
+                    background: locked ? '#475569' : c.bg, cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? '0.7' : '1',
                     transition:'all 0.15s', fontFamily:'inherit'
                 });
-                b.onclick = () => { if (!isLocked) this.onStartLevel(idx); };
-                const iconEl = this.el('div', { background:'rgba(0,0,0,0.2)', width:'48px', height:'48px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', flexShrink:'0' }, isLocked ? '🔒' : c.icon);
-                const textWrap = this.el('div', { textAlign:'left', flex:'1' });
-                const t1 = this.el('div', { color:'white', fontWeight:'900', fontSize:'20px' }, lvl.name.split('：')[0]);
-                const t2 = this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'14px', fontWeight:'bold' }, lvl.name.split('：')[1] || '');
-                textWrap.append(t1, t2);
+                b.onclick = () => { if (!locked && this.onOpenPrep) this.onOpenPrep(idx); };
+                const iconEl = this.el('div', { background:'rgba(0,0,0,0.2)', width:'46px', height:'46px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', flexShrink:'0' }, locked ? '🔒' : c.icon);
+                const textWrap = this.el('div', { textAlign:'left', flex:'1', minWidth:'0' });
+                const titleRow = this.el('div', { display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' });
+                titleRow.append(this.el('div', { color:'white', fontWeight:'900', fontSize:'19px' }, lvl.name.split('：')[0]));
+                const arch = ARCHETYPES[lvl.archetype];
+                if (arch) titleRow.append(this.el('span', { fontSize:'10px', fontWeight:'900', color:'#1c1917', background: arch.color, borderRadius:'999px', padding:'1px 8px' }, arch.label));
+                textWrap.appendChild(titleRow);
+                textWrap.appendChild(this.el('div', { color:'rgba(255,255,255,0.85)', fontSize:'13px', fontWeight:'bold' }, locked ? (lockText || '未解锁') : (lvl.name.split('：')[1] || '')));
+                // 星级
+                if (!locked) {
+                    const sid = lvl.id || ('L' + idx);
+                    textWrap.appendChild(this.el('div', { fontSize:'15px', letterSpacing:'2px', color:'#FDE68A', marginTop:'2px' }, starsFor(sid)));
+                }
                 b.append(iconEl, textWrap);
-                lvlList.appendChild(b);
-            });
+                return b;
+            };
+            // 战役关卡（不含挑战关）
+            for (let idx = 0; idx < CAMPAIGN_COUNT; idx++) {
+                lvlList.appendChild(makeCard(LEVELS[idx], idx, colors[idx % colors.length], idx > this.unlockedLevel));
+            }
+            // 挑战关（按累计星数解锁）
+            const chIdx = CAMPAIGN_COUNT, chLvl = LEVELS[chIdx];
+            if (chLvl) {
+                const tStars = totalStars(this.results);
+                const need = chLvl.unlockStars || 0;
+                const chLocked = tStars < need;
+                lvlList.appendChild(this.el('div', { color:'rgba(255,255,255,0.55)', fontSize:'12px', fontWeight:'bold', marginTop:'4px', letterSpacing:'1px' }, '— 课外挑战 —'));
+                lvlList.appendChild(makeCard(chLvl, chIdx, { bg:'#0d9488', shadow:'#134e4a', icon:'⚡' }, chLocked, `集满 ${need} 星解锁（当前 ${tStars}）`));
+            }
             inner.append(icon, title, fsBtn, saveRow, lvlList);
             wrap.appendChild(inner);
+            return wrap;
+        }
+
+        // ----- Phase 2.5 备战画面：敌人预告 + 推荐策略 + 有限 loadout -----
+        renderPrep() {
+            if (this.phase !== 'prep' || !this.prepData) return null;
+            const pd = this.prepData;
+            const size = pd.loadoutSize || LOADOUT_SIZE;
+            const roleTag = { normal: '普通', fast: '高速', tank: '重甲', boss: '魔王', elf: '能量' };
+            const roleColor = { normal: '#48bb78', fast: '#E85D5D', tank: '#a0aec0', boss: '#e53e3e', elf: '#F6D365' };
+
+            const wrap = this.el('div', {
+                position:'absolute', inset:'0', display:'flex', alignItems:'center', justifyContent:'center', zIndex:'55',
+                background:'linear-gradient(135deg, #1f3d2f 0%, #2F6B4F 55%, #1e293b 100%)', pointerEvents:'auto',
+                padding:'calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))',
+                boxSizing:'border-box'
+            });
+            const card = this.el('div', {
+                width:'100%', maxWidth:'540px', maxHeight:'100%', overflowY:'auto', boxSizing:'border-box',
+                display:'flex', flexDirection:'column', gap:'10px'
+            });
+            card.className = 'hide-scrollbar';
+
+            // 标题
+            const head = this.el('div', { textAlign:'center', color:'#F7F3E8', fontWeight:'900', fontSize:'20px', textShadow:'0 2px 4px rgba(0,0,0,0.5)' },
+                '📋 备战 · ' + (pd.name || '').split('：')[0]);
+            card.appendChild(head);
+
+            // 关卡原型 + 预告提示
+            const meta = this.el('div', { display:'flex', flexDirection:'column', alignItems:'center', gap:'4px' });
+            const arch = ARCHETYPES[pd.archetype];
+            if (arch) meta.appendChild(this.el('span', { fontSize:'11px', fontWeight:'900', color:'#1c1917', background: arch.color, borderRadius:'999px', padding:'2px 12px' }, arch.label));
+            if (pd.hint) meta.appendChild(this.el('div', { fontSize:'12px', color:'#F7F3E8', textAlign:'center', opacity:'0.9' }, '🎯 ' + pd.hint));
+            card.appendChild(meta);
+
+            // 本关敌人
+            const enemyBox = this.el('div', { borderRadius:'12px', padding:'10px 12px' });
+            enemyBox.className = 'chalk-card';
+            enemyBox.appendChild(this.el('div', { fontWeight:'900', fontSize:'13px', color:'#F6D365', marginBottom:'6px' }, '本关敌人'));
+            const enemyRow = this.el('div', { display:'flex', flexWrap:'wrap', gap:'6px' });
+            (pd.enemies || []).forEach(en => {
+                const chip = this.el('div', { display:'inline-flex', alignItems:'center', gap:'5px', background:'rgba(0,0,0,0.22)', borderRadius:'999px', padding:'3px 9px', fontSize:'12px', color:'#F7F3E8', fontWeight:'bold' });
+                chip.append(
+                    this.el('span', { width:'10px', height:'10px', borderRadius:'3px', background: en.color, display:'inline-block', border:'1px solid rgba(247,243,232,0.7)' }),
+                    this.el('span', {}, `${en.name}×${en.count}`),
+                    this.el('span', { fontSize:'10px', color: roleColor[en.role] || '#F7F3E8', fontWeight:'900' }, roleTag[en.role] || '')
+                );
+                enemyRow.appendChild(chip);
+            });
+            enemyBox.appendChild(enemyRow);
+            card.appendChild(enemyBox);
+
+            // 推荐策略
+            const stratBox = this.el('div', { borderRadius:'4px 12px 4px 12px', padding:'10px 12px' });
+            stratBox.className = 'sticky-note';
+            stratBox.appendChild(this.el('div', { fontWeight:'900', fontSize:'13px', marginBottom:'4px' }, '💡 推荐策略'));
+            (pd.strategies || []).forEach(s => stratBox.appendChild(this.el('div', { fontSize:'12px', lineHeight:'1.6', fontWeight:'bold' }, '· ' + s)));
+            card.appendChild(stratBox);
+
+            // 星级目标 + 当前最佳
+            const sg = pd.starGoals || {};
+            const bestStars = (this.results[pd.id] && this.results[pd.id].stars) || 0;
+            const goalBox = this.el('div', { borderRadius:'12px', padding:'8px 12px', display:'flex', flexDirection:'column', gap:'2px' });
+            goalBox.className = 'chalk-card';
+            const goalHead = this.el('div', { display:'flex', justifyContent:'space-between', alignItems:'center' });
+            goalHead.append(
+                this.el('span', { fontWeight:'900', fontSize:'13px', color:'#F6D365' }, '⭐ 星级目标'),
+                this.el('span', { fontSize:'13px', letterSpacing:'2px', color:'#FDE68A' }, '★★★☆☆☆'.slice(3 - bestStars, 6 - bestStars))
+            );
+            goalBox.appendChild(goalHead);
+            const g2 = sg.twoStar ? ('2★ 生命≥' + (sg.twoStar.minHp || 0)) : '';
+            const g3 = sg.threeStar ? ('3★ 生命≥' + (sg.threeStar.minHp || 0) + (sg.threeStar.maxWrongAnswers != null ? ' 且答错≤' + sg.threeStar.maxWrongAnswers : '')) : '';
+            if (g2 || g3) goalBox.appendChild(this.el('div', { fontSize:'11px', color:'rgba(247,243,232,0.85)' }, [g2, g3].filter(Boolean).join('　｜　')));
+            card.appendChild(goalBox);
+
+            // 文具 loadout
+            const loadBox = this.el('div', { borderRadius:'12px', padding:'10px 12px' });
+            loadBox.className = 'chalk-card';
+            const loadTitle = this.el('div', { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px' });
+            loadTitle.append(
+                this.el('span', { fontWeight:'900', fontSize:'13px', color:'#F6D365' }, pd.isFixed ? '✏️ 本关固定配备（教学关）' : `✏️ 选择 ${size} 件文具上场`),
+                this.el('span', { fontSize:'12px', color: pd.isFixed ? '#F7F3E8' : (this.prepLoadout.length === size ? '#7CFC9A' : '#F2A6A6'), fontWeight:'900' },
+                    pd.isFixed ? '全配' : `已选 ${this.prepLoadout.length}/${size}`)
+            );
+            loadBox.appendChild(loadTitle);
+            const grid = this.el('div', { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'8px' });
+            Object.values(TOWERS).forEach(t => {
+                const sel = pd.isFixed || this.prepLoadout.includes(t.id);
+                const c = this.el('button', {
+                    display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'8px 4px', borderRadius:'10px',
+                    border:'3px solid ' + (sel ? '#F6D365' : '#5e3a22'), background: sel ? '#F7F3E8' : '#c7b89e',
+                    color:'#5b4636', fontFamily:'inherit', cursor: pd.isFixed ? 'default' : 'pointer', opacity: sel ? '1' : '0.65',
+                    transition:'all 0.12s'
+                });
+                c.append(
+                    this.el('div', { fontSize:'22px' }, t.icon),
+                    this.el('div', { fontSize:'11px', fontWeight:'900' }, t.name),
+                    this.el('div', { fontSize:'10px', color:'#8a6a45' }, '☀️' + t.cost)
+                );
+                if (!pd.isFixed) c.onclick = () => {
+                    const i = this.prepLoadout.indexOf(t.id);
+                    if (i >= 0) this.prepLoadout.splice(i, 1);
+                    else { if (this.prepLoadout.length >= size) return; this.prepLoadout.push(t.id); }
+                    this.render();
+                };
+                grid.appendChild(c);
+            });
+            loadBox.appendChild(grid);
+            card.appendChild(loadBox);
+
+            // 按钮列
+            const btnRow = this.el('div', { display:'flex', gap:'10px', marginTop:'2px' });
+            const backBtn = this.btn('返回', {
+                padding:'12px 18px', borderRadius:'12px', border:'2px solid rgba(247,243,232,0.4)', background:'rgba(0,0,0,0.25)',
+                color:'#F7F3E8', fontWeight:'900', fontSize:'15px', fontFamily:'inherit', cursor:'pointer'
+            }, () => this.onRestart && this.onRestart());
+            const ready = pd.isFixed || this.prepLoadout.length === size;
+            const startBtn = this.btn('开始上课 ▶', {
+                flex:'1', padding:'12px', borderRadius:'12px', border:'2px solid ' + (ready ? '#34d399' : '#94a3b8'),
+                background: ready ? '#10b981' : '#475569', color:'white', fontWeight:'900', fontSize:'17px', fontFamily:'inherit',
+                cursor: ready ? 'pointer' : 'not-allowed', boxShadow: ready ? '0 5px 0 #065f46' : 'none'
+            }, () => { if (ready && this.onConfirmPrep) this.onConfirmPrep(this.prepLevelIdx, pd.isFixed ? Object.keys(TOWERS) : this.prepLoadout.slice()); });
+            startBtn.disabled = !ready;
+            btnRow.append(backBtn, startBtn);
+            card.appendChild(btnRow);
+
+            wrap.appendChild(card);
             return wrap;
         }
 
         renderTowerBar() {
             if (this.phase !== 'td') return null;
             const isL = this.isLandscape;
-            const towerList = Object.values(TOWERS);
+            // Phase 2.5：道具栏只显示本关 loadout 内的文具
+            const ids = (this.activeLoadout && this.activeLoadout.length) ? this.activeLoadout : Object.keys(TOWERS);
+            const towerList = Object.values(TOWERS).filter(t => ids.includes(t.id));
             const landscapeButtonSize = isL
-                ? Math.max(42, Math.min(54, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 112) / towerList.length)))
+                ? Math.max(42, Math.min(54, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 160) / Math.max(1, towerList.length))))
                 : 80;
             const bar = this.el('div', {
                 pointerEvents:'auto',
@@ -1382,6 +1819,25 @@
                 hpRow.append(this.el('span', { fontSize:'16px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
                 stats.append(mpRow, hpRow);
                 inner.appendChild(stats);
+                // 班主任技能槽（Phase 2.5）
+                const pct = Math.round((this.teacherCharge || 0) * 100);
+                const skill = this.el('button', {
+                    margin:'0 4px 4px', padding:'5px 4px', borderRadius:'8px', border:'1px solid ' + (this.teacherReady ? '#F6D365' : '#B9825B'),
+                    background: this.teacherReady ? '#4A90E2' : '#23463a', color:'#F7F3E8', fontFamily:'inherit',
+                    cursor: this.teacherReady ? 'pointer' : 'default', flexShrink:'0', display:'flex', flexDirection:'column', gap:'2px',
+                    animation: this.teacherReady ? 'pulse 1.4s infinite' : ''
+                });
+                skill.appendChild(this.el('div', { fontSize:'9px', fontWeight:'900', textAlign:'center', letterSpacing:'1px' }, '👩‍🏫 班主任'));
+                if (this.teacherReady) {
+                    skill.appendChild(this.el('div', { fontSize:'10px', fontWeight:'900', textAlign:'center', color:'#F6D365' }, '⚡就绪·点击'));
+                } else {
+                    const track = this.el('div', { height:'7px', background:'rgba(0,0,0,0.35)', borderRadius:'999px', overflow:'hidden' });
+                    track.appendChild(this.el('div', { height:'100%', width: pct + '%', background:'linear-gradient(90deg,#4A90E2,#F6D365)', borderRadius:'999px', transition:'width 0.2s' }));
+                    skill.appendChild(track);
+                    skill.appendChild(this.el('div', { fontSize:'9px', textAlign:'center', color:'rgba(247,243,232,0.7)' }, pct + '%'));
+                }
+                if (this.teacherReady) skill.onclick = (e) => { e.stopPropagation(); this.onTeacherSkill && this.onTeacherSkill(); };
+                inner.appendChild(skill);
             }
 
             towerList.forEach(t => {
@@ -1594,6 +2050,61 @@
             return wrap;
         }
 
+        // ----- Phase 2.5 System 4：提前上课按钮（等待下一波时出现） -----
+        renderEarlyCall() {
+            if (this.phase !== 'td' || !this.waitWave) return null;
+            const wrap = this.el('div', {
+                position:'absolute', left:'50%', transform:'translateX(-50%)',
+                bottom: this.isLandscape ? 'calc(14px + env(safe-area-inset-bottom))' : 'calc(120px + env(safe-area-inset-bottom))',
+                zIndex:'47', pointerEvents:'auto'
+            });
+            const btn = this.btn('⏩ 提前上课  +50 灵感值', {
+                padding:'10px 22px', borderRadius:'999px', border:'2px solid #d9a93f', background:'#F6D365', color:'#5b4636',
+                fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.35)',
+                animation:'pulse 2s infinite'
+            }, (e) => { e.stopPropagation(); this.onEarlyCall && this.onEarlyCall(); });
+            wrap.appendChild(btn);
+            return wrap;
+        }
+
+        // ----- Phase 2.5 System 5：场上单位升级面板（点击已放置单位时出现） -----
+        renderFieldInfo() {
+            if (this.phase !== 'td' || !this.fieldSel) return null;
+            const f = this.fieldSel;
+            const isL = this.isLandscape;
+            const wrap = this.el('div', {
+                position:'absolute', pointerEvents:'auto', zIndex:'46',
+                ...(isL
+                    ? { left: 'calc(' + (SIDEBAR_WIDTH_LANDSCAPE + 16) + 'px + env(safe-area-inset-left))', bottom:'calc(12px + env(safe-area-inset-bottom))' }
+                    : { left:'50%', transform:'translateX(-50%)', bottom:'calc(118px + env(safe-area-inset-bottom))' })
+            });
+            const card = this.el('div', {
+                background:'#2F6B4F', color:'#F7F3E8', borderRadius:'14px', padding:'10px 14px',
+                border:'2px solid ' + f.color, boxShadow:'0 8px 24px rgba(0,0,0,0.4)', maxWidth:'260px'
+            });
+            const title = this.el('div', { display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' });
+            title.append(
+                this.el('span', { fontSize:'22px' }, f.icon),
+                this.el('span', { fontWeight:'900', fontSize:'15px' }, f.name),
+                this.el('span', { marginLeft:'auto', fontSize:'11px', color:'#F6D365' }, f.upgraded ? '⭐ 已升级' : '关卡内升级')
+            );
+            card.appendChild(title);
+            if (f.canUpgrade) {
+                card.appendChild(this.el('div', { fontSize:'12px', lineHeight:'1.5', marginBottom:'8px' }, f.upgradeName + '：' + f.upgradeDesc));
+                const upBtn = this.btn('升级 ☀️' + f.upgradeCost, {
+                    width:'100%', padding:'8px', borderRadius:'10px', border:'2px solid #34d399', background:'#10b981',
+                    color:'white', fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer'
+                }, (e) => { e.stopPropagation(); this.onUpgrade && this.onUpgrade(); });
+                card.appendChild(upBtn);
+            } else if (f.upgraded) {
+                card.appendChild(this.el('div', { fontSize:'12px', color:'#F6D365' }, '已强化至满级'));
+            } else {
+                card.appendChild(this.el('div', { fontSize:'12px', color:'rgba(247,243,232,0.7)' }, '此文具无可用升级'));
+            }
+            wrap.appendChild(card);
+            return wrap;
+        }
+
         renderRewardPicker() {
             if (!this.rewardCards) return null;
             const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.78)', backdropFilter:'blur(4px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px', zIndex:'70', pointerEvents:'auto' });
@@ -1717,13 +2228,55 @@
 
         renderLevelComplete() {
             if (this.phase !== 'level_complete') return null;
+            const r = this.levelResult || { stars: 1, tags: [] };
             const overlay = this.el('div', { position:'absolute', inset:'0', backgroundColor:'rgba(15,23,42,0.9)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px', zIndex:'50', pointerEvents:'auto' });
-            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'32px', maxWidth:'380px', width:'100%', textAlign:'center', borderBottom:'8px solid #a7f3d0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' });
-            const nextBtn = this.btn('前往下一章 ➤', {
-                width:'100%', padding:'16px', borderRadius:'16px', backgroundColor:'#10b981', color:'white', fontWeight:'900', fontSize:'20px',
-                boxShadow:'0 6px 0 #065f46', border:'2px solid #34d399', cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit'
-            }, () => this.onStartLevel && this.onStartLevel(999));
-            box.append(this.el('div', { fontSize:'80px', marginBottom:'24px', animation:'bounce 1s infinite' }, '🌟'), this.el('h2', { fontSize:'36px', fontWeight:'900', color:'#10b981', marginBottom:'8px' }, '章节完成！'), this.el('p', { color:'#64748b', marginBottom:'32px', fontSize:'18px' }, '太棒了！休息一下，准备迎接下一章！'), nextBtn);
+            const box = this.el('div', { backgroundColor:'white', borderRadius:'24px', padding:'26px', maxWidth:'400px', width:'100%', textAlign:'center', borderBottom:'8px solid #a7f3d0', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', boxSizing:'border-box' });
+
+            box.appendChild(this.el('h2', { fontSize:'28px', fontWeight:'900', color:'#10b981', marginBottom:'4px' },
+                r.isLastCampaign ? '🎓 全部通关！' : (r.isChallenge ? '⚡ 挑战完成！' : '章节完成！')));
+
+            // 星级
+            const starRow = this.el('div', { display:'flex', justifyContent:'center', gap:'10px', margin:'10px 0 4px' });
+            for (let i = 0; i < 3; i++) {
+                const earned = i < (r.stars || 0);
+                starRow.appendChild(this.el('div', { fontSize:'42px', color: earned ? '#F6C945' : '#e2e8f0', animation: earned ? 'bounce 1s infinite' : '', filter: earned ? 'drop-shadow(0 2px 4px rgba(246,201,69,0.5))' : 'none' }, earned ? '★' : '☆'));
+            }
+            box.appendChild(starRow);
+            if (r.isNewBest) box.appendChild(this.el('div', { color:'#f59e0b', fontWeight:'900', fontSize:'14px', marginBottom:'2px' }, '🎉 新纪录！'));
+
+            // 表现标签
+            if (r.tags && r.tags.length) {
+                const tagRow = this.el('div', { display:'flex', justifyContent:'center', gap:'8px', flexWrap:'wrap', margin:'6px 0' });
+                r.tags.forEach(tg => tagRow.appendChild(this.el('span', { fontSize:'12px', fontWeight:'900', color:'#3730a3', background:'#e0e7ff', borderRadius:'999px', padding:'3px 12px' }, tg)));
+                box.appendChild(tagRow);
+            }
+            box.appendChild(this.el('div', { color:'#64748b', fontSize:'14px', margin:'6px 0 4px' },
+                '剩余生命 ❤️' + (r.hp != null ? r.hp : '-') + '　答错 ' + (r.wrong != null ? r.wrong : '-')));
+            if (r.reward && r.reward.text) box.appendChild(this.el('div', { color:'#0f766e', fontWeight:'900', fontSize:'14px', marginBottom:'8px' }, '🎁 ' + r.reward.text));
+
+            // 按钮
+            const btnRow = this.el('div', { display:'flex', gap:'10px', marginTop:'14px' });
+            const retryBtn = this.btn('🔄 重玩', {
+                padding:'13px 16px', borderRadius:'14px', backgroundColor:'#fbbf24', color:'#7c2d12', fontWeight:'900', fontSize:'16px',
+                border:'2px solid #f59e0b', boxShadow:'0 5px 0 #b45309', cursor:'pointer', fontFamily:'inherit'
+            }, () => { const idx = LEVELS.findIndex(l => l.name === this.stats.levelName); if (idx >= 0 && this.onOpenPrep) this.onOpenPrep(idx); });
+            btnRow.appendChild(retryBtn);
+            if (r.isChallenge || r.isLastCampaign) {
+                btnRow.appendChild(this.btn('🏠 返回选单', {
+                    flex:'1', padding:'13px', borderRadius:'14px', backgroundColor:'#10b981', color:'white', fontWeight:'900', fontSize:'17px',
+                    border:'2px solid #34d399', boxShadow:'0 5px 0 #065f46', cursor:'pointer', fontFamily:'inherit'
+                }, () => this.onRestart && this.onRestart()));
+            } else {
+                btnRow.appendChild(this.btn('下一章 ➤', {
+                    flex:'1', padding:'13px', borderRadius:'14px', backgroundColor:'#10b981', color:'white', fontWeight:'900', fontSize:'17px',
+                    border:'2px solid #34d399', boxShadow:'0 5px 0 #065f46', cursor:'pointer', fontFamily:'inherit'
+                }, () => {
+                    const cur = LEVELS.findIndex(l => l.name === this.stats.levelName);
+                    const next = (cur !== -1 ? cur : 0) + 1;
+                    if (next < CAMPAIGN_COUNT && this.onOpenPrep) this.onOpenPrep(next);
+                }));
+            }
+            box.appendChild(btnRow);
             overlay.appendChild(box);
             return overlay;
         }
@@ -1753,6 +2306,12 @@
                 return;
             }
 
+            if (this.phase === 'prep') {
+                const prep = this.renderPrep();
+                if (prep) this.root.appendChild(prep);
+                return;
+            }
+
             const loading = this.renderLoading();
             if (loading) this.root.appendChild(loading);
 
@@ -1767,6 +2326,12 @@
 
             const towerInfo = this.renderTowerInfo();
             if (towerInfo) this.root.appendChild(towerInfo);
+
+            const fieldInfo = this.renderFieldInfo();
+            if (fieldInfo) this.root.appendChild(fieldInfo);
+
+            const earlyCall = this.renderEarlyCall();
+            if (earlyCall) this.root.appendChild(earlyCall);
 
             const waveIntro = this.renderWaveIntro();
             if (waveIntro) this.root.appendChild(waveIntro);
@@ -1815,6 +2380,15 @@
     let isLoading = false;
     let unlockedLevel = loadGameSave().unlockedLevel || 0;
     let isLandscape = window.innerWidth > window.innerHeight;
+    // ----- Phase 2.5 状态 -----
+    let activeLoadout = Object.keys(TOWERS);
+    let prepData = null;
+    let prepLevelIdx = 0;
+    let teacherCharge = 0, teacherReady = false, waitWave = false;
+    let fieldSel = null;
+    // ----- Phase 4 状态 -----
+    let results = loadGameSave().results || {};
+    let levelResult = null;
 
     const callbacks = {
         onStatsUpdate: (mp, hp, wave, lvlName, progress, cooldowns) => {
@@ -1846,9 +2420,11 @@
             selectedTower = t;
             ui.update({ selectedTower });
         },
-        onLevelComplete: (completedLevelIdx) => {
-            unlockedLevel = Math.max(unlockedLevel, completedLevelIdx + 1);
-            ui.update({ unlockedLevel });
+        onLevelComplete: (completedLevelIdx, result) => {
+            if (result && !result.isChallenge) unlockedLevel = Math.max(unlockedLevel, Math.min(CAMPAIGN_COUNT - 1, completedLevelIdx + 1));
+            results = loadGameSave().results || results; // 引擎已写盘，同步最新星级
+            levelResult = result || null;
+            ui.update({ unlockedLevel, results, levelResult });
         },
         onWaveIntro: (info) => {
             waveIntro = info;
@@ -1867,6 +2443,14 @@
             ui.update({ combatToast });
             if (combatToastTimeout) clearTimeout(combatToastTimeout);
             combatToastTimeout = setTimeout(() => { combatToast = null; ui.update({ combatToast }); }, 3200);
+        },
+        onCombatState: (s) => {
+            teacherCharge = s.teacherCharge; teacherReady = s.teacherReady; waitWave = s.waitWave;
+            ui.update({ teacherCharge, teacherReady, waitWave });
+        },
+        onFieldSelect: (info) => {
+            fieldSel = info;
+            ui.update({ fieldSel });
         }
     };
 
@@ -1880,18 +2464,34 @@
         engine.setSelectedTower(t);
         ui.update({ selectedTower });
     };
+    // Phase 2.5：进入备战画面（敌人预告 + loadout 选择）
+    ui.onOpenPrep = (idx) => {
+        prepData = engine.getLevelPreview(idx);
+        prepLevelIdx = idx;
+        // 第一章固定全配；第二章起预选泛用 4 件，玩家可改
+        const defaultLoadout = prepData.isFixed ? Object.keys(TOWERS) : DEFAULT_LOADOUT.slice();
+        phase = 'prep';
+        ui.update({ phase, prepData, prepLevelIdx, prepLoadout: defaultLoadout });
+    };
+    // 备战完成 → 进入战斗
+    ui.onConfirmPrep = (idx, loadout) => {
+        requestLandscapeMode();
+        activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
+        gameOverData = null;
+        ui.update({ activeLoadout, gameOverData });
+        engine.startLevel(idx, activeLoadout);
+    };
+    // 兼容旧入口（直接开始指定关）
     ui.onStartLevel = (idx) => {
         requestLandscapeMode();
-        if (idx > 100) {
-            // next level
-            const currentLevelIdx = LEVELS.findIndex(l => l.name === stats.levelName);
-            if (currentLevelIdx !== -1 && currentLevelIdx < LEVELS.length - 1) engine.startLevel(currentLevelIdx + 1);
-        } else {
-            engine.startLevel(idx);
-            gameOverData = null;
-            ui.update({ gameOverData });
-        }
+        engine.startLevel(idx, activeLoadout);
+        gameOverData = null;
+        ui.update({ gameOverData });
     };
+    // Phase 2.5：提前上课 / 班主任技能 / 关卡内升级
+    ui.onEarlyCall = () => engine.callNextWaveEarly();
+    ui.onTeacherSkill = () => engine.releaseTeacherSkill();
+    ui.onUpgrade = () => engine.upgradeSelectedField();
     ui.onRestart = () => {
         phase = 'menu';
         gameOverData = null;
@@ -1924,6 +2524,9 @@
         ui.update({ explanationData });
         engine.proceedToFollowUp();
     };
+
+    // 启动时把存档进度（解锁关卡 + 星级）推到选单，确保返回玩家正确显示
+    ui.update({ unlockedLevel, results });
 
     // Input handling
     function handleInput(type, x, y) {
