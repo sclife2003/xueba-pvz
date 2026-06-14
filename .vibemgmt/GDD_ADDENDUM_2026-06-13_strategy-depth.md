@@ -1,6 +1,7 @@
 # xueba-pvz Unified GDD and Claude Implementation Plan
 
 **Date:** 2026-06-13  
+**Last updated:** 2026-06-14
 **Audience:** Claude Code / game design implementation agent  
 **Project:** `VibeProjects/xueba-pvz`
 **Primary file:** `index.html`
@@ -15,6 +16,191 @@
 Future planning and Claude implementation handoff should use this file as the source of truth.
 
 Do not maintain a separate `CLAUDE_HANDOFF_2026-06-13_game-optimization.md`. If the project direction changes, update this document instead.
+
+---
+
+## 0.0 Document Status
+
+**ACTIVE NOW:** Section 23, `Claude Implementation Prompt: Child-Friendly World Map Refactor`.
+
+Current implementation target:
+
+```text
+Phase A + Phase B only:
+Child-friendly simplification + school-stage world map.
+```
+
+Authoritative current rules:
+
+- Implement Section 23 next.
+- Follow Section 0.1 and Section 9 Phase A/B.
+- Treat Section 10 as superseded historical Phase 1 handoff.
+- Treat Sections 13-22 as legacy / deferred design backlog unless BOSS explicitly re-approves them.
+- Do not implement or expand limited loadout, in-level upgrades, early wave call, challenge gates, or permanent mastery upgrades in the mainline worlds.
+
+Document status table:
+
+| Section | Status | Meaning |
+|---|---|---|
+| 0.1 | Active | Current BOSS product decision |
+| 9 Phase A/B | Active | Current roadmap |
+| 10 | Superseded | Old Phase 1 handoff, do not execute now |
+| 11-22 | Deferred / legacy | Research Institute or future advanced backlog |
+| 23 | Active | Only current Claude implementation prompt |
+| 24 | Deferred | Old Phase 2.5 prompt, do not execute now |
+
+---
+
+## 0.1 2026-06-14 Product Pivot: Child-Friendly World Map
+
+### BOSS decision
+
+The game is now targeting elementary-school players first. The current implementation and earlier strategy-depth plan have become too complex for that audience.
+
+The next implementation work must simplify the game before adding more systems.
+
+### New priority
+
+Build a child-friendly learning adventure:
+
+```text
+World map -> short lane-defense level -> quick quiz power moment -> sticker / star reward -> next level
+```
+
+The game should feel closer to:
+
+- A safe school adventure map.
+- Short educational mini-game sessions.
+- Cute collectible stickers and badges.
+- Clear, fixed recommended tools.
+- Low punishment and frequent encouragement.
+
+It should not feel like:
+
+- A hardcore tower defense build planner.
+- An RPG equipment upgrade game.
+- A strategy game that requires pre-level loadout optimization.
+- A game where children get blocked because they did not understand meta systems.
+
+### Keep
+
+- Mobile landscape tower-defense battlefield.
+- Simple enemy preview / level hint.
+- Quiz-to-combat rewards.
+- One simple head-teacher active skill.
+- Star rating as encouragement.
+- Save import / export.
+- Original school-learning visual theme.
+
+### Remove or hide for now
+
+These systems should be removed from the main flow or hidden until a future "Research Institute" advanced area:
+
+| System | Current issue | Decision |
+|---|---|---|
+| Limited loadout selection | Children must decide before they understand the level | Replace with fixed recommended tools per level |
+| In-level tool upgrades | Adds RPG-like complexity and extra UI | Remove from main flow |
+| Early wave call | Advanced risk/reward, easy to misclick | Remove from main flow |
+| Challenge level star gate | Can feel like punishment | Make optional later, not part of main progression |
+| Permanent mastery upgrades | Turns rewards into stat management | Replace with stickers, badges, cosmetics |
+
+### New world map structure
+
+Replace the current chapter-list menu with a world map organized by school stages:
+
+| World | Target feeling | Difficulty | Gameplay role |
+|---|---|---|---|
+| Elementary School | Friendly tutorial, confidence building | Very easy | Teach placement, energy, one enemy type |
+| Middle School | First real variation | Easy | Introduce fast enemy and slow tool |
+| High School | Mixed but still readable | Medium | Introduce tank enemy and quiz rewards |
+| University | Boss and combination stages | Medium-high | Combine learned ideas |
+| Research Institute | Optional advanced area | Advanced | Only here may use loadout / upgrades / challenge rules |
+
+Naming can stay playful:
+
+```text
+小學部 / 初中部 / 高中部 / 大學部 / 研究所
+```
+
+Each world should contain multiple short level nodes. First implementation can create a data structure and show 3-5 placeholder nodes per world, even if only existing levels are mapped initially.
+
+### Required mapping from existing implementation
+
+The current implementation has four main `LEVELS` plus one challenge level. For the first world-map refactor, map them as follows:
+
+| Existing level / theme | New world | New meaning |
+|---|---|---|
+| `1-1` / classroom | `elementary` / 小學部 | First tutorial world |
+| `2-1` / playground | `middle` / 初中部 | First variation world |
+| `3-1` / library | `high` / 高中部 | First mixed-pressure world |
+| `4-1` / exam | `university` / 大學部 | First boss / exam world |
+| `challenge-speed` / challenge | `research` / 研究所 | Locked advanced placeholder only |
+
+Do not treat the old four scene themes as separate top-level worlds. They become level scenes inside the new school-stage world map.
+
+For the first implementation, each world may contain:
+
+- One playable mapped level.
+- Two to four locked placeholder nodes with friendly labels.
+- A short world description.
+
+The Research Institute should be visible as a future advanced area but locked or disabled in the first refactor.
+
+### Child-friendly reward model
+
+Replace complex upgrades with:
+
+- Stickers: enemy cards, tool cards, subject badges.
+- Stars: 1 star clears and unlocks the next main level; 2-3 stars are optional.
+- "Today I learned" summary after a level.
+- Wrong-answer review cards.
+- Cosmetic classroom decorations later.
+
+Stars must not block main progression for the first four worlds.
+
+### Save compatibility requirements
+
+If implementation adds `stickers`, `badges`, `worldProgress`, `schemaVersion`, or any other progress field, update all save paths together:
+
+1. `loadGameSave()` default return shape.
+2. Existing-save migration when old payloads do not contain new fields.
+3. `exportSave()` payload.
+4. `importSave()` sanitizer whitelist.
+5. Any UI reads of the new fields.
+
+Required save payload direction:
+
+```js
+{
+  schemaVersion: 2,
+  unlockedLevel: 0,
+  hp: 0,
+  results: {},
+  stickers: {},
+  badges: {},
+  worldProgress: {}
+}
+```
+
+Important: current `importSave()` reconstructs a clean object from a whitelist. If new fields are not explicitly copied there, export -> import will silently drop the child's collection progress. Syntax checks will not catch this. Claude must update the sanitizer when adding collection fields.
+
+### Learning-game inspirations to absorb
+
+Research summary from popular elementary learning games:
+
+- Kahoot / Blooket / Gimkit: short questions, fast feedback, immediate reward.
+- Prodigy: world adventure and battle fantasy can motivate practice, but avoid letting gameplay bury the learning.
+- Khan Academy Kids / PBS Kids: safe, friendly, low-pressure UI and character guidance.
+- ABCya / SplashLearn / Education.com: grade-level organization and short subject-based activities.
+- Coolmath Games: simple logic-game clarity, low-friction browser play.
+
+Application to this game:
+
+- Keep sessions short.
+- Make rewards visual, not numerical.
+- Let children play before asking them to optimize.
+- Use worlds and stickers instead of upgrade trees.
+- Keep wrong answers instructional, not punitive.
 
 ---
 
@@ -81,6 +267,8 @@ After gameplay code changes, run at minimum:
 ```powershell
 node -e "const fs=require('fs'); const html=fs.readFileSync('index.html','utf8'); const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error('script not found'); new Function(m[1]); console.log('inline script syntax: ok');"
 ```
+
+Validation note: this command assumes the project keeps one inline `<script>` block. If a future change adds a second `<script>` block, replace this regex check with a parser or a more precise extraction method.
 
 ---
 
@@ -473,6 +661,147 @@ Avoid:
 
 ## 9. Master Phase Plan
 
+### Current implementation priority
+
+The active roadmap is changed by the 2026-06-14 product pivot.
+
+Current priority:
+
+```text
+Phase A: Child-friendly simplification
+Phase B: School-stage world map
+Phase C: Quiz reward and sticker collection
+Phase D: PvZ-quality original school art pass
+Phase E: Advanced strategy systems only inside Research Institute
+```
+
+Do not continue adding Phase 2.5 strategy depth until Phase A and Phase B are complete.
+
+### Phase A: Child-friendly simplification
+
+Goal:
+
+```text
+Reduce cognitive load so elementary-school players can start playing quickly.
+```
+
+Deliverables:
+
+1. Remove or hide limited loadout selection from the main flow.
+2. Remove or hide in-level tool upgrades from the main flow.
+3. Remove or hide early wave call from the main flow.
+4. Replace strategy-heavy preparation with a friendly level intro:
+   - Level name.
+   - One sentence goal.
+   - "Recommended tools" shown automatically, not selected manually.
+   - One simple enemy hint.
+5. Keep one teacher skill button only if it is simple and obvious.
+
+Acceptance:
+
+- A child can start a level in one tap from the map.
+- The player does not need to choose a loadout before playing.
+- No upgrade button appears during normal mainline levels.
+- No early-wave call button appears during normal mainline levels.
+- Stars are shown as encouragement, not as a blocker.
+
+### Phase B: School-stage world map
+
+Goal:
+
+```text
+Make progression feel like a cute school adventure from 小學部 to 研究所.
+```
+
+Deliverables:
+
+1. Replace the current vertical chapter list with a world map / stage map.
+2. Add five world groups:
+   - 小學部
+   - 初中部
+   - 高中部
+   - 大學部
+   - 研究所
+3. Each world contains multiple level nodes.
+4. Existing levels should be mapped into the new worlds first.
+5. Locked future nodes can appear as disabled placeholders.
+6. Research Institute is optional advanced content and can stay locked initially.
+
+Acceptance:
+
+- Menu first impression is a school map, not a list of hard strategy stages.
+- The player understands where they are and what comes next.
+- Mainline progress only requires clearing the previous level.
+- The map works in mobile landscape.
+
+Qualitative playtest rubric:
+
+- A first-time child tester can identify the next playable level within 10 seconds.
+- A first-time adult reviewer can describe the five worlds as school stages, not as generic level cards.
+- The tester can start 小學部 first level without reading a strategy guide.
+- No screen asks the player to optimize equipment before the first battle.
+- Reviewer screenshot check: the first menu viewport should visibly read as a school/world map.
+
+### Phase C: Quiz reward and sticker collection
+
+Goal:
+
+```text
+Replace stat-upgrade motivation with visible child-friendly collection.
+```
+
+Deliverables:
+
+1. After each level, show:
+   - Stars earned.
+   - Sticker or badge reward.
+   - "Today I learned" short summary.
+2. Add a simple sticker collection data model.
+3. Stickers can include:
+   - Tool stickers.
+   - Enemy stickers.
+   - Subject badges.
+   - World completion badges.
+4. Wrong answers should be saved only as review hints, not punishment.
+
+Acceptance:
+
+- Rewards are visual and easy to understand.
+- No permanent stat upgrades are required.
+- Children get a positive ending even with 1 star.
+
+### Phase D: PvZ-level original school art pass
+
+Use the Phase 3 art direction below, but adapt it to the new world map structure.
+
+Priority art targets:
+
+1. World map background and nodes.
+2. Elementary School battlefield vertical slice.
+3. Three friendly defender redesigns.
+4. Two enemy redesigns.
+5. Sticker reward UI.
+
+### Phase E: Advanced strategy systems
+
+The old Phase 2.5 systems are not deleted from the document, but they are no longer mainline requirements.
+
+Only consider these inside Research Institute or optional advanced mode:
+
+- Free loadout selection.
+- In-level upgrades.
+- Early wave call.
+- Challenge rules.
+- More demanding star goals.
+
+---
+
+### Legacy phase notes
+
+The following old Phase 1/2/2.5/3/4 sections remain for historical context and reusable ideas. They are not the active roadmap.
+
+When implementing new work, use Phase A-E above. Only use the legacy sections if Section 23 explicitly references them or BOSS re-approves them.
+
 ### Phase 1: Gameplay clarity and UI readability
 
 Goal:
@@ -625,9 +954,13 @@ Acceptance:
 
 ---
 
-## 10. Immediate Claude Task: Phase 1 Only
+## 10. Superseded Claude Task: Phase 1 Only
 
-Claude should implement Phase 1 only unless BOSS explicitly asks for a later phase.
+Status: superseded by Section 23.
+
+This section records an older Phase 1 handoff. Do not execute it as the current task. The active task is Section 23: Child-Friendly World Map Refactor.
+
+Claude should not implement this Phase 1-only prompt unless BOSS explicitly asks to return to the old Phase 1 scope.
 
 ### Required Phase 1 tasks
 
@@ -709,6 +1042,12 @@ Also report:
 
 ## 11. Strategy Depth Design Intent
 
+Status as of 2026-06-14: deferred.
+
+This section is a design backlog for advanced players and the future Research Institute world. It is not the active implementation priority for elementary-school mainline gameplay.
+
+Do not implement limited loadout, in-level upgrades, early wave call, or challenge gates in the mainline school worlds unless BOSS explicitly re-approves them.
+
 This section extends the master design with the strategy-depth systems for Phase 2.5 and Phase 4.
 
 The game should not only become visually closer to a polished lane-defense game; it must also become more strategically interesting. The player should feel that they are:
@@ -788,6 +1127,10 @@ Application to `xueba-pvz`:
 
 ## 13. New Phase Order
 
+Status: legacy / superseded by Section 9 Phase A-E.
+
+This old phase order remains only to preserve design history. Do not use it as the current roadmap.
+
 Update the master roadmap to:
 
 ```text
@@ -812,6 +1155,10 @@ Do not jump directly from Phase 2 to full art production if the strategy skeleto
 
 ## 14. Phase 2.5: Strategy Depth Upgrade
 
+Status: already partially implemented in `index.html`, now deferred for Research Institute / advanced mode.
+
+Do not add this to elementary, middle, high, or university mainline gameplay. Mainline must hide limited loadout, in-level upgrades, early wave call, and challenge gates.
+
 ### Goal
 
 Make `xueba-pvz` feel less like a prototype where the player always uses the same best tools, and more like a strategic lane-defense game where each level asks a different question.
@@ -827,6 +1174,8 @@ Make `xueba-pvz` feel less like a prototype where the player always uses the sam
 ---
 
 ## 15. System 1: Level-Start Enemy Preview
+
+Status: keep only as a friendly level intro / simple hint in mainline. Advanced strategy preview belongs to Research Institute.
 
 ### Problem
 
@@ -868,6 +1217,8 @@ hint: '用膠水陷阱拖住它'
 ---
 
 ## 16. System 2: Limited Tool Loadout
+
+Status: already partially implemented, but deferred for Research Institute. Mainline worlds must use fixed recommended tools instead of asking children to choose a loadout.
 
 ### Problem
 
@@ -913,6 +1264,8 @@ Preparation screen:
 ---
 
 ## 17. System 3: Head Teacher Active Skill Meter
+
+Status: one simple teacher skill may remain in mainline if it is obvious and low-friction. Do not add skill trees or multiple active-skill choices.
 
 ### Problem
 
@@ -973,6 +1326,8 @@ When full:
 
 ## 18. System 4: Early Wave Call - `提前上課`
 
+Status: already partially implemented, but deferred for Research Institute. Do not show this button in mainline worlds.
+
 ### Problem
 
 Wave pacing is currently controlled mostly by the system. Skilled players need a way to trade risk for reward.
@@ -1027,6 +1382,8 @@ Do not remove maze/quiz flow yet unless Phase 2 changes it.
 
 ## 19. System 5: Lightweight In-Level Upgrades
 
+Status: already partially implemented, but deferred for Research Institute. Do not show in-level upgrade UI in mainline worlds.
+
 ### Problem
 
 Defenders do not currently create enough attachment or build variety across a level.
@@ -1069,6 +1426,8 @@ Use energy first because it reuses existing economy.
 
 ## 20. Priority Matrix
 
+Status: legacy / deferred. Do not use this order for the current implementation. Use Section 23.
+
 Use this order for Phase 2.5 implementation:
 
 | Priority | Feature | Value | Effort | Reason |
@@ -1091,6 +1450,8 @@ Recommended build sequence:
 
 ## 21. Interaction With Existing Phases
 
+Status: legacy / partially obsolete after the 2026-06-14 product pivot.
+
 ### Phase 1 dependency
 
 Phase 2.5 assumes Phase 1 already provides:
@@ -1110,7 +1471,9 @@ Phase 2.5 assumes Phase 2 already provides:
 
 ### Phase 3 dependency
 
-Phase 3 art pass should take Phase 2.5 systems into account:
+Legacy note only. Phase 3 art pass should not prioritize mainline UI for limited loadout, in-level upgrades, or early wave call because those systems are now hidden from child-friendly mainline worlds.
+
+If Research Institute advanced mode is re-approved later, then art pass may take Phase 2.5 systems into account:
 
 - Loadout screen needs polished art.
 - Teacher skill meter needs its own identity.
@@ -1122,6 +1485,10 @@ Do not make Phase 3 art before the strategy UI surfaces are known.
 ---
 
 ## 22. Phase 4: Strategic Level Design and Long-Term Progression
+
+Status: legacy / partially superseded by Section 9 Phase B-C.
+
+Use this section only as reference material. Current world-map progression should follow Section 0.1 and Section 23: school-stage worlds, simple unlocks, 1-star mainline progress, and sticker/badge rewards.
 
 ### Goal
 
@@ -1466,7 +1833,145 @@ Report back with:
 
 ---
 
-## 23. Claude Implementation Prompt for Phase 2.5
+## 23. Claude Implementation Prompt: Child-Friendly World Map Refactor
+
+Use this prompt for the next implementation session.
+
+```text
+請接手 xueba-pvz，先做「小學生友善簡化 + 世界地圖」改版。
+
+工作目錄：
+C:\Users\Legion5 IRX_5070\VibeProjects\xueba-pvz
+
+唯一設計書：
+.vibemgmt/GDD_ADDENDUM_2026-06-13_strategy-depth.md
+
+請先閱讀：
+- Section 0.0: Document Status
+- Section 0.1: 2026-06-14 Product Pivot: Child-Friendly World Map
+- Section 9: Master Phase Plan
+- Section 11: Strategy Depth Design Intent 的 deferred 警示
+
+背景：
+目前 index.html 已經有一些偏硬核的系統：有限 loadout、關卡內升級、提前上課、挑戰關星星解鎖。BOSS 認為這些對小學生太複雜。現在目標不是繼續加策略深度，而是先把主線改成小學生友善、短回合、世界地圖、貼紙收集。
+
+本次只做 Phase A + Phase B 的第一版，不做 Phase C/D/E。
+
+目標：
+1. 讓小學生可以從世界地圖一眼看懂進度。
+2. 從地圖點一個關卡就能開始玩，不需要先做複雜選擇。
+3. 主線不顯示關卡內升級、不顯示提前上課、不要求選 4 件道具。
+4. 保留現有塔防玩法、答題、橫屏、safe-area、visualViewport、存檔匯入/匯出。
+
+請依序實作：
+
+1. 改資料結構：
+   - 新增或重構 WORLDS / SCHOOL_STAGES：
+     - elementary: 小學部
+     - middle: 初中部
+     - high: 高中部
+     - university: 大學部
+     - research: 研究所
+   - 每個 world 有 name、theme、description、icon、levels。
+   - 把現有 LEVELS 依照 Section 0.1 的 required mapping 映射到這些 world：
+     - 1-1 / classroom -> elementary / 小學部
+     - 2-1 / playground -> middle / 初中部
+     - 3-1 / library -> high / 高中部
+     - 4-1 / exam -> university / 大學部
+     - challenge-speed -> research / 研究所 locked placeholder
+   - 可以先讓每個 world 有 3-5 個節點，其中未實作關卡顯示為 locked placeholder。
+
+2. 改主選單：
+   - 用世界地圖 / 學校地圖取代目前直向關卡清單。
+   - 手機橫屏要可用。
+   - 每個大區塊顯示：
+     - 名稱
+     - 簡短說明
+     - 進度，例如 1/5
+     - 星星總數或貼紙數
+   - 點進世界後顯示該世界的關卡節點。
+   - 已解鎖關卡可點，未解鎖關卡灰掉。
+
+3. 簡化備戰流程：
+   - 主線關卡不要讓玩家選 loadout。
+   - 關卡點擊後只顯示一個友善 intro panel：
+     - 關卡名稱
+     - 一句任務目標
+     - 本關小提示
+     - 推薦文具（自動帶入，不讓玩家選）
+     - 開始按鈕
+   - 第一版可以使用 fixedLoadout / recommendedTools 欄位。
+   - startLevel(idx, loadout) 仍可接受 loadout，但主線由關卡資料自動傳入。
+
+4. 隱藏或停用主線複雜系統：
+   - 不在主線顯示關卡內升級面板。
+   - 不在主線顯示提前上課按鈕。
+   - 不要求玩家選 4 件文具。
+   - 保留相關函式可以，但 UI 不應出現在 elementary/middle/high/university 主線。
+   - research 世界可先不開放，未來才放進階系統。
+
+5. 調整星星與解鎖：
+   - 1 星通關即可解鎖下一個主線關卡。
+   - 2-3 星只作鼓勵展示。
+   - 不要用星星卡住小學部到大學部主線進度。
+   - 研究所可以未來再用星星解鎖，這次先不做。
+
+6. 輕量收集資料模型：
+   - 可以先新增 stickers / badges 的 save data 欄位。
+   - 本次不用做完整貼紙冊 UI。
+   - 通關時可以先顯示一個簡單 badge / sticker reward text。
+   - 若新增 stickers / badges / worldProgress / schemaVersion，必須同步更新：
+     - loadGameSave() 預設值
+     - 舊存檔 migration
+     - exportSave() payload
+     - importSave() sanitizer 白名單
+   - importSave() 目前會白名單重建 clean object；不要讓 export -> import 丟失 stickers/badges。
+   - 建議 payload 內加入 schemaVersion: 2，不能只依靠 localStorage key 或 XBPVZ1 prefix。
+
+7. 文字與 UX：
+   - 面向小學生，文字短、鼓勵、少懲罰。
+   - 避免「困難、煉獄、魔王壓線」這類壓迫詞用在小學部。
+   - 小學部關卡名稱要可愛、低壓。
+   - 錯題提示保留教學語氣。
+
+限制：
+- 維持單檔 index.html。
+- 不引入 React/Vue/Vite/npm。
+- 不拆檔。
+- 不使用 PvZ 原素材、角色名、音效或圖片。
+- 不破壞橫屏鎖定、safe-area、visualViewport 修正。
+- 不破壞存檔匯入/匯出；若 save schema 增加 stickers/badges，必須向後相容舊存檔。
+- 不做 Phase 3 美術大改。
+- 不做完整貼紙冊。
+- 不做 Research Institute 進階系統。
+- 不刪除舊函式時也可以，但主線 UI 必須簡化。
+
+完成後驗證：
+1. 執行 inline script syntax check：
+   node -e "const fs=require('fs'); const html=fs.readFileSync('index.html','utf8'); const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error('script not found'); new Function(m[1]); console.log('inline script syntax: ok');"
+   注意：此檢查只適用目前單一 inline script。若新增第二個 script 區塊，需改用更精準的 parser / extraction。
+2. 手動檢查：
+   - 主選單是世界地圖/學校地圖，不是單純列表。
+   - 小學部可直接點關卡開始。
+   - 主線沒有 loadout 必選流程。
+   - 主線沒有升級按鈕。
+   - 主線沒有提前上課按鈕。
+   - 通關 1 星可以前進。
+   - 存檔匯出/匯入仍可用。
+   - 如果新增 stickers/badges，匯出後再匯入不會丟失這些欄位。
+
+回報格式：
+1. 修改範圍
+2. 新增/調整的資料結構
+3. 世界地圖如何運作
+4. 移除或隱藏了哪些複雜系統
+5. 驗證結果
+6. 剩餘風險與下一步建議
+```
+
+---
+
+## 24. Deferred Claude Implementation Prompt for Phase 2.5
 
 Use this prompt after Phase 2 is complete:
 
