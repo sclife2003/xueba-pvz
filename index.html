@@ -483,6 +483,19 @@
       eraser:   { name: '厚橡皮',   desc: '血量提升', cost: 100, apply: o => { const add = Math.round(o.maxHp * 0.8); o.maxHp += add; o.hp += add; } }
     };
 
+    // ==================== 永久装备升级（知识碎片）====================
+    // 用碎片把文具永久升级成更强版本（铅笔→原子笔机枪 等）。纯加成、不卡进度。
+    // apply(o) 复用战斗已支持的 override 栏位（rateOverride/atkOverride/slowDurOverride/maxHp）；
+    // teacher 为一次性炸弹，伤害已极高，改用 recharge 缩短冷却。display 用 name/icon 换皮。
+    const TOOL_UPGRADES = {
+      textbook: { name: '百科全书', icon: '📚', cost: 6,  blurb: '产能更快，能量滚滚来', apply: o => { o.rateOverride = Math.max(36, Math.round(o.data.rate * 0.5)); } },
+      pencil:   { name: '原子笔机枪', icon: '🖊️', cost: 10, blurb: '射速翻倍 + 伤害提升', apply: o => { o.rateOverride = Math.max(12, Math.round(o.data.rate * 0.45)); o.atkOverride = Math.round(o.data.dmg * 1.5); } },
+      watering: { name: '高压水枪', icon: '💦', cost: 8,  blurb: '连续扫射更快更痛', apply: o => { o.rateOverride = Math.max(4, Math.round(o.data.rate * 0.5)); o.atkOverride = Math.round(o.data.dmg * 1.3); } },
+      glue:     { name: '超黏口香糖', icon: '🍬', cost: 8,  blurb: '减速更久、黏得更牢', apply: o => { o.slowDurOverride = 360; o.atkOverride = Math.round(o.data.dmg * 1.4); } },
+      eraser:   { name: '知识钢盾', icon: '🔰', cost: 10, blurb: '血量大幅提升，挡更久（纯肉盾，不输出）', apply: o => { const add = Math.round(o.maxHp * 1.2); o.maxHp += add; o.hp += add; } },
+      teacher:  { name: '校长训话', icon: '🧑‍🏫', cost: 12, blurb: '冷却更快，可更常引爆', recharge: 0.6, apply: o => {} }
+    };
+
     // ==================== UTILS ====================
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -498,7 +511,7 @@
     const SAVE_KEY = 'xueba_pvz_save_v1';
     const SAVE_SCHEMA_VERSION = 2;
     function emptySave() {
-        return { schemaVersion: SAVE_SCHEMA_VERSION, unlockedLevel: 0, hp: 0, results: {}, stickers: {}, badges: {}, worldProgress: {} };
+        return { schemaVersion: SAVE_SCHEMA_VERSION, unlockedLevel: 0, hp: 0, results: {}, stickers: {}, badges: {}, worldProgress: {}, shards: 0, toolUpgrades: {} };
     }
     // 把任意（可能是舊 v1）存檔物件補齊成最新 schema，舊進度完整保留（向後相容）
     function migrateSave(d) {
@@ -510,6 +523,8 @@
         base.stickers = (d.stickers && typeof d.stickers === 'object') ? d.stickers : {};      // v2+；舊檔缺則空
         base.badges = (d.badges && typeof d.badges === 'object') ? d.badges : {};               // v2+
         base.worldProgress = (d.worldProgress && typeof d.worldProgress === 'object') ? d.worldProgress : {}; // v2+
+        base.shards = Math.max(0, parseInt(d.shards) || 0);                                       // 知识碎片（永久升级货币）
+        base.toolUpgrades = (d.toolUpgrades && typeof d.toolUpgrades === 'object') ? d.toolUpgrades : {}; // 已永久升级的文具
         base.schemaVersion = SAVE_SCHEMA_VERSION;
         return reconcileUnlockedLevelFromResults(base);
     }
@@ -594,7 +609,9 @@
                 results: cleanResults,
                 stickers: sanitizeCollection(data.stickers),
                 badges: sanitizeCollection(data.badges),
-                worldProgress: sanitizeCollection(data.worldProgress)
+                worldProgress: sanitizeCollection(data.worldProgress),
+                shards: Math.max(0, Math.min(999999, parseInt(data.shards) || 0)),
+                toolUpgrades: sanitizeCollection(data.toolUpgrades)
             };
             reconcileUnlockedLevelFromResults(clean);
             writeGameSave(clean);
@@ -899,6 +916,7 @@
             this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
             // Phase C：本关学科统计 + 本关错题（错题仅本关、不存档）
             this.subjectsLearned = {}; this.wrongList = []; this.enemiesSeen = {};
+            this.shardsEarnedThisLevel = 0; // 本关获得的知识碎片（结算展示用）
             this.challengeRule = LEVELS[idx].isChallenge ? (LEVELS[idx].rule || null) : null;
             this.phase = 'td'; this.naturalSunTimer = 200;
             this.startTD();
@@ -1034,8 +1052,12 @@
                     const isFree = this.freeNextTower;
                     if (isFree || this.mp >= tData.cost) {
                         if (isFree) this.freeNextTower = false; else this.mp -= tData.cost;
-                        this.objs.push({ type: 'tower', id: uiSelected, c, r, x: this.OX + c * this.G, y: this.OY + r * this.G, hp: tData.dmg, maxHp: tData.dmg, data: tData, cd: 0, fire: 0, placedFrame: this.frame });
-                        this.towerCooldowns[uiSelected] = tData.recharge;
+                        const tw = { type: 'tower', id: uiSelected, c, r, x: this.OX + c * this.G, y: this.OY + r * this.G, hp: tData.dmg, maxHp: tData.dmg, data: tData, cd: 0, fire: 0, placedFrame: this.frame };
+                        // 永久升级：若该文具已升级，套用更强属性 + 换皮，并依需要缩短冷却
+                        const permUp = (this.save.toolUpgrades && this.save.toolUpgrades[uiSelected]) ? TOOL_UPGRADES[uiSelected] : null;
+                        if (permUp) { tw.upgradedPermanent = true; tw.up = permUp; permUp.apply(tw); }
+                        this.objs.push(tw);
+                        this.towerCooldowns[uiSelected] = Math.round(tData.recharge * ((permUp && permUp.recharge) || 1));
                         this.spawnParticles(cx, cy, '#fff', 8);
                         this.floatText(isFree ? '免费!' : `-${tData.cost}`, cx, cy, isFree ? '#48bb78' : '#fbbf24');
                         this.updateStats();
@@ -1161,6 +1183,7 @@
             if (correct) {
                 const subj = (cq && cq.subject) || '常识';
                 this.subjectsLearned[subj] = (this.subjectsLearned[subj] || 0) + 1;
+                this.addShards(1); // 答对一题 → +1 知识碎片
             } else if (cq) {
                 const correctAns = ((cq.a || []).find(o => o.ok === 1) || {}).t || '';
                 const exp = (cq.visual && cq.visual.content && cq.visual.content.join('　')) || '仔细审题，下次一定行！';
@@ -1249,6 +1272,15 @@
             return true;
         }
 
+        // 知识碎片：永久升级货币。即时写盘（频率低）；累计本关获得量供结算展示。
+        addShards(n) {
+            if (!n) return;
+            if (typeof this.save.shards !== 'number') this.save.shards = 0;
+            this.save.shards = Math.min(999999, this.save.shards + n); // 与 import clamp 同上限，防爆表
+            this.shardsEarnedThisLevel = (this.shardsEarnedThisLevel || 0) + n;
+            writeGameSave(this.save);
+        }
+
         // Phase 4：结算星级并保存最佳成绩
         computeAndSaveStars() {
             const lvl = LEVELS[this.levelIdx];
@@ -1289,7 +1321,8 @@
             if (wrong === 0) tags.push('零失误');
             if (hp >= HP_CAP) tags.push('完美防守');
             const stickerText = isFirstSticker ? ('🏅 收集到「' + friendlyLevelName(lvl) + '」贴纸！') : '';
-            return { levelIdx: this.levelIdx, id, stars, hp, wrong, isNewBest, reward: lvl.reward || null, tags, isChallenge: !!lvl.isChallenge, name: lvl.name, stickerText, gotBadge, gotWorldBadge, subjectsLearned: this.subjectsLearned || {}, wrongList: this.wrongList || [] };
+            this.addShards(1 + stars); // 通关奖励碎片：基础 1 + 每颗星 1
+            return { levelIdx: this.levelIdx, id, stars, hp, wrong, isNewBest, reward: lvl.reward || null, tags, isChallenge: !!lvl.isChallenge, name: lvl.name, stickerText, gotBadge, gotWorldBadge, subjectsLearned: this.subjectsLearned || {}, wrongList: this.wrongList || [], shardsEarned: this.shardsEarnedThisLevel || 0, shardsTotal: this.save.shards || 0 };
         }
 
         nextLevel() {
@@ -1992,6 +2025,7 @@
                         }
                         // 升级标记 + 选中高亮（Phase 2.5）
                         if(o.upgraded) { ctx.fillStyle='#F6D365'; ctx.font=`bold ${Math.max(12,G*0.3)}px Arial`; ctx.textAlign='left'; ctx.fillText('⭐', o.x+G-G*0.36, o.y+G*0.36); }
+                        if(o.upgradedPermanent) { ctx.font=`${Math.max(12,G*0.32)}px Arial`; ctx.textAlign='left'; ctx.fillText('✨', o.x+G*0.04, o.y+G*0.34); }
                         if(o===this.selectedField) { ctx.strokeStyle='#F6D365'; ctx.lineWidth=3; ctx.setLineDash([6,4]); ctx.strokeRect(o.x+4, o.y+4, G-8, G-8); ctx.setLineDash([]); }
                     } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
                     else if(o.type==='bullet') {
@@ -2094,6 +2128,8 @@
             this.advancedMode = false;  // 主线 = false：隐藏提前上课 / 关卡内升级（仅研究所进阶模式才开，本版不开放）
             this.stickers = {};         // 收集：贴纸
             this.badges = {};           // 收集：徽章
+            this.shards = 0;            // 知识碎片（永久升级货币）
+            this.toolUpgrades = {};     // 已永久升级的文具
             // ----- Phase 2.5 UI 状态 -----
             this.activeLoadout = Object.keys(TOWERS); // 道具栏只渲染 loadout 内的文具
             this.prepData = null;       // 备战画面数据（敌人预告 + 推荐策略）
@@ -2115,6 +2151,8 @@
             this.onRewardPick = null;
             this.onOpenWorld = null;    // 点世界 → 展开该世界关卡节点
             this.onOpenCollection = null; // 打开收藏馆
+            this.onOpenWorkshop = null;   // 打开装备工坊
+            this.onUpgradeTool = null;    // 在工坊升级某文具
             this.onOpenPrep = null;     // 进入关卡 intro
             this.onConfirmPrep = null;  // intro 完成 → 开始战斗
             this.onEarlyCall = null;    // 提前上课
@@ -2177,11 +2215,17 @@
             inner.appendChild(this.el('h1', { fontSize:'32px', fontWeight:'900', background:'linear-gradient(to right, #fde68a, #f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', margin:'2px 0', textAlign:'center', letterSpacing:'-1px' }, '学霸校园大冒险'));
             inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.78)', fontSize:'14px', fontWeight:'bold', marginBottom:'12px', textAlign:'center' }, '选一个学校，开始你的学习冒险吧！'));
 
-            // Phase C：收藏馆入口
-            inner.appendChild(this.btn('🏅 我的收藏馆', {
-                width:'100%', padding:'11px', borderRadius:'14px', border:'2px solid #fbbf24', background:'rgba(251,191,36,0.18)',
-                color:'#fde68a', fontWeight:'900', fontSize:'16px', fontFamily:'inherit', cursor:'pointer', marginBottom:'14px'
+            // 收藏馆 + 装备工坊入口（含碎片数）
+            const entryRow = this.el('div', { width:'100%', display:'flex', gap:'8px', marginBottom:'14px' });
+            entryRow.appendChild(this.btn('🏅 收藏馆', {
+                flex:'1', padding:'11px', borderRadius:'14px', border:'2px solid #fbbf24', background:'rgba(251,191,36,0.18)',
+                color:'#fde68a', fontWeight:'900', fontSize:'15px', fontFamily:'inherit', cursor:'pointer'
             }, () => this.onOpenCollection && this.onOpenCollection()));
+            entryRow.appendChild(this.btn('🔧 装备工坊 💎' + (this.shards || 0), {
+                flex:'1', padding:'11px', borderRadius:'14px', border:'2px solid #38bdf8', background:'rgba(56,189,248,0.18)',
+                color:'#bae6fd', fontWeight:'900', fontSize:'15px', fontFamily:'inherit', cursor:'pointer'
+            }, () => this.onOpenWorkshop && this.onOpenWorkshop()));
+            inner.appendChild(entryRow);
 
             const list = this.el('div', { width:'100%', display:'flex', flexDirection:'column', gap:'12px' });
             WORLDS.forEach((world, wi) => {
@@ -2247,7 +2291,7 @@
 
             // 顶部：返回 + 世界名
             const head = this.el('div', { display:'flex', alignItems:'center', gap:'12px' });
-            head.appendChild(this.btn('‹ 地图', {
+            head.appendChild(this.btn('‹ 返回地图', {
                 padding:'8px 14px', borderRadius:'999px', border:'2px solid rgba(255,255,255,0.35)', background:'rgba(0,0,0,0.25)',
                 color:'white', fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer', flexShrink:'0'
             }, () => this.onRestart && this.onRestart()));
@@ -2331,7 +2375,7 @@
             WORLDS.filter(w => !w.locked).forEach(w => tally(!!badges['world:' + w.id]));
 
             const head = this.el('div', { display:'flex', alignItems:'center', gap:'12px' });
-            head.appendChild(this.btn('‹ 地图', {
+            head.appendChild(this.btn('‹ 返回地图', {
                 padding:'8px 14px', borderRadius:'999px', border:'2px solid rgba(255,255,255,0.35)', background:'rgba(0,0,0,0.25)',
                 color:'white', fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer', flexShrink:'0'
             }, () => this.onRestart && this.onRestart()));
@@ -2369,6 +2413,75 @@
             inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, emoji: w.icon }))));
 
             inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', marginTop:'2px' }, '通关、遇到新朋友、完成整座学校，就能收集更多贴纸喔！'));
+            wrap.appendChild(inner);
+            return wrap;
+        }
+
+        // ----- 装备工坊：用知识碎片把文具永久升级（纯加成、不卡进度） -----
+        renderWorkshop() {
+            if (this.phase !== 'workshop') return null;
+            const shards = this.shards || 0;
+            const ups = this.toolUpgrades || {};
+            const wrap = this.el('div', {
+                position:'absolute', inset:'0', zIndex:'56', overflowY:'auto', overflowX:'hidden', pointerEvents:'auto',
+                background:'linear-gradient(135deg, #0c4a6e 0%, #1e3a8a 50%, #1e293b 100%)',
+                display:'flex', justifyContent:'center', boxSizing:'border-box',
+                padding:'calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))'
+            });
+            wrap.className = 'hide-scrollbar';
+            const inner = this.el('div', { width:'100%', maxWidth:'520px', margin:'auto', display:'flex', flexDirection:'column', gap:'12px' });
+
+            const head = this.el('div', { display:'flex', alignItems:'center', gap:'12px' });
+            head.appendChild(this.btn('‹ 返回地图', {
+                padding:'8px 14px', borderRadius:'999px', border:'2px solid rgba(255,255,255,0.35)', background:'rgba(0,0,0,0.25)',
+                color:'white', fontWeight:'900', fontSize:'14px', fontFamily:'inherit', cursor:'pointer', flexShrink:'0'
+            }, () => this.onRestart && this.onRestart()));
+            const ht = this.el('div', { display:'flex', flexDirection:'column' });
+            ht.append(
+                this.el('div', { color:'white', fontWeight:'900', fontSize:'24px' }, '🔧 装备工坊'),
+                this.el('div', { color:'#bae6fd', fontSize:'14px', fontWeight:'900' }, '知识碎片 💎 ' + shards + '（答题、通关都会获得）')
+            );
+            head.appendChild(ht);
+            inner.appendChild(head);
+
+            Object.values(TOWERS).forEach(t => {
+                const up = TOOL_UPGRADES[t.id];
+                if (!up) return;
+                const done = !!ups[t.id];
+                const afford = shards >= up.cost;
+                const card = this.el('div', {
+                    display:'flex', alignItems:'center', gap:'12px', padding:'12px', borderRadius:'16px',
+                    border:'2px solid ' + (done ? '#34d399' : '#334155'), background:'rgba(255,255,255,0.06)'
+                });
+                // 升级前后图示
+                const icons = this.el('div', { display:'flex', alignItems:'center', gap:'6px', flexShrink:'0' });
+                icons.append(
+                    this.el('div', { width:'40px', height:'40px', borderRadius:'10px', background:'rgba(0,0,0,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px', opacity: done ? '0.5' : '1' }, t.icon),
+                    this.el('div', { color:'#94a3b8', fontWeight:'900' }, '→'),
+                    this.el('div', { width:'44px', height:'44px', borderRadius:'10px', background: done ? 'rgba(52,211,153,0.25)' : 'rgba(56,189,248,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', border:'2px solid ' + (done ? '#34d399' : '#38bdf8') }, up.icon)
+                );
+                card.appendChild(icons);
+                const info = this.el('div', { flex:'1', minWidth:'0' });
+                info.append(
+                    this.el('div', { color:'white', fontWeight:'900', fontSize:'15px' }, t.name + ' → ' + up.name),
+                    this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'12px', fontWeight:'bold', lineHeight:'1.4' }, up.blurb)
+                );
+                card.appendChild(info);
+                if (done) {
+                    card.appendChild(this.el('div', { color:'#34d399', fontWeight:'900', fontSize:'14px', flexShrink:'0' }, '✅ 已升级'));
+                } else {
+                    const buyBtn = this.btn('💎' + up.cost, {
+                        padding:'10px 14px', borderRadius:'12px', border:'2px solid ' + (afford ? '#38bdf8' : '#475569'),
+                        background: afford ? '#0ea5e9' : '#334155', color:'white', fontWeight:'900', fontSize:'15px',
+                        fontFamily:'inherit', cursor: afford ? 'pointer' : 'not-allowed', flexShrink:'0'
+                    }, () => { if (afford && this.onUpgradeTool) this.onUpgradeTool(t.id); });
+                    buyBtn.disabled = !afford;
+                    card.appendChild(buyBtn);
+                }
+                inner.appendChild(card);
+            });
+
+            inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', marginTop:'2px', lineHeight:'1.5' }, '升级是永久的，让文具变更强；就算不升级，也能照样通关喔！'));
             wrap.appendChild(inner);
             return wrap;
         }
@@ -2531,6 +2644,10 @@
                 const isCooldown = cooldown > 0;
                 const canAfford = this.stats.mp >= t.cost;
                 const isSelected = this.selectedTower === t.id;
+                // 永久升级：道具栏显示升级后的名称与图示 + ✨
+                const permUp = (this.toolUpgrades && this.toolUpgrades[t.id]) ? TOOL_UPGRADES[t.id] : null;
+                const dispIcon = permUp ? permUp.icon : t.icon;
+                const dispName = permUp ? permUp.name : t.name;
 
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
@@ -2551,14 +2668,15 @@
                     backgroundColor: canAfford ? '#facc15' : '#ef4444', color: canAfford ? '#713f12' : 'white'
                 }, String(t.cost));
 
-                // Icon
-                const iconEl = this.el('div', { fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, t.icon);
+                // Icon（升级后换皮 + ✨ 角标）
+                const iconEl = this.el('div', { position:'relative', fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, dispIcon);
+                if (permUp) iconEl.appendChild(this.el('div', { position:'absolute', top:'-2px', left:'-2px', fontSize:'10px' }, '✨'));
 
-                // Name
+                // Name（升级后显示新名）
                 const nameEl = this.el('div', {
-                    backgroundColor:'#efe7d3', color:'#6b4a2f', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
-                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid #c9a06a'
-                }, t.name);
+                    backgroundColor: permUp ? '#cdeafe' : '#efe7d3', color:'#6b4a2f', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
+                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid ' + (permUp ? '#7cc8f0' : '#c9a06a')
+                }, dispName);
 
                 // Cooldown overlay
                 if (isCooldown) {
@@ -2951,6 +3069,7 @@
                 '剩余生命 ❤️' + (r.hp != null ? r.hp : '-') + '　答错 ' + (r.wrong != null ? r.wrong : '-')));
             if (r.reward && r.reward.text) box.appendChild(this.el('div', { color:'#0f766e', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '🎁 ' + r.reward.text));
             if (r.stickerText) box.appendChild(this.el('div', { color:'#9333ea', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, r.stickerText));
+            if (r.shardsEarned) box.appendChild(this.el('div', { color:'#0ea5e9', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '💎 +' + r.shardsEarned + ' 知识碎片（共 ' + (r.shardsTotal != null ? r.shardsTotal : '-') + '）·到装备工坊升级文具！'));
             if (r.gotWorldBadge) box.appendChild(this.el('div', { color:'#b45309', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '🏆 解锁世界徽章：' + r.gotWorldBadge + '！'));
 
             // Phase C：今天我学会了（学科分类统计）
@@ -3045,6 +3164,12 @@
                 return;
             }
 
+            if (this.phase === 'workshop') {
+                const wk = this.renderWorkshop();
+                if (wk) this.root.appendChild(wk);
+                return;
+            }
+
             if (this.phase === 'prep') {
                 const prep = this.renderPrep();
                 if (prep) this.root.appendChild(prep);
@@ -3124,6 +3249,8 @@
     const advancedMode = false; // 主线小学生模式：研究所进阶系统本版不开放
     let stickers = loadGameSave().stickers || {};
     let badges = loadGameSave().badges || {};
+    let shards = loadGameSave().shards || 0;
+    let toolUpgrades = loadGameSave().toolUpgrades || {};
     // ----- Phase 2.5 状态 -----
     let activeLoadout = Object.keys(TOWERS);
     let prepData = null;
@@ -3166,12 +3293,13 @@
         },
         onLevelComplete: (completedLevelIdx, result) => {
             if (result && !result.isChallenge) unlockedLevel = Math.max(unlockedLevel, Math.min(CAMPAIGN_COUNT - 1, completedLevelIdx + 1));
-            const fresh = loadGameSave(); // 引擎已写盘，同步最新星级 + 收集
+            const fresh = loadGameSave(); // 引擎已写盘，同步最新星级 + 收集 + 碎片
             results = fresh.results || results;
             stickers = fresh.stickers || stickers;
             badges = fresh.badges || badges;
+            shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || toolUpgrades;
             levelResult = result || null;
-            ui.update({ unlockedLevel, results, stickers, badges, levelResult });
+            ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, levelResult });
         },
         onWaveIntro: (info) => {
             waveIntro = info;
@@ -3224,6 +3352,27 @@
         phase = 'collection';
         ui.update({ phase, stickers, badges });
     };
+    // 装备工坊：打开（读最新碎片/升级）
+    ui.onOpenWorkshop = () => {
+        const fresh = loadGameSave();
+        shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || {};
+        phase = 'workshop';
+        ui.update({ phase, shards, toolUpgrades });
+    };
+    // 装备工坊：花碎片升级某文具（永久）
+    ui.onUpgradeTool = (toolId) => {
+        const up = TOOL_UPGRADES[toolId]; if (!up) return;
+        const save = loadGameSave();
+        if (!save.toolUpgrades) save.toolUpgrades = {};
+        if (save.toolUpgrades[toolId]) return;          // 已升级
+        if ((save.shards || 0) < up.cost) return;       // 碎片不足
+        save.shards -= up.cost;
+        save.toolUpgrades[toolId] = true;
+        writeGameSave(save);
+        engine.save = save;                              // 同步引擎，下一关即生效
+        shards = save.shards; toolUpgrades = save.toolUpgrades;
+        ui.update({ shards, toolUpgrades });            // 仍在 workshop，刷新即可
+    };
     // Phase A：进入关卡友善 intro（不需选 loadout，开战给全部文具）
     ui.onOpenPrep = (idx) => {
         prepData = engine.getLevelPreview(idx);
@@ -3235,8 +3384,9 @@
     ui.onConfirmPrep = (idx, loadout) => {
         requestLandscapeMode();
         activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
+        const fresh = loadGameSave(); toolUpgrades = fresh.toolUpgrades || {}; // 道具栏显示升级后外观
         gameOverData = null;
-        ui.update({ activeLoadout, gameOverData });
+        ui.update({ activeLoadout, toolUpgrades, gameOverData });
         engine.startLevel(idx, activeLoadout);
     };
     // 兼容旧入口（直接开始指定关）
@@ -3255,9 +3405,10 @@
         const fresh = loadGameSave();
         unlockedLevel = Math.max(unlockedLevel, fresh.unlockedLevel || 0);
         results = fresh.results || results; stickers = fresh.stickers || stickers; badges = fresh.badges || badges;
+        shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || toolUpgrades;
         phase = 'menu';
         gameOverData = null;
-        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges });
+        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges, shards, toolUpgrades });
     };
     ui.onQuizAnswer = (ok) => {
         quizData = null;
@@ -3288,7 +3439,7 @@
     };
 
     // 启动时把存档进度（解锁关卡 + 星级 + 收集）推到选单，确保返回玩家正确显示
-    ui.update({ unlockedLevel, results, stickers, badges, advancedMode });
+    ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, advancedMode });
 
     // Input handling
     function handleInput(type, x, y) {

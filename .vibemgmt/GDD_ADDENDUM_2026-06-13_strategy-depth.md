@@ -102,7 +102,17 @@ These systems should be removed from the main flow or hidden until a future "Res
 | In-level tool upgrades | Adds RPG-like complexity and extra UI | Remove from main flow |
 | Early wave call | Advanced risk/reward, easy to misclick | Remove from main flow |
 | Challenge level star gate | Can feel like punishment | Make optional later, not part of main progression |
-| Permanent mastery upgrades | Turns rewards into stat management | Replace with stickers, badges, cosmetics |
+| Permanent mastery upgrades | Turns rewards into stat management | ~~Replace with stickers, badges, cosmetics~~ → **REVISED 2026-06-14 (see below)** |
+
+### 0.1.1 Decision revision (2026-06-14): child-friendly permanent upgrades ARE allowed
+
+BOSS re-approved a **permanent equipment-upgrade system**, reversing the original "remove permanent mastery upgrades" line above. It is kept child-friendly by three guardrails (BOSS-chosen):
+
+1. **Universal currency** — one "知识碎片 / knowledge shard", earned purely by playing (correct quiz answer +1; level clear +1+stars). No payment, no per-tool grind.
+2. **One upgrade per tool** — simple, not a deep tree (铅笔→原子笔机枪, 橡皮→知识钢盾, 课本→百科全书, 喷壶→高压水枪, 胶水→超黏口香糖, 老师→校长). Effects reuse the existing `UPGRADES` override fields.
+3. **Pure power bonus, never gates progression** — every mainline level remains clearable (1-star) with zero upgrades; upgrades only make it stronger/more fun.
+
+UI: a 「装备工坊」screen reachable from the world map (alongside 收藏馆). Stickers/badges/cosmetics from §0.1 still stand; this adds a parallel, opt-in power-fantasy track (Bloons-style) the research flagged as engaging for this age as long as the three guardrails hold.
 
 ### New world map structure
 
