@@ -169,6 +169,8 @@
       slime: { id: 'slime', name: '果冻怪', hp: 100, spd: 0.6, dmg: 5, val: 0, color: '#48bb78', type: 'ground', role: 'normal', ability: 'none', hint: '铅笔射手能稳定处理' },
       bat: { id: 'bat', name: '迟到怪', hp: 45, spd: 1.35, dmg: 2, val: 0, color: '#9f7aea', type: 'ground', role: 'fast', ability: 'schoolRush', hint: '冲刺前用胶水黏住' },
       tank: { id: 'tank', name: '作业山', hp: 420, spd: 0.34, dmg: 10, val: 0, color: '#a0aec0', type: 'ground', role: 'tank', ability: 'paperShield', hint: '前半血更硬，用橡皮盾拖住集火' },
+      note: { id: 'note', name: '传纸条', hp: 70, spd: 0.95, dmg: 3, val: 0, color: '#f59e0b', type: 'ground', role: 'trick', ability: 'laneHop', hint: '会换到旁边一排，别只守一条路' },
+      doodle: { id: 'doodle', name: '涂鸦怪', hp: 170, spd: 0.42, dmg: 4, val: 0, color: '#ec4899', type: 'ground', role: 'support', ability: 'doodleHeal', hint: '会给附近同学鼓劲，优先点掉' },
       boss: { id: 'boss', name: '监考怪', hp: 1800, spd: 0.24, dmg: 45, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', ability: 'focusDrain', hint: '会点名拆防线，留班主任技能' },
       elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground', role: 'elf', hint: '击杀可得能量' }
     };
@@ -189,6 +191,34 @@
         ]
       },
       {
+        id: '1-2', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        enemyPreviewHint: '传纸条会换路，别只守一排',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁小纸条贴纸' },
+        name: "小学部：课间小纸条",
+        bg: "#2f855a", difficulty: 1.05,
+        tip: "传纸条会突然换到旁边一排，每一路都要有一点防守。",
+        waves: [
+            { groups: [{ e: 'slime', n: 4, interval: 150, preDelay: 60 }, { e: 'note', n: 2, interval: 180, preDelay: 140 }] },
+            { groups: [{ e: 'note', n: 4, interval: 160, preDelay: 70 }, { e: 'slime', n: 6, interval: 120, preDelay: 80 }] },
+            { groups: [{ e: 'note', n: 5, interval: 135, preDelay: 80 }, { e: 'tank', n: 1, interval: 0, preDelay: 220 }] }
+        ]
+      },
+      {
+        id: '1-3', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        enemyPreviewHint: '小测验会混合基础怪，练习补防线',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁初中部：操场挑战' },
+        name: "小学部：班会小测",
+        bg: "#2f855a", difficulty: 1.12,
+        tip: "先铺课本，再补每一路铅笔。看到作业山就用橡皮拖住。",
+        waves: [
+            { groups: [{ e: 'slime', n: 6, interval: 120, preDelay: 50 }, { e: 'note', n: 3, interval: 150, preDelay: 140 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 80 }, { e: 'slime', n: 8, interval: 90, preDelay: 90 }] },
+            { groups: [{ e: 'note', n: 5, interval: 120, preDelay: 70 }, { e: 'tank', n: 2, interval: 220, preDelay: 160 }, { e: 'elf', n: 2, interval: 80, preDelay: 120 }] }
+        ]
+      },
+      {
         id: '2-1', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
         enemyPreviewHint: '迟到怪会突然冲刺，胶水能让它慢下来',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
@@ -201,6 +231,34 @@
             { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 50 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
             { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 100 }, { e: 'slime', n: 12, interval: 60, preDelay: 50 }] },
             { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 200 }, { e: 'tank', n: 2, interval: 300, preDelay: 100 }] }
+        ]
+      },
+      {
+        id: '2-2', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        enemyPreviewHint: '接力跑会连续冲刺，胶水要放在前段',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁操场接力贴纸' },
+        name: "初中部：接力跑",
+        bg: "#c05621", difficulty: 1.32,
+        tip: "迟到怪成群时，先黏住再用铅笔收掉。不要等到压线才放胶水。",
+        waves: [
+            { groups: [{ e: 'bat', n: 5, interval: 95, preDelay: 50 }, { e: 'slime', n: 5, interval: 100, preDelay: 80 }] },
+            { groups: [{ e: 'bat', n: 8, interval: 80, preDelay: 60 }, { e: 'note', n: 4, interval: 120, preDelay: 120 }] },
+            { groups: [{ e: 'bat', n: 10, interval: 65, preDelay: 60 }, { e: 'tank', n: 2, interval: 180, preDelay: 160 }] }
+        ]
+      },
+      {
+        id: '2-3', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        enemyPreviewHint: '运动会混合冲刺和换路，练习快速补防',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁高中部：图书馆考验' },
+        name: "初中部：运动会",
+        bg: "#c05621", difficulty: 1.38,
+        tip: "这一关要同时看冲刺和换路。胶水控速，橡皮挡最后一排。",
+        waves: [
+            { groups: [{ e: 'bat', n: 6, interval: 80, preDelay: 50 }, { e: 'note', n: 5, interval: 120, preDelay: 90 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 80 }, { e: 'bat', n: 8, interval: 70, preDelay: 80 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 180 }, { e: 'bat', n: 8, interval: 65, preDelay: 80 }, { e: 'note', n: 5, interval: 110, preDelay: 110 }] }
         ]
       },
       {
@@ -219,6 +277,34 @@
         ]
       },
       {
+        id: '3-2', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        enemyPreviewHint: '涂鸦怪会帮附近敌人回血，要优先处理',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁涂鸦怪贴纸' },
+        name: "高中部：自习室",
+        bg: "#4c1d95", difficulty: 1.48,
+        tip: "涂鸦怪会给附近怪鼓劲回血，出现时先集中火力点掉。",
+        waves: [
+            { groups: [{ e: 'doodle', n: 2, interval: 260, preDelay: 80 }, { e: 'slime', n: 8, interval: 70, preDelay: 90 }] },
+            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 80 }, { e: 'doodle', n: 3, interval: 220, preDelay: 120 }] },
+            { groups: [{ e: 'doodle', n: 4, interval: 180, preDelay: 70 }, { e: 'bat', n: 8, interval: 70, preDelay: 110 }, { e: 'tank', n: 3, interval: 160, preDelay: 150 }] }
+        ]
+      },
+      {
+        id: '3-3', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        enemyPreviewHint: '图书馆会同时出现硬怪和回血怪',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
+        reward: { type: 'unlock', text: '解锁大学部：考场决战' },
+        name: "高中部：图书馆闭馆",
+        bg: "#4c1d95", difficulty: 1.55,
+        tip: "先挡住作业山，再优先点掉涂鸦怪。喷壶适合清小怪群。",
+        waves: [
+            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 70 }, { e: 'doodle', n: 2, interval: 230, preDelay: 140 }] },
+            { groups: [{ e: 'note', n: 6, interval: 95, preDelay: 60 }, { e: 'doodle', n: 3, interval: 200, preDelay: 100 }, { e: 'tank', n: 3, interval: 160, preDelay: 160 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 180 }, { e: 'doodle', n: 4, interval: 170, preDelay: 80 }, { e: 'tank', n: 4, interval: 145, preDelay: 130 }] }
+        ]
+      },
+      {
         id: '4-1', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
         enemyPreviewHint: '监考怪会点名拆防线，班主任技能是最后答案',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
@@ -231,6 +317,21 @@
             { groups: [{ e: 'tank', n: 6, interval: 120, preDelay: 50 }, { e: 'slime', n: 15, interval: 45, preDelay: 100 }] },
             { groups: [{ e: 'boss', n: 2, interval: 450, preDelay: 200 }, { e: 'bat', n: 9, interval: 55, preDelay: 50 }] },
             { groups: [{ e: 'boss', n: 2, interval: 250, preDelay: 100 }, { e: 'tank', n: 7, interval: 100, preDelay: 100 }, { e: 'slime', n: 16, interval: 35, preDelay: 50 }] }
+        ]
+      },
+      {
+        id: '4-2', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
+        enemyPreviewHint: '毕业答辩会把所有机制混在一起',
+        starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
+        reward: { type: 'badge', text: '🎓 校园毕业徽章' },
+        name: "大学部：毕业答辩",
+        bg: "#7f1d1d", difficulty: 1.78,
+        tip: "最后一关会混合冲刺、换路、回血和点名。留好班主任技能处理危险波。",
+        waves: [
+            { groups: [{ e: 'bat', n: 7, interval: 60, preDelay: 50 }, { e: 'note', n: 6, interval: 90, preDelay: 90 }, { e: 'elf', n: 3, interval: 60, preDelay: 120 }] },
+            { groups: [{ e: 'tank', n: 5, interval: 120, preDelay: 50 }, { e: 'doodle', n: 4, interval: 170, preDelay: 90 }, { e: 'slime', n: 12, interval: 50, preDelay: 120 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 320, preDelay: 180 }, { e: 'bat', n: 10, interval: 55, preDelay: 80 }, { e: 'doodle', n: 3, interval: 190, preDelay: 130 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 260, preDelay: 100 }, { e: 'tank', n: 6, interval: 110, preDelay: 80 }, { e: 'note', n: 8, interval: 80, preDelay: 120 }, { e: 'doodle', n: 4, interval: 170, preDelay: 140 }] }
         ]
       }
     ];
@@ -263,40 +364,68 @@
       name: '课外挑战：速度课堂',
       bg: '#0f766e', difficulty: 1.3,
       tip: '提前上课会缩短等待，敌人更快——抓准班主任技能与升级时机！',
-      waves: LEVELS[1].waves
+      waves: (LEVELS.find(l => l.id === '2-1') || LEVELS[0]).waves
     });
 
     // ==================== CHILD-FRIENDLY MAINLINE (Phase A) ====================
     // 主线文具采用关卡自动解锁，不让小学生做配装选择。
     const MAINLINE_LOADOUTS = {
       '1-1': ['textbook', 'pencil', 'eraser'],
+      '1-2': ['textbook', 'pencil', 'eraser'],
+      '1-3': ['textbook', 'pencil', 'eraser'],
       '2-1': ['textbook', 'pencil', 'glue', 'eraser'],
+      '2-2': ['textbook', 'pencil', 'glue', 'eraser'],
+      '2-3': ['textbook', 'pencil', 'glue', 'eraser'],
       '3-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
+      '3-2': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
+      '3-3': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
       '4-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser', 'teacher'],
+      '4-2': ['textbook', 'pencil', 'glue', 'watering', 'eraser', 'teacher'],
       'challenge-speed': ['textbook', 'pencil', 'glue', 'eraser']
     };
     // 进关前只讲一个本关重点，避免看起来像装备选择页。
     const LESSON_BEATS = {
       '1-1': { tool: 'textbook', title: '先放课本', text: '课本会产能量；有能量，后面才放得出铅笔。' },
+      '1-2': { tool: 'pencil', title: '每一路都要顾到', text: '传纸条会换路，别把所有文具挤在同一排。' },
+      '1-3': { tool: 'eraser', title: '快破线时放橡皮', text: '作业山出现时，用橡皮先挡住再慢慢打。' },
       '2-1': { tool: 'glue', title: '胶水黏住冲刺', text: '迟到怪快冲到前排时，胶水会把节奏拉回来。' },
+      '2-2': { tool: 'glue', title: '胶水放前段', text: '敌人冲刺前被黏住，防线压力会小很多。' },
+      '2-3': { tool: 'glue', title: '同时看冲刺和换路', text: '胶水控速，铅笔补输出，橡皮守最后一格。' },
       '3-1': { tool: 'eraser', title: '橡皮挡住作业山', text: '硬怪先挡住，再让后排文具慢慢解决。' },
+      '3-2': { tool: 'watering', title: '先处理涂鸦怪', text: '涂鸦怪会帮附近敌人回血，喷壶适合快速补伤害。' },
+      '3-3': { tool: 'watering', title: '清小怪，点支援', text: '先点掉涂鸦怪，再集中火力打作业山。' },
       '4-1': { tool: 'teacher', title: '班主任救关键一波', text: '监考怪点名时，班主任技能可以稳住全场。' },
+      '4-2': { tool: 'teacher', title: '毕业答辩总复习', text: '所有机制都会出现，危险时用班主任争取时间。' },
       'challenge-speed': { tool: 'glue', title: '快节奏复习', text: '敌人来得更快，先控速再补输出。' }
     };
     // 主线推荐文具：只用于收藏/提示，真正可用文具由 MAINLINE_LOADOUTS 自动决定。
     const RECOMMENDED_TOOLS = {
       '1-1': ['textbook', 'pencil', 'eraser'],
+      '1-2': ['pencil', 'eraser'],
+      '1-3': ['eraser', 'pencil'],
       '2-1': ['glue', 'pencil', 'eraser'],
-      '3-1': ['eraser', 'pencil', 'teacher'],
+      '2-2': ['glue', 'pencil'],
+      '2-3': ['glue', 'eraser', 'pencil'],
+      '3-1': ['eraser', 'pencil', 'watering'],
+      '3-2': ['watering', 'pencil'],
+      '3-3': ['watering', 'eraser', 'pencil'],
       '4-1': ['eraser', 'teacher', 'pencil'],
+      '4-2': ['teacher', 'glue', 'watering'],
       'challenge-speed': ['glue', 'pencil', 'eraser']
     };
     // 一句任务目标：短、鼓励、低压（小学生友善 intro 用）
     const LEVEL_GOALS = {
       '1-1': '把课本放好、收集能量，守住校门就过关！',
+      '1-2': '传纸条会换路，学会每一路都放一点防守！',
+      '1-3': '小测验来了，复习课本、铅笔和橡皮的配合！',
       '2-1': '操场的怪跑很快，用胶水把它们黏住！',
+      '2-2': '接力跑一波接一波，先控速再输出！',
+      '2-3': '运动会混合考验：冲刺、换路、硬怪一起上！',
       '3-1': '来了硬硬的怪，用橡皮堡垒挡住、集中火力！',
+      '3-2': '涂鸦怪会帮敌人回血，先把它找出来！',
+      '3-3': '图书馆闭馆前，处理支援怪和作业山组合！',
       '4-1': '毕业大考！沉住气，守到最后一波就毕业啦！',
+      '4-2': '毕业答辩总复习，所有学过的招式都用上！',
       'challenge-speed': '速度课堂：节奏更快，挑战你的反应！'
     };
     LEVELS.forEach(l => {
@@ -307,19 +436,19 @@
     });
 
     // ==================== SCHOOL-STAGE WORLD MAP (Phase B) ====================
-    // 学制世界地图：把现有 4 个主题关卡映射到 5 个学制世界（GDD 0.1 / 23 映射规则）。
-    //   classroom -> 小学部 / playground -> 初中部 / library -> 高中部 / exam -> 大学部 / challenge -> 研究所(locked)
-    // 每个 world 目前仅 1 个真实关卡（levelIdx），其余为「即将推出」locked placeholder，先呈现冒险规模。
+    function levelIndexById(id) { return LEVELS.findIndex(l => l.id === id); }
+
+    // 学制世界地图：每个已开放世界包含多个真实子关卡；研究所仍作为未来进阶区 locked。
     // node: { levelIdx:n }（真实关卡） 或 { name, placeholder:true }（占位）。研究所整区 locked，本版不开放进阶系统。
     const WORLDS = [
       { id:'elementary', name:'小学部', icon:'🏫', desc:'初入校园，轻松学会摆放与收集能量', color:'#10b981', shadow:'#065f46',
-        nodes:[ { levelIdx:0 }, { name:'课间游戏', placeholder:true }, { name:'美劳课', placeholder:true }, { name:'班会时间', placeholder:true } ] },
+        nodes:[ { levelIdx:levelIndexById('1-1') }, { levelIdx:levelIndexById('1-2') }, { levelIdx:levelIndexById('1-3') }, { name:'美劳课', placeholder:true } ] },
       { id:'middle', name:'初中部', icon:'🏃', desc:'操场上的速度挑战，学会减速控制', color:'#f59e0b', shadow:'#92400e',
-        nodes:[ { levelIdx:1 }, { name:'社团活动', placeholder:true }, { name:'运动会', placeholder:true }, { name:'户外教学', placeholder:true } ] },
+        nodes:[ { levelIdx:levelIndexById('2-1') }, { levelIdx:levelIndexById('2-2') }, { levelIdx:levelIndexById('2-3') }, { name:'户外教学', placeholder:true } ] },
       { id:'high', name:'高中部', icon:'📚', desc:'图书馆里的专注考验，集火破甲', color:'#7c3aed', shadow:'#4c1d95',
-        nodes:[ { levelIdx:2 }, { name:'自习室', placeholder:true }, { name:'实验课', placeholder:true }, { name:'模拟考', placeholder:true } ] },
+        nodes:[ { levelIdx:levelIndexById('3-1') }, { levelIdx:levelIndexById('3-2') }, { levelIdx:levelIndexById('3-3') }, { name:'实验课', placeholder:true } ] },
       { id:'university', name:'大学部', icon:'🎓', desc:'考场决战，综合运用学过的招式', color:'#ef4444', shadow:'#7f1d1d',
-        nodes:[ { levelIdx:3 }, { name:'期中报告', placeholder:true }, { name:'毕业专题', placeholder:true }, { name:'毕业典礼', placeholder:true } ] },
+        nodes:[ { levelIdx:levelIndexById('4-1') }, { levelIdx:levelIndexById('4-2') }, { name:'毕业专题', placeholder:true }, { name:'毕业典礼', placeholder:true } ] },
       { id:'research', name:'研究所', icon:'🔬', desc:'进阶研究区 · 即将开放', color:'#0d9488', shadow:'#134e4a', locked:true,
         nodes:[ { name:'课外挑战：速度课堂', placeholder:true }, { name:'高阶试炼', placeholder:true } ] }
     ];
@@ -382,7 +511,19 @@
         base.badges = (d.badges && typeof d.badges === 'object') ? d.badges : {};               // v2+
         base.worldProgress = (d.worldProgress && typeof d.worldProgress === 'object') ? d.worldProgress : {}; // v2+
         base.schemaVersion = SAVE_SCHEMA_VERSION;
-        return base;
+        return reconcileUnlockedLevelFromResults(base);
+    }
+    function reconcileUnlockedLevelFromResults(save) {
+        if (!save || typeof save !== 'object') return emptySave();
+        let unlocked = Math.max(0, Math.min(CAMPAIGN_COUNT - 1, parseInt(save.unlockedLevel) || 0));
+        if (save.results && typeof save.results === 'object') {
+            LEVELS.slice(0, CAMPAIGN_COUNT).forEach((lvl, idx) => {
+                const r = save.results[lvl.id];
+                if (r && (parseInt(r.stars) || 0) > 0) unlocked = Math.max(unlocked, Math.min(CAMPAIGN_COUNT - 1, idx + 1));
+            });
+        }
+        save.unlockedLevel = unlocked;
+        return save;
     }
     function loadGameSave() {
         try {
@@ -455,6 +596,7 @@
                 badges: sanitizeCollection(data.badges),
                 worldProgress: sanitizeCollection(data.worldProgress)
             };
+            reconcileUnlockedLevelFromResults(clean);
             writeGameSave(clean);
             window.alert('导入成功！已解锁到第 ' + (clean.unlockedLevel + 1) + ' 关。');
             location.reload();
@@ -1465,6 +1607,32 @@
                             o.rushUsed = true; o.rushTimer = 90;
                             this.floatText('冲刺！', o.x, o.y, '#E85D5D', 45, 24);
                         }
+                        if(o.data && o.data.ability === 'laneHop' && !o.hopped && o.x < this.OX + this.C * this.G * 0.72) {
+                            const dirs = [];
+                            if (o.r > 0) dirs.push(-1);
+                            if (o.r < this.R - 1) dirs.push(1);
+                            if (dirs.length) {
+                                o.hopped = true;
+                                o.r += dirs[Math.floor(Math.random() * dirs.length)];
+                                o.y = this.OY + o.r * this.G;
+                                this.floatText('换路！', o.x, o.y, '#F59E0B', 45, 22);
+                                this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#F59E0B', 10);
+                            }
+                        }
+                        if(o.data && o.data.ability === 'doodleHeal' && this.frame % 120 === 0) {
+                            let healed = false;
+                            this.objs.forEach(e => {
+                                if (e.type === 'enemy' && e !== o && e.r === o.r && Math.abs(e.x - o.x) < this.G * 2.3 && e.hp > 0 && e.hp < e.maxHp) {
+                                    e.hp = Math.min(e.maxHp, e.hp + 45);
+                                    e.hitFlash = Math.max(e.hitFlash || 0, 4);
+                                    healed = true;
+                                }
+                            });
+                            if (healed) {
+                                this.floatText('鼓劲！', o.x, o.y, '#EC4899', 38, 20);
+                                this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#EC4899', 8);
+                            }
+                        }
                         if(o.rushTimer > 0) { spd *= 1.75; o.rushTimer--; }
                         if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
                         let move = true;
@@ -1561,6 +1729,48 @@
                 ctx.fillStyle = accColor; ctx.strokeStyle = '#2D3748'; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(cx - 16, y + 28); ctx.lineTo(cx - 20, y + 5); ctx.lineTo(cx + 20, y + 5); ctx.lineTo(cx + 16, y + 28); ctx.fill(); ctx.stroke();
                 ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(cx - 6, y + 38, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 6, y + 38, 3, 0, Math.PI*2); ctx.fill();
+            } else if (o.id === 'note') {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(Math.sin(this.frame * 0.12 + o.x * 0.01) * 0.22);
+                ctx.fillStyle = '#FDE68A';
+                ctx.strokeStyle = '#92400E';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-G * 0.28, -G * 0.24);
+                ctx.lineTo(G * 0.26, -G * 0.16);
+                ctx.lineTo(G * 0.18, G * 0.24);
+                ctx.lineTo(-G * 0.24, G * 0.18);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = 'rgba(146,64,14,0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-G * 0.18, -G * 0.03); ctx.lineTo(G * 0.12, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-G * 0.16, G * 0.08); ctx.lineTo(G * 0.08, G * 0.11); ctx.stroke();
+                ctx.fillStyle = '#111827';
+                ctx.beginPath(); ctx.arc(-G * 0.09, -G * 0.1, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(G * 0.08, -G * 0.08, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            } else if (o.id === 'doodle') {
+                const wiggle = Math.sin(this.frame * 0.14 + o.x * 0.01) * 4;
+                ctx.fillStyle = '#F9A8D4';
+                ctx.strokeStyle = '#9D174D';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(cx, cy, G * 0.31, 0, Math.PI * 2);
+                ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = '#EC4899';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(cx - G * 0.25, cy - G * 0.12);
+                ctx.quadraticCurveTo(cx - G * 0.05, cy - G * 0.24 + wiggle, cx + G * 0.22, cy - G * 0.1);
+                ctx.stroke();
+                ctx.fillStyle = '#111827';
+                ctx.beginPath(); ctx.arc(cx - G * 0.1, cy, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx + G * 0.11, cy, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#BE185D';
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(cx, cy + G * 0.12, G * 0.09, 0, Math.PI); ctx.stroke();
             } else if (o.id === 'boss') {
                 const bossColor = levelIdx === 2 ? '#9B2C2C' : '#C53030';
                 ctx.fillStyle = 'rgba(229, 62, 62, 0.3)'; ctx.beginPath(); ctx.arc(cx, cy, G/2, 0, Math.PI*2); ctx.fill();
@@ -2168,8 +2378,8 @@
         renderPrep() {
             if (this.phase !== 'prep' || !this.prepData) return null;
             const pd = this.prepData;
-            const roleTag = { normal: '普通', fast: '好快', tank: '好硬', boss: '魔王', elf: '能量' };
-            const roleColor = { normal: '#48bb78', fast: '#E85D5D', tank: '#a0aec0', boss: '#e53e3e', elf: '#F6D365' };
+            const roleTag = { normal: '普通', fast: '好快', tank: '好硬', trick: '换路', support: '支援', boss: '魔王', elf: '能量' };
+            const roleColor = { normal: '#48bb78', fast: '#E85D5D', tank: '#a0aec0', trick: '#F59E0B', support: '#EC4899', boss: '#e53e3e', elf: '#F6D365' };
             const fname = friendlyName(pd.name);
             const beat = pd.lessonBeat || null;
             const bestStars = (this.results[pd.id] && this.results[pd.id].stars) || 0;
