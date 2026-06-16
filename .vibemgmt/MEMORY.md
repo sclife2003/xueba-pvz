@@ -5,7 +5,7 @@
 ---
 
 ## Context
-- **Project Root**: `%USERPROFILE%\VibeProjects\xueba-pvz`
+- **Project Root**: `%USERPROFILE%\VibeProjects\xueba`
 - **形态**: 单档 `index.html`（HTML5 Canvas，无框架、无构建、无外部素材）；GitHub Pages 部署 `https://sclife2003.github.io/xueba-pvz/`
 - **定位**: 小学生友善、原创校园主题 PvZ-like 5 路塔防 + 答题转战斗 + 世界地图 + 收集。**不抄 PvZ 素材/角色/名称**。
 - **唯一设计书**: `.vibemgmt/GDD_ADDENDUM_2026-06-13_strategy-depth.md`（§0.0 Document Status 标 active；§0.1 儿童化转向；§0.1.1 永久升级逆转决策）
