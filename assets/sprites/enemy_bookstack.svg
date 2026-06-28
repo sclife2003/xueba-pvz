@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#1e1b4b" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <ellipse cx="64" cy="114" rx="42" ry="8" fill="#1e1b4b" opacity=".2"/>
+  <g filter="url(#shadow)">
+    <rect x="28" y="74" width="72" height="31" rx="7" fill="#7c3aed" stroke="#3b0764" stroke-width="4"/>
+    <rect x="20" y="49" width="82" height="30" rx="7" fill="#f59e0b" stroke="#7c2d12" stroke-width="4"/>
+    <rect x="33" y="25" width="70" height="30" rx="7" fill="#14b8a6" stroke="#134e4a" stroke-width="4"/>
+    <path d="M39 85h45M31 61h46M45 38h37" stroke="#fff7ed" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+    <circle cx="51" cy="66" r="7" fill="#fff"/>
+    <circle cx="79" cy="65" r="7" fill="#fff"/>
+    <circle cx="52" cy="67" r="3" fill="#111827"/>
+    <circle cx="78" cy="66" r="3" fill="#111827"/>
+    <path d="M53 92c10 5 22 4 31-2" stroke="#111827" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M24 106l-10 9M96 105l11 9" stroke="#3b0764" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

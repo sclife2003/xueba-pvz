@@ -160,6 +160,7 @@
       pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100, desc: '稳定攻击单一路线敌人', use: '主力输出，每条路至少一个', counter: '普通敌人' },
       watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100, desc: '高攻速低伤，连续扫射', use: '对付成群的小怪', counter: '蝙蝠等小怪群' },
       glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150, desc: '命中后减速敌人', use: '放在快速敌人的来路前段', counter: '高速敌人' },
+      ruler: { id: 'ruler', name: '直尺穿线', cost: 125, type: 'shoot', range: 99, rate: 62, dmg: 34, color: '#f97316', icon: '📏', pierce: true, pierceCount: 2, recharge: 120, desc: '直线穿透攻击同一路多名敌人', use: '敌人排队推进时放在后排打整条线', counter: '排队推进的混合怪' },
       eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 600, desc: '高血量肉盾，阻挡推进', use: '挡在主力塔前方拖延', counter: '铁桶怪 / 魔王压线' },
       teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
@@ -171,13 +172,40 @@
       tank: { id: 'tank', name: '作业山', hp: 420, spd: 0.34, dmg: 10, val: 0, color: '#a0aec0', type: 'ground', role: 'tank', ability: 'paperShield', hint: '前半血更硬，用橡皮盾拖住集火' },
       note: { id: 'note', name: '传纸条', hp: 70, spd: 0.95, dmg: 3, val: 0, color: '#f59e0b', type: 'ground', role: 'trick', ability: 'laneHop', hint: '会换到旁边一排，别只守一条路' },
       doodle: { id: 'doodle', name: '涂鸦怪', hp: 170, spd: 0.42, dmg: 4, val: 0, color: '#ec4899', type: 'ground', role: 'support', ability: 'doodleHeal', hint: '会给附近同学鼓劲，优先点掉' },
-      boss: { id: 'boss', name: '监考怪', hp: 1800, spd: 0.24, dmg: 45, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', ability: 'focusDrain', hint: '会点名拆防线，留班主任技能' },
+      erasercrumb: { id: 'erasercrumb', name: '橡皮屑怪', hp: 82, spd: 0.72, dmg: 3, val: 0, color: '#f9a8d4', type: 'ground', role: 'normal', ability: 'none', hint: '数量多但不硬，铅笔能清掉' },
+      hallpass: { id: 'hallpass', name: '走廊通行怪', hp: 92, spd: 0.88, dmg: 3, val: 0, color: '#38bdf8', type: 'ground', role: 'trick', ability: 'laneHop', hint: '会临时换路，防线不要偏科' },
+      quizpaper: { id: 'quizpaper', name: '小测卷怪', hp: 210, spd: 0.44, dmg: 6, val: 0, color: '#f97316', type: 'ground', role: 'tank', ability: 'paperShield', hint: '卷面护盾很厚，挡住后集火' },
+      whistle: { id: 'whistle', name: '哨声怪', hp: 130, spd: 0.7, dmg: 4, val: 0, color: '#0ea5e9', type: 'ground', role: 'support', ability: 'whistleBoost', hint: '会吹哨加速同路怪物，先点掉' },
+      jump_rope: { id: 'jump_rope', name: '跳绳怪', hp: 72, spd: 1.15, dmg: 3, val: 0, color: '#22c55e', type: 'ground', role: 'fast', ability: 'schoolRush', hint: '接近中线会突然提速，胶水要提前放' },
+      sunshine: { id: 'sunshine', name: '阳光怪', hp: 1280, spd: 0.32, dmg: 24, val: 0, color: '#facc15', type: 'ground', role: 'boss', ability: 'sunSteal', hint: '会抢阳光；每吃 5 个，攻击和速度都上升 20%' },
+      quiet: { id: 'quiet', name: '安静魔', hp: 155, spd: 0.42, dmg: 4, val: 0, color: '#64748b', type: 'ground', role: 'support', ability: 'quietAura', hint: '会让同路文具短暂停摆，优先处理' },
+      bookstack: { id: 'bookstack', name: '书堆怪', hp: 560, spd: 0.28, dmg: 12, val: 0, color: '#8b5cf6', type: 'ground', role: 'tank', ability: 'paperShield', hint: '高血量压线，用橡皮挡住再输出' },
+      bookmark: { id: 'bookmark', name: '书签怪', hp: 126, spd: 0.66, dmg: 5, val: 0, color: '#14b8a6', type: 'ground', role: 'trick', ability: 'laneHop', hint: '会从书页缝里换路，后排要均衡' },
+      paperstorm: { id: 'paperstorm', name: '卷面风暴怪', hp: 135, spd: 0.82, dmg: 6, val: 0, color: '#e2e8f0', type: 'ground', role: 'fast', ability: 'none', hint: '成群推进，喷壶和直尺能处理' },
+      deadline: { id: 'deadline', name: '截止铃怪', hp: 920, spd: 0.38, dmg: 18, val: 0, color: '#ef4444', type: 'ground', role: 'boss', ability: 'rageRush', hint: '低血量会暴走冲刺，留控制和爆发' },
+      boss: { id: 'boss', name: '监考官', hp: 2400, spd: 0.23, dmg: 52, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', ability: 'focusDrain', hint: '高血量 Boss；会点名拆防线，低血量暴走 5 秒' },
       elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground', role: 'elf', hint: '击杀可得能量' }
+    };
+
+    const BOSS_MECHANICS = {
+      sunshine: { scene: 'playground', label: '阳光抢夺', stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 },
+      deadline: { scene: 'exam', label: '截止铃暴走', rageRush: { hpRatio: 0.45, duration: 150, statBoost: 1.3 } },
+      boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 } }
+    };
+
+    const SCENE_MONSTER_TABLE = {
+      classroom: { scene: '教室', theme: '基础分路与小测压力', monsters: ['erasercrumb', 'hallpass', 'quizpaper', 'slime', 'note'] },
+      playground: { scene: '操场', theme: '速度、冲刺与阳光争夺', monsters: ['whistle', 'jump_rope', 'sunshine', 'bat'] },
+      library: { scene: '图书馆', theme: '安静干扰、书堆压线与支援怪', monsters: ['quiet', 'bookstack', 'bookmark', 'doodle'] },
+      exam: { scene: '考场', theme: '倒计时、卷面风暴与高压 Boss', monsters: ['paperstorm', 'deadline', 'boss', 'tank'] },
+      research: { scene: '研究所', theme: '进阶混合机制实验', monsters: ['sunshine', 'quiet', 'deadline', 'boss'] },
+      challenge: { scene: '课外挑战', theme: '规则变体与速度考验', monsters: ['whistle', 'jump_rope', 'bat'] }
     };
 
     const LEVELS = [
       {
         id: '1-1', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        signatureEnemy: 'erasercrumb',
         enemyPreviewHint: '先学会课本产能、铅笔防守、橡皮救急',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第二章：操场激战' },
@@ -186,12 +214,13 @@
         tip: "先放课本攒能量，再给每一路放铅笔。橡皮只在快被突破时救急。",
         waves: [
             { groups: [{ e: 'slime', n: 3, interval: 200, preDelay: 50 }, { e: 'elf', n: 1, interval: 0, preDelay: 100 }] },
-            { groups: [{ e: 'slime', n: 6, interval: 150, preDelay: 50 }] },
-            { groups: [{ e: 'slime', n: 8, interval: 105, preDelay: 100 }, { e: 'tank', n: 1, interval: 0, preDelay: 220 }] }
+            { groups: [{ e: 'erasercrumb', n: 3, interval: 135, preDelay: 70 }, { e: 'slime', n: 4, interval: 150, preDelay: 80 }] },
+            { groups: [{ e: 'slime', n: 7, interval: 105, preDelay: 100 }, { e: 'erasercrumb', n: 3, interval: 115, preDelay: 130 }, { e: 'tank', n: 1, interval: 0, preDelay: 240 }] }
         ]
       },
       {
         id: '1-2', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        signatureEnemy: 'hallpass',
         enemyPreviewHint: '传纸条会换路，别只守一排',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁小纸条贴纸' },
@@ -199,13 +228,14 @@
         bg: "#2f855a", difficulty: 1.05,
         tip: "传纸条会突然换到旁边一排，每一路都要有一点防守。",
         waves: [
-            { groups: [{ e: 'slime', n: 4, interval: 150, preDelay: 60 }, { e: 'note', n: 2, interval: 180, preDelay: 140 }] },
-            { groups: [{ e: 'note', n: 4, interval: 160, preDelay: 70 }, { e: 'slime', n: 6, interval: 120, preDelay: 80 }] },
-            { groups: [{ e: 'note', n: 5, interval: 135, preDelay: 80 }, { e: 'tank', n: 1, interval: 0, preDelay: 220 }] }
+            { groups: [{ e: 'slime', n: 4, interval: 150, preDelay: 60 }, { e: 'hallpass', n: 2, interval: 180, preDelay: 140 }] },
+            { groups: [{ e: 'note', n: 3, interval: 160, preDelay: 70 }, { e: 'hallpass', n: 3, interval: 160, preDelay: 110 }, { e: 'slime', n: 5, interval: 120, preDelay: 80 }] },
+            { groups: [{ e: 'hallpass', n: 4, interval: 135, preDelay: 80 }, { e: 'note', n: 3, interval: 140, preDelay: 100 }, { e: 'tank', n: 1, interval: 0, preDelay: 230 }] }
         ]
       },
       {
         id: '1-3', chapterId: 'classroom', archetype: 'tutorial', isBoss: false,
+        signatureEnemy: 'quizpaper',
         enemyPreviewHint: '小测验会混合基础怪，练习补防线',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁初中部：操场挑战' },
@@ -213,13 +243,14 @@
         bg: "#2f855a", difficulty: 1.12,
         tip: "先铺课本，再补每一路铅笔。看到作业山就用橡皮拖住。",
         waves: [
-            { groups: [{ e: 'slime', n: 6, interval: 120, preDelay: 50 }, { e: 'note', n: 3, interval: 150, preDelay: 140 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 80 }, { e: 'slime', n: 8, interval: 90, preDelay: 90 }] },
-            { groups: [{ e: 'note', n: 5, interval: 120, preDelay: 70 }, { e: 'tank', n: 2, interval: 220, preDelay: 160 }, { e: 'elf', n: 2, interval: 80, preDelay: 120 }] }
+            { groups: [{ e: 'slime', n: 6, interval: 120, preDelay: 50 }, { e: 'hallpass', n: 2, interval: 150, preDelay: 140 }] },
+            { groups: [{ e: 'quizpaper', n: 1, interval: 0, preDelay: 80 }, { e: 'slime', n: 7, interval: 90, preDelay: 90 }, { e: 'erasercrumb', n: 4, interval: 120, preDelay: 130 }] },
+            { groups: [{ e: 'note', n: 4, interval: 120, preDelay: 70 }, { e: 'quizpaper', n: 2, interval: 220, preDelay: 160 }, { e: 'elf', n: 2, interval: 80, preDelay: 120 }] }
         ]
       },
       {
         id: '2-1', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        signatureEnemy: 'whistle',
         enemyPreviewHint: '迟到怪会突然冲刺，胶水能让它慢下来',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第三章：期末大考' },
@@ -230,13 +261,14 @@
         // 让世界开场不再是前一关的 2 倍陡坡（effHP ~8500→~5100）。
         waves: [
             { groups: [{ e: 'slime', n: 5, interval: 100, preDelay: 50 }, { e: 'bat', n: 3, interval: 150, preDelay: 150 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 50 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'slime', n: 8, interval: 70, preDelay: 50 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 220, preDelay: 100 }, { e: 'bat', n: 4, interval: 110, preDelay: 100 }] }
+            { groups: [{ e: 'whistle', n: 1, interval: 0, preDelay: 80 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'whistle', n: 2, interval: 220, preDelay: 80 }, { e: 'slime', n: 6, interval: 70, preDelay: 50 }] },
+            { groups: [{ e: 'whistle', n: 2, interval: 220, preDelay: 100 }, { e: 'bat', n: 5, interval: 100, preDelay: 100 }] }
         ]
       },
       {
         id: '2-2', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        signatureEnemy: 'jump_rope',
         enemyPreviewHint: '接力跑会连续冲刺，胶水要放在前段',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁操场接力贴纸' },
@@ -244,13 +276,14 @@
         bg: "#c05621", difficulty: 1.32,
         tip: "迟到怪成群时，先黏住再用铅笔收掉。不要等到压线才放胶水。",
         waves: [
-            { groups: [{ e: 'bat', n: 5, interval: 95, preDelay: 50 }, { e: 'slime', n: 5, interval: 100, preDelay: 80 }] },
-            { groups: [{ e: 'bat', n: 8, interval: 80, preDelay: 60 }, { e: 'note', n: 4, interval: 120, preDelay: 120 }] },
-            { groups: [{ e: 'bat', n: 10, interval: 65, preDelay: 60 }, { e: 'tank', n: 2, interval: 180, preDelay: 160 }] }
+            { groups: [{ e: 'bat', n: 5, interval: 95, preDelay: 50 }, { e: 'jump_rope', n: 3, interval: 120, preDelay: 80 }] },
+            { groups: [{ e: 'jump_rope', n: 6, interval: 80, preDelay: 60 }, { e: 'whistle', n: 1, interval: 0, preDelay: 120 }, { e: 'note', n: 3, interval: 120, preDelay: 120 }] },
+            { groups: [{ e: 'jump_rope', n: 8, interval: 65, preDelay: 60 }, { e: 'bat', n: 5, interval: 75, preDelay: 90 }, { e: 'tank', n: 2, interval: 180, preDelay: 170 }] }
         ]
       },
       {
-        id: '2-3', chapterId: 'playground', archetype: 'speed-check', isBoss: false,
+        id: '2-3', chapterId: 'playground', archetype: 'speed-check', isBoss: true,
+        signatureEnemy: 'sunshine',
         enemyPreviewHint: '运动会混合冲刺和换路，练习快速补防',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁高中部：图书馆考验' },
@@ -258,13 +291,14 @@
         bg: "#c05621", difficulty: 1.38,
         tip: "这一关要同时看冲刺和换路。胶水控速，橡皮挡最后一排。",
         waves: [
-            { groups: [{ e: 'bat', n: 6, interval: 80, preDelay: 50 }, { e: 'note', n: 5, interval: 120, preDelay: 90 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 180, preDelay: 80 }, { e: 'bat', n: 8, interval: 70, preDelay: 80 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 180 }, { e: 'bat', n: 8, interval: 65, preDelay: 80 }, { e: 'note', n: 5, interval: 110, preDelay: 110 }] }
+            { groups: [{ e: 'bat', n: 5, interval: 80, preDelay: 50 }, { e: 'jump_rope', n: 4, interval: 95, preDelay: 90 }] },
+            { groups: [{ e: 'whistle', n: 2, interval: 190, preDelay: 80 }, { e: 'bat', n: 8, interval: 70, preDelay: 80 }] },
+            { groups: [{ e: 'sunshine', n: 1, interval: 0, preDelay: 180 }, { e: 'bat', n: 8, interval: 65, preDelay: 80 }, { e: 'note', n: 5, interval: 110, preDelay: 110 }] }
         ]
       },
       {
         id: '3-1', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        signatureEnemy: 'quiet',
         enemyPreviewHint: '作业山前半血很硬，橡皮挡住后集中火力',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁第四章：毕业典礼' },
@@ -274,14 +308,15 @@
         // 平衡 2026-06-14：作为高中部「开场关」，2 boss→1 boss、减坦克。原 effHP ~15182（且此关 loadout 无班主任炸弹）
         // 是 7th 关的巨大墙；调到 ~8900，压轴留给世界后段（3-3）。
         waves: [
-            { groups: [{ e: 'slime', n: 6, interval: 70, preDelay: 50 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 140, preDelay: 50 }, { e: 'bat', n: 6, interval: 70, preDelay: 100 }] },
-            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 300, preDelay: 200 }, { e: 'tank', n: 2, interval: 170, preDelay: 100 }, { e: 'slime', n: 6, interval: 60, preDelay: 50 }] }
+            { groups: [{ e: 'slime', n: 5, interval: 70, preDelay: 50 }, { e: 'quiet', n: 1, interval: 0, preDelay: 120 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 140, preDelay: 50 }, { e: 'quiet', n: 2, interval: 210, preDelay: 100 }] },
+            { groups: [{ e: 'tank', n: 2, interval: 150, preDelay: 100 }, { e: 'bat', n: 4, interval: 90, preDelay: 100 }, { e: 'quiet', n: 2, interval: 220, preDelay: 130 }] },
+            { groups: [{ e: 'bookstack', n: 1, interval: 0, preDelay: 200 }, { e: 'tank', n: 2, interval: 170, preDelay: 100 }, { e: 'quiet', n: 2, interval: 180, preDelay: 80 }] }
         ]
       },
       {
         id: '3-2', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        signatureEnemy: 'bookstack',
         enemyPreviewHint: '涂鸦怪会帮附近敌人回血，要优先处理',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁涂鸦怪贴纸' },
@@ -289,13 +324,14 @@
         bg: "#4c1d95", difficulty: 1.48,
         tip: "涂鸦怪会给附近怪鼓劲回血，出现时先集中火力点掉。",
         waves: [
-            { groups: [{ e: 'doodle', n: 2, interval: 260, preDelay: 80 }, { e: 'slime', n: 8, interval: 70, preDelay: 90 }] },
-            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 80 }, { e: 'doodle', n: 3, interval: 220, preDelay: 120 }] },
-            { groups: [{ e: 'doodle', n: 4, interval: 180, preDelay: 70 }, { e: 'bat', n: 8, interval: 70, preDelay: 110 }, { e: 'tank', n: 3, interval: 160, preDelay: 150 }] }
+            { groups: [{ e: 'doodle', n: 2, interval: 260, preDelay: 80 }, { e: 'quiet', n: 2, interval: 190, preDelay: 100 }, { e: 'slime', n: 6, interval: 70, preDelay: 90 }] },
+            { groups: [{ e: 'bookstack', n: 2, interval: 220, preDelay: 80 }, { e: 'doodle', n: 2, interval: 220, preDelay: 120 }] },
+            { groups: [{ e: 'bookstack', n: 2, interval: 190, preDelay: 70 }, { e: 'doodle', n: 3, interval: 180, preDelay: 100 }, { e: 'bat', n: 6, interval: 70, preDelay: 120 }] }
         ]
       },
       {
         id: '3-3', chapterId: 'library', archetype: 'tank-check', isBoss: false,
+        signatureEnemy: 'bookmark',
         enemyPreviewHint: '图书馆会同时出现硬怪和回血怪',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 1 } },
         reward: { type: 'unlock', text: '解锁大学部：考场决战' },
@@ -303,13 +339,14 @@
         bg: "#4c1d95", difficulty: 1.55,
         tip: "先挡住作业山，再优先点掉涂鸦怪。喷壶适合清小怪群。",
         waves: [
-            { groups: [{ e: 'tank', n: 3, interval: 150, preDelay: 70 }, { e: 'doodle', n: 2, interval: 230, preDelay: 140 }] },
-            { groups: [{ e: 'note', n: 6, interval: 95, preDelay: 60 }, { e: 'doodle', n: 3, interval: 200, preDelay: 100 }, { e: 'tank', n: 3, interval: 160, preDelay: 160 }] },
-            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 180 }, { e: 'doodle', n: 4, interval: 170, preDelay: 80 }, { e: 'tank', n: 4, interval: 145, preDelay: 130 }] }
+            { groups: [{ e: 'bookstack', n: 2, interval: 170, preDelay: 70 }, { e: 'bookmark', n: 3, interval: 160, preDelay: 140 }] },
+            { groups: [{ e: 'bookmark', n: 6, interval: 95, preDelay: 60 }, { e: 'doodle', n: 3, interval: 200, preDelay: 100 }, { e: 'bookstack', n: 2, interval: 180, preDelay: 160 }] },
+            { groups: [{ e: 'deadline', n: 1, interval: 0, preDelay: 180 }, { e: 'doodle', n: 4, interval: 170, preDelay: 80 }, { e: 'bookstack', n: 3, interval: 170, preDelay: 130 }] }
         ]
       },
       {
         id: '4-1', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
+        signatureEnemy: 'paperstorm',
         enemyPreviewHint: '监考怪会点名拆防线，班主任技能是最后答案',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
         reward: { type: 'badge', text: '🎓 毕业徽章' },
@@ -317,14 +354,15 @@
         bg: "#7f1d1d", difficulty: 1.7,
         tip: "综合练习：挡住作业山、黏住迟到怪，监考怪靠班主任化解。",
         waves: [
-            { groups: [{ e: 'bat', n: 7, interval: 60, preDelay: 50 }, { e: 'elf', n: 4, interval: 40, preDelay: 50 }] },
-            { groups: [{ e: 'tank', n: 6, interval: 120, preDelay: 50 }, { e: 'slime', n: 15, interval: 45, preDelay: 100 }] },
-            { groups: [{ e: 'boss', n: 2, interval: 450, preDelay: 200 }, { e: 'bat', n: 9, interval: 55, preDelay: 50 }] },
-            { groups: [{ e: 'boss', n: 2, interval: 250, preDelay: 100 }, { e: 'tank', n: 7, interval: 100, preDelay: 100 }, { e: 'slime', n: 16, interval: 35, preDelay: 50 }] }
+            { groups: [{ e: 'paperstorm', n: 7, interval: 60, preDelay: 50 }, { e: 'elf', n: 4, interval: 40, preDelay: 50 }] },
+            { groups: [{ e: 'tank', n: 4, interval: 120, preDelay: 50 }, { e: 'paperstorm', n: 10, interval: 55, preDelay: 100 }] },
+            { groups: [{ e: 'boss', n: 1, interval: 0, preDelay: 200 }, { e: 'paperstorm', n: 9, interval: 55, preDelay: 50 }, { e: 'deadline', n: 1, interval: 0, preDelay: 260 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 280, preDelay: 100 }, { e: 'tank', n: 5, interval: 110, preDelay: 100 }, { e: 'paperstorm', n: 12, interval: 40, preDelay: 70 }] }
         ]
       },
       {
         id: '4-2', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
+        signatureEnemy: 'deadline',
         enemyPreviewHint: '毕业答辩会把所有机制混在一起',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
         reward: { type: 'badge', text: '🎓 校园毕业徽章' },
@@ -332,10 +370,10 @@
         bg: "#7f1d1d", difficulty: 1.78,
         tip: "最后一关会混合冲刺、换路、回血和点名。留好班主任技能处理危险波。",
         waves: [
-            { groups: [{ e: 'bat', n: 7, interval: 60, preDelay: 50 }, { e: 'note', n: 6, interval: 90, preDelay: 90 }, { e: 'elf', n: 3, interval: 60, preDelay: 120 }] },
-            { groups: [{ e: 'tank', n: 5, interval: 120, preDelay: 50 }, { e: 'doodle', n: 4, interval: 170, preDelay: 90 }, { e: 'slime', n: 12, interval: 50, preDelay: 120 }] },
-            { groups: [{ e: 'boss', n: 2, interval: 320, preDelay: 180 }, { e: 'bat', n: 10, interval: 55, preDelay: 80 }, { e: 'doodle', n: 3, interval: 190, preDelay: 130 }] },
-            { groups: [{ e: 'boss', n: 2, interval: 260, preDelay: 100 }, { e: 'tank', n: 6, interval: 110, preDelay: 80 }, { e: 'note', n: 8, interval: 80, preDelay: 120 }, { e: 'doodle', n: 4, interval: 170, preDelay: 140 }] }
+            { groups: [{ e: 'paperstorm', n: 7, interval: 60, preDelay: 50 }, { e: 'bookmark', n: 5, interval: 90, preDelay: 90 }, { e: 'elf', n: 3, interval: 60, preDelay: 120 }] },
+            { groups: [{ e: 'bookstack', n: 3, interval: 150, preDelay: 50 }, { e: 'doodle', n: 4, interval: 170, preDelay: 90 }, { e: 'quiet', n: 3, interval: 180, preDelay: 120 }] },
+            { groups: [{ e: 'deadline', n: 2, interval: 340, preDelay: 180 }, { e: 'paperstorm', n: 10, interval: 55, preDelay: 80 }, { e: 'doodle', n: 3, interval: 190, preDelay: 130 }] },
+            { groups: [{ e: 'boss', n: 2, interval: 280, preDelay: 100 }, { e: 'deadline', n: 1, interval: 0, preDelay: 140 }, { e: 'tank', n: 5, interval: 110, preDelay: 80 }, { e: 'bookmark', n: 6, interval: 80, preDelay: 120 }] }
         ]
       }
     ];
@@ -361,6 +399,7 @@
     const CAMPAIGN_COUNT = LEVELS.length;
     LEVELS.push({
       id: 'challenge-speed', chapterId: 'challenge', archetype: 'challenge', isBoss: false,
+      signatureEnemy: 'whistle',
       isChallenge: true, rule: 'speed', unlockStars: 6, // 累计 6 星解锁
       enemyPreviewHint: '速度课堂：过波等待极短、敌人更快，考验提前上课与技能时机',
       starGoals: { twoStar: { minHp: 3 }, threeStar: { minHp: 5, maxWrongAnswers: 1 } },
@@ -375,6 +414,7 @@
     // advanced:true → 备战可自选 4 件文具 + 战斗中可提前上课 / 关卡内升级。纯进阶选修，不影响主线。
     LEVELS.push({
       id: 'r-1', chapterId: 'research', archetype: 'mixed-wave-exam', isBoss: true, advanced: true, loadoutSize: 4,
+      signatureEnemy: 'paperstorm',
       enemyPreviewHint: '自由配装实验：自己挑 4 件文具，善用关卡内升级与提前上课',
       starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 7, maxWrongAnswers: 1 } },
       reward: { type: 'badge', text: '🔬 研究员徽章' },
@@ -385,6 +425,7 @@
     });
     LEVELS.push({
       id: 'r-2', chapterId: 'research', archetype: 'challenge', isBoss: false, advanced: true, loadoutSize: 4,
+      signatureEnemy: 'deadline',
       isChallenge: true, rule: 'speed',
       enemyPreviewHint: '极速研究：节奏更快，配装 + 提前上课 + 技能时机一起考验',
       starGoals: { twoStar: { minHp: 3 }, threeStar: { minHp: 5, maxWrongAnswers: 1 } },
@@ -404,12 +445,12 @@
       '2-1': ['textbook', 'pencil', 'glue', 'eraser'],
       '2-2': ['textbook', 'pencil', 'glue', 'eraser'],
       '2-3': ['textbook', 'pencil', 'glue', 'eraser'],
-      '3-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
-      '3-2': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
-      '3-3': ['textbook', 'pencil', 'glue', 'watering', 'eraser'],
-      '4-1': ['textbook', 'pencil', 'glue', 'watering', 'eraser', 'teacher'],
-      '4-2': ['textbook', 'pencil', 'glue', 'watering', 'eraser', 'teacher'],
-      'challenge-speed': ['textbook', 'pencil', 'glue', 'eraser']
+      '3-1': ['textbook', 'pencil', 'glue', 'watering', 'ruler', 'eraser'],
+      '3-2': ['textbook', 'pencil', 'glue', 'watering', 'ruler', 'eraser'],
+      '3-3': ['textbook', 'pencil', 'glue', 'watering', 'ruler', 'eraser'],
+      '4-1': ['textbook', 'pencil', 'glue', 'watering', 'ruler', 'eraser', 'teacher'],
+      '4-2': ['textbook', 'pencil', 'glue', 'watering', 'ruler', 'eraser', 'teacher'],
+      'challenge-speed': ['textbook', 'pencil', 'glue', 'ruler', 'eraser']
     };
     // 进关前只讲一个本关重点，避免看起来像装备选择页。
     const LESSON_BEATS = {
@@ -419,7 +460,7 @@
       '2-1': { tool: 'glue', title: '胶水黏住冲刺', text: '迟到怪快冲到前排时，胶水会把节奏拉回来。' },
       '2-2': { tool: 'glue', title: '胶水放前段', text: '敌人冲刺前被黏住，防线压力会小很多。' },
       '2-3': { tool: 'glue', title: '同时看冲刺和换路', text: '胶水控速，铅笔补输出，橡皮守最后一格。' },
-      '3-1': { tool: 'eraser', title: '橡皮挡住作业山', text: '硬怪先挡住，再让后排文具慢慢解决。' },
+      '3-1': { tool: 'ruler', title: '直尺打一整排', text: '敌人排成一条线时，直尺可以一次穿过好几个。' },
       '3-2': { tool: 'watering', title: '先处理涂鸦怪', text: '涂鸦怪会帮附近敌人回血，喷壶适合快速补伤害。' },
       '3-3': { tool: 'watering', title: '清小怪，点支援', text: '先点掉涂鸦怪，再集中火力打作业山。' },
       '4-1': { tool: 'teacher', title: '班主任救关键一波', text: '监考怪点名时，班主任技能可以稳住全场。' },
@@ -434,12 +475,12 @@
       '2-1': ['glue', 'pencil', 'eraser'],
       '2-2': ['glue', 'pencil'],
       '2-3': ['glue', 'eraser', 'pencil'],
-      '3-1': ['eraser', 'pencil', 'watering'],
+      '3-1': ['ruler', 'eraser', 'pencil'],
       '3-2': ['watering', 'pencil'],
       '3-3': ['watering', 'eraser', 'pencil'],
       '4-1': ['eraser', 'teacher', 'pencil'],
-      '4-2': ['teacher', 'glue', 'watering'],
-      'challenge-speed': ['glue', 'pencil', 'eraser']
+      '4-2': ['teacher', 'ruler', 'glue', 'watering'],
+      'challenge-speed': ['glue', 'ruler', 'pencil', 'eraser']
     };
     // 一句任务目标：短、鼓励、低压（小学生友善 intro 用）
     const LEVEL_GOALS = {
@@ -457,6 +498,7 @@
       'challenge-speed': '速度课堂：节奏更快，挑战你的反应！'
     };
     LEVELS.forEach(l => {
+      if (typeof l.threatTier !== 'number') l.threatTier = Math.max(1, Math.round(((l.difficulty || 1) - 0.8) * 5));
       l.recommendedTools = RECOMMENDED_TOOLS[l.id] || Object.keys(TOWERS);
       l.mainlineLoadout = MAINLINE_LOADOUTS[l.id] || Object.keys(TOWERS);
       l.lessonBeat = LESSON_BEATS[l.id] || null;
@@ -516,18 +558,63 @@
       eraser:   { name: '厚橡皮',   desc: '血量提升', cost: 100, apply: o => { const add = Math.round(o.maxHp * 0.8); o.maxHp += add; o.hp += add; } }
     };
 
-    // ==================== 永久装备升级（知识碎片）====================
-    // 用碎片把文具永久升级成更强版本（铅笔→原子笔机枪 等）。纯加成、不卡进度。
-    // apply(o) 复用战斗已支持的 override 栏位（rateOverride/atkOverride/slowDurOverride/maxHp）；
-    // teacher 为一次性炸弹，伤害已极高，改用 recharge 缩短冷却。display 用 name/icon 换皮。
-    const TOOL_UPGRADES = {
-      textbook: { name: '百科全书', icon: '📚', cost: 6,  blurb: '产能更快，能量滚滚来', apply: o => { o.rateOverride = Math.max(36, Math.round(o.data.rate * 0.5)); } },
-      pencil:   { name: '原子笔机枪', icon: '🖊️', cost: 10, blurb: '射速翻倍 + 伤害提升', apply: o => { o.rateOverride = Math.max(12, Math.round(o.data.rate * 0.45)); o.atkOverride = Math.round(o.data.dmg * 1.5); } },
-      watering: { name: '高压水枪', icon: '💦', cost: 8,  blurb: '连续扫射更快更痛', apply: o => { o.rateOverride = Math.max(4, Math.round(o.data.rate * 0.5)); o.atkOverride = Math.round(o.data.dmg * 1.3); } },
-      glue:     { name: '超黏口香糖', icon: '🍬', cost: 8,  blurb: '减速更久、黏得更牢', apply: o => { o.slowDurOverride = 360; o.atkOverride = Math.round(o.data.dmg * 1.4); } },
-      eraser:   { name: '知识钢盾', icon: '🔰', cost: 10, blurb: '血量大幅提升，挡更久（纯肉盾，不输出）', apply: o => { const add = Math.round(o.maxHp * 1.2); o.maxHp += add; o.hp += add; } },
-      teacher:  { name: '校长训话', icon: '🧑‍🏫', cost: 12, blurb: '冷却更快，可更常引爆', recharge: 0.6, apply: o => {} }
+    // ==================== 永久文具等级（知识碎片）====================
+    // v3：每件文具 1-5 级。等级越高，战斗属性越强；旧版 toolUpgrades=true 会迁移为 Lv2。
+    const MAX_TOOL_LEVEL = 5;
+    const TOOL_LEVELS = {
+      textbook: [
+        { level: 1, name: '知识课本', icon: '📒', cost: 0, blurb: '基础产能', apply: o => {} },
+        { level: 2, name: '重点笔记', icon: '📘', cost: 5, blurb: '产能速度 +10%', apply: o => { o.rateOverride = Math.max(44, Math.round(o.data.rate * 0.90)); } },
+        { level: 3, name: '百科全书', icon: '📚', cost: 8, blurb: '产能速度 +25%', apply: o => { o.rateOverride = Math.max(40, Math.round(o.data.rate * 0.75)); } },
+        { level: 4, name: '学霸书库', icon: '📚', cost: 12, blurb: '产能速度 +38%', apply: o => { o.rateOverride = Math.max(36, Math.round(o.data.rate * 0.62)); } },
+        { level: 5, name: '知识图书馆', icon: '🏛️', cost: 18, blurb: '产能速度 +50%，偶尔掉大能量', apply: o => { o.rateOverride = Math.max(32, Math.round(o.data.rate * 0.50)); o.orbValueOverride = 55; } }
+      ],
+      pencil: [
+        { level: 1, name: '铅笔射手', icon: '✏️', cost: 0, blurb: '基础单路输出', apply: o => {} },
+        { level: 2, name: '削尖铅笔', icon: '✏️', cost: 6, blurb: '伤害 +12%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.12); } },
+        { level: 3, name: '自动铅笔', icon: '📝', cost: 10, blurb: '伤害 +22%，攻速 +12%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.22); o.rateOverride = Math.max(18, Math.round(o.data.rate * 0.88)); } },
+        { level: 4, name: '原子笔连射', icon: '🖊️', cost: 15, blurb: '伤害 +35%，攻速 +25%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.35); o.rateOverride = Math.max(16, Math.round(o.data.rate * 0.75)); } },
+        { level: 5, name: '原子笔机枪', icon: '🖊️', cost: 22, blurb: '伤害 +55%，攻速 +40%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.55); o.rateOverride = Math.max(12, Math.round(o.data.rate * 0.60)); } }
+      ],
+      watering: [
+        { level: 1, name: '喷壶', icon: '🚿', cost: 0, blurb: '基础高速扫射', apply: o => {} },
+        { level: 2, name: '大喷壶', icon: '🚿', cost: 6, blurb: '伤害 +10%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.10); } },
+        { level: 3, name: '连续墨滴', icon: '💧', cost: 9, blurb: '攻速 +18%，伤害 +18%', apply: o => { o.rateOverride = Math.max(5, Math.round(o.data.rate * 0.82)); o.atkOverride = Math.round(o.data.dmg * 1.18); } },
+        { level: 4, name: '高压水枪', icon: '💦', cost: 14, blurb: '攻速 +32%，伤害 +28%', apply: o => { o.rateOverride = Math.max(4, Math.round(o.data.rate * 0.68)); o.atkOverride = Math.round(o.data.dmg * 1.28); } },
+        { level: 5, name: '清洁水炮', icon: '🌊', cost: 20, blurb: '攻速 +45%，伤害 +45%', apply: o => { o.rateOverride = Math.max(4, Math.round(o.data.rate * 0.55)); o.atkOverride = Math.round(o.data.dmg * 1.45); } }
+      ],
+      glue: [
+        { level: 1, name: '强力胶水', icon: '💧', cost: 0, blurb: '基础减速', apply: o => {} },
+        { level: 2, name: '黏性胶水', icon: '💧', cost: 5, blurb: '减速更久，伤害 +8%', apply: o => { o.slowDurOverride = 220; o.atkOverride = Math.round(o.data.dmg * 1.08); } },
+        { level: 3, name: '超黏胶带', icon: '🩹', cost: 8, blurb: '减速更久，伤害 +18%', apply: o => { o.slowDurOverride = 270; o.atkOverride = Math.round(o.data.dmg * 1.18); } },
+        { level: 4, name: '超黏口香糖', icon: '🍬', cost: 12, blurb: '减速很久，伤害 +30%', apply: o => { o.slowDurOverride = 330; o.atkOverride = Math.round(o.data.dmg * 1.30); } },
+        { level: 5, name: '防滑操场胶', icon: '🍬', cost: 18, blurb: '强减速，伤害 +45%', apply: o => { o.slowDurOverride = 390; o.atkOverride = Math.round(o.data.dmg * 1.45); } }
+      ],
+      ruler: [
+        { level: 1, name: '直尺穿线', icon: '📏', cost: 0, blurb: '穿透 2 个敌人', apply: o => {} },
+        { level: 2, name: '加厚直尺', icon: '📏', cost: 7, blurb: '伤害 +12%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.12); } },
+        { level: 3, name: '钢尺连线', icon: '📐', cost: 11, blurb: '穿透 3 个敌人', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.22); o.pierceCountOverride = 3; } },
+        { level: 4, name: '几何长尺', icon: '📐', cost: 16, blurb: '穿透 3 个，攻速 +15%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.35); o.rateOverride = Math.max(28, Math.round(o.data.rate * 0.85)); o.pierceCountOverride = 3; } },
+        { level: 5, name: '黄金比例尺', icon: '📏', cost: 24, blurb: '穿透 4 个，伤害 +55%', apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.55); o.rateOverride = Math.max(24, Math.round(o.data.rate * 0.75)); o.pierceCountOverride = 4; } }
+      ],
+      eraser: [
+        { level: 1, name: '橡皮盾', icon: '🛡️', cost: 0, blurb: '基础阻挡', apply: o => {} },
+        { level: 2, name: '厚橡皮', icon: '🛡️', cost: 5, blurb: '血量 +25%', apply: o => { const add = Math.round(o.maxHp * 0.25); o.maxHp += add; o.hp += add; } },
+        { level: 3, name: '知识钢盾', icon: '🔰', cost: 9, blurb: '血量 +55%', apply: o => { const add = Math.round(o.maxHp * 0.55); o.maxHp += add; o.hp += add; } },
+        { level: 4, name: '清洁橡皮堡垒', icon: '🔰', cost: 14, blurb: '血量 +90%', apply: o => { const add = Math.round(o.maxHp * 0.90); o.maxHp += add; o.hp += add; } },
+        { level: 5, name: '学霸防线', icon: '🏰', cost: 20, blurb: '血量 +130%', apply: o => { const add = Math.round(o.maxHp * 1.30); o.maxHp += add; o.hp += add; } }
+      ],
+      teacher: [
+        { level: 1, name: '刘老师', icon: '👩‍🏫', cost: 0, blurb: '基础三路爆破', apply: o => {} },
+        { level: 2, name: '班主任提醒', icon: '👩‍🏫', cost: 7, blurb: '伤害 +10%，冷却 -8%', recharge: 0.92, apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.10); } },
+        { level: 3, name: '校长训话', icon: '🧑‍🏫', cost: 12, blurb: '伤害 +22%，冷却 -18%', recharge: 0.82, apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.22); } },
+        { level: 4, name: '全校广播', icon: '📣', cost: 18, blurb: '伤害 +35%，冷却 -28%', recharge: 0.72, apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.35); } },
+        { level: 5, name: '校长总动员', icon: '🧑‍🏫', cost: 26, blurb: '伤害 +55%，冷却 -40%', recharge: 0.60, apply: o => { o.atkOverride = Math.round(o.data.dmg * 1.55); } }
+      ]
     };
+
+    // 旧代码仍有 TOOL_UPGRADES 名称，保留为 Lv5 展示兼容；新逻辑以 TOOL_LEVELS / toolLevels 为准。
+    const TOOL_UPGRADES = Object.fromEntries(Object.keys(TOOL_LEVELS).map(id => [id, TOOL_LEVELS[id][MAX_TOOL_LEVEL - 1]]));
 
     // ==================== UTILS ====================
     function shuffleArray(array) {
@@ -537,14 +624,60 @@
         }
         return array;
     }
+    function defaultToolLevels() {
+        const levels = {};
+        Object.keys(TOWERS).forEach(id => { levels[id] = 1; });
+        return levels;
+    }
+    function clampToolLevel(value) {
+        return Math.max(1, Math.min(MAX_TOOL_LEVEL, parseInt(value) || 1));
+    }
+    function normalizeToolLevels(levels, legacyUpgrades) {
+        const out = defaultToolLevels();
+        if (levels && typeof levels === 'object') {
+            Object.keys(out).forEach(id => { if (levels[id] != null) out[id] = clampToolLevel(levels[id]); });
+        }
+        if (legacyUpgrades && typeof legacyUpgrades === 'object') {
+            Object.keys(out).forEach(id => { if (legacyUpgrades[id] && out[id] < 2) out[id] = 2; });
+        }
+        return out;
+    }
+    function legacyUpgradesFromLevels(levels) {
+        const out = {};
+        Object.keys(TOWERS).forEach(id => { if (clampToolLevel(levels && levels[id]) > 1) out[id] = true; });
+        return out;
+    }
+    function getToolLevelFromMap(levels, id) {
+        return clampToolLevel(levels && levels[id]);
+    }
+    function getToolLevelMeta(id, level) {
+        const table = TOOL_LEVELS[id] || [];
+        return table[clampToolLevel(level) - 1] || table[0] || null;
+    }
+    function getNextToolLevelMeta(id, currentLevel) {
+        const nextLevel = clampToolLevel(currentLevel) + 1;
+        return nextLevel <= MAX_TOOL_LEVEL ? getToolLevelMeta(id, nextLevel) : null;
+    }
+    function applyToolLevel(tower, level) {
+        const meta = getToolLevelMeta(tower.id, level);
+        tower.toolLevel = clampToolLevel(level);
+        if (!meta) return null;
+        if (tower.toolLevel > 1) {
+            tower.upgradedPermanent = true;
+            tower.up = meta;
+        }
+        meta.apply(tower);
+        return meta;
+    }
 
     // ==================== SAVE / PROGRESS ====================
-    // schemaVersion 2（Phase A/B）：新增 stickers / badges / worldProgress 收集欄位。
+    // schemaVersion 3：新增 toolLevels（每件文具 1-5 级）并保留旧 toolUpgrades 迁移。
     // 不能只靠 SAVE_KEY 或 XBPVZ1 前綴判斷版本；版本號寫進 payload，方便未來 migration。
     const SAVE_KEY = 'xueba_pvz_save_v1';
-    const SAVE_SCHEMA_VERSION = 2;
+    const SAVE_SCHEMA_VERSION = 3;
     function emptySave() {
-        return { schemaVersion: SAVE_SCHEMA_VERSION, unlockedLevel: 0, hp: 0, results: {}, stickers: {}, badges: {}, worldProgress: {}, shards: 0, toolUpgrades: {} };
+        const toolLevels = defaultToolLevels();
+        return { schemaVersion: SAVE_SCHEMA_VERSION, unlockedLevel: 0, hp: 0, results: {}, stickers: {}, badges: {}, worldProgress: {}, shards: 0, toolLevels, toolUpgrades: {} };
     }
     // 把任意（可能是舊 v1）存檔物件補齊成最新 schema，舊進度完整保留（向後相容）
     function migrateSave(d) {
@@ -557,7 +690,8 @@
         base.badges = (d.badges && typeof d.badges === 'object') ? d.badges : {};               // v2+
         base.worldProgress = (d.worldProgress && typeof d.worldProgress === 'object') ? d.worldProgress : {}; // v2+
         base.shards = Math.max(0, parseInt(d.shards) || 0);                                       // 知识碎片（永久升级货币）
-        base.toolUpgrades = (d.toolUpgrades && typeof d.toolUpgrades === 'object') ? d.toolUpgrades : {}; // 已永久升级的文具
+        base.toolLevels = normalizeToolLevels(d.toolLevels, d.toolUpgrades); // v3：每件文具 1-5 级
+        base.toolUpgrades = legacyUpgradesFromLevels(base.toolLevels); // legacy display compatibility
         base.schemaVersion = SAVE_SCHEMA_VERSION;
         return reconcileUnlockedLevelFromResults(base);
     }
@@ -593,6 +727,15 @@
         return Math.round(3 + d * 3); // 第一章6 → 第四章8
     }
     const HP_CAP = 15; // 存档生命上限，防止数值爆表
+    function scaleEnemyStats(enemyDef, level, challengeRule) {
+        const difficulty = (level && level.difficulty) || 1.0;
+        const threatTier = Math.max(1, Math.min(12, parseInt(level && level.threatTier) || 1));
+        const tierBoost = Math.max(0, threatTier - 1);
+        const hp = enemyDef.hp * difficulty * (1 + tierBoost * 0.12);
+        const spd = enemyDef.spd * (1 + (difficulty - 1) * 0.2) * (1 + tierBoost * 0.025) * (challengeRule === 'speed' ? 1.2 : 1);
+        const dmg = enemyDef.dmg * difficulty * (1 + tierBoost * 0.08);
+        return { hp, spd, dmg, threatTier };
+    }
 
     // 存档码：跨装置/浏览器手动搬运进度（纯前端，无需后端、不依赖 cookie）
     // UTF-8 安全的 base64：直接 btoa 遇到 CJK/emoji 会丢 InvalidCharacterError；ASCII 内容下与旧码完全相容
@@ -634,7 +777,8 @@
                     };
                 }
             }
-            // 白名單重建：v2 新增欄位必須在此明確複製，否則 export -> import 會悄悄丟失小朋友的收集進度
+            // 白名單重建：新 schema 欄位必須在此明確複製，否則 export -> import 會悄悄丟失進度
+            const importedToolLevels = normalizeToolLevels(data.toolLevels, data.toolUpgrades);
             const clean = {
                 schemaVersion: SAVE_SCHEMA_VERSION,
                 unlockedLevel: Math.max(0, Math.min(CAMPAIGN_COUNT - 1, parseInt(data.unlockedLevel) || 0)),
@@ -644,7 +788,8 @@
                 badges: sanitizeCollection(data.badges),
                 worldProgress: sanitizeCollection(data.worldProgress),
                 shards: Math.max(0, Math.min(999999, parseInt(data.shards) || 0)),
-                toolUpgrades: sanitizeCollection(data.toolUpgrades)
+                toolLevels: importedToolLevels,
+                toolUpgrades: legacyUpgradesFromLevels(importedToolLevels)
             };
             reconcileUnlockedLevelFromResults(clean);
             writeGameSave(clean);
@@ -810,6 +955,17 @@
       enemy_tank: 'assets/sprites/enemy_tank.svg',
       enemy_boss: 'assets/sprites/enemy_boss.svg',
       enemy_elf: 'assets/sprites/enemy_elf.svg',
+      enemy_erasercrumb: 'assets/sprites/enemy_erasercrumb.svg',
+      enemy_hallpass: 'assets/sprites/enemy_hallpass.svg',
+      enemy_quizpaper: 'assets/sprites/enemy_quizpaper.svg',
+      enemy_whistle: 'assets/sprites/enemy_whistle.svg',
+      enemy_jump_rope: 'assets/sprites/enemy_jump_rope.svg',
+      enemy_sunshine: 'assets/sprites/enemy_sunshine.svg',
+      enemy_quiet: 'assets/sprites/enemy_quiet.svg',
+      enemy_bookstack: 'assets/sprites/enemy_bookstack.svg',
+      enemy_bookmark: 'assets/sprites/enemy_bookmark.svg',
+      enemy_paperstorm: 'assets/sprites/enemy_paperstorm.svg',
+      enemy_deadline: 'assets/sprites/enemy_deadline.svg',
       tower_pencil: 'assets/sprites/tower_pencil.svg',
       tower_textbook: 'assets/sprites/tower_textbook.svg',
       tower_watering: 'assets/sprites/tower_watering.svg',
@@ -1179,11 +1335,11 @@
                     if (isFree || this.mp >= tData.cost) {
                         if (isFree) this.freeNextTower = false; else this.mp -= tData.cost;
                         const tw = { type: 'tower', id: uiSelected, c, r, x: this.OX + c * this.G, y: this.OY + r * this.G, hp: tData.dmg, maxHp: tData.dmg, data: tData, cd: 0, fire: 0, placedFrame: this.frame };
-                        // 永久升级：若该文具已升级，套用更强属性 + 换皮，并依需要缩短冷却
-                        const permUp = (this.save.toolUpgrades && this.save.toolUpgrades[uiSelected]) ? TOOL_UPGRADES[uiSelected] : null;
-                        if (permUp) { tw.upgradedPermanent = true; tw.up = permUp; permUp.apply(tw); }
+                        // 永久等级：按 toolLevels 套用 Lv1-Lv5 战斗属性；旧存档会先 migration。
+                        const toolLevel = getToolLevelFromMap(this.save.toolLevels, uiSelected);
+                        const levelMeta = applyToolLevel(tw, toolLevel);
                         this.objs.push(tw);
-                        this.towerCooldowns[uiSelected] = Math.round(tData.recharge * ((permUp && permUp.recharge) || 1));
+                        this.towerCooldowns[uiSelected] = Math.round(tData.recharge * ((levelMeta && levelMeta.recharge) || 1));
                         SOUND.play('place');
                         this.spawnParticles(cx, cy, '#fff', 8);
                         this.floatText(isFree ? '免费!' : `-${tData.cost}`, cx, cy, isFree ? '#48bb78' : '#fbbf24');
@@ -1527,6 +1683,8 @@
             const lvl = LEVELS[idx];
             const tally = {};
             lvl.waves.forEach(w => w.groups.forEach(g => { tally[g.e] = (tally[g.e] || 0) + g.n; }));
+            const sceneTable = SCENE_MONSTER_TABLE[lvl.chapterId] || null;
+            const signatureDef = lvl.signatureEnemy && ENEMIES[lvl.signatureEnemy] ? ENEMIES[lvl.signatureEnemy] : null;
             const enemies = Object.keys(tally).map(id => ({
                 id, name: (ENEMIES[id] && ENEMIES[id].name) || id, color: (ENEMIES[id] && ENEMIES[id].color) || '#ffffff',
                 count: tally[id], role: (ENEMIES[id] && ENEMIES[id].role) || 'normal', hint: (ENEMIES[id] && ENEMIES[id].hint) || ''
@@ -1536,10 +1694,18 @@
             if (roles.has('fast')) strategies.push('快速敌人多：用胶水陷阱减速拖住');
             if (roles.has('normal')) strategies.push('普通敌人：铅笔投手当主力输出');
             if (roles.has('tank')) strategies.push('铁桶怪硬：橡皮盾挡路 + 集火破甲');
+            if (roles.has('support')) strategies.push('支援型怪物：先点掉，不要让它们放大整波压力');
+            if (roles.has('trick')) strategies.push('换路型怪物：每一路都留基础输出，别单线押宝');
             if (roles.has('boss')) strategies.push('有魔王压线：留好橡皮盾与班主任技能');
             return {
                 levelIdx: idx, id: lvl.id || ('L' + idx), name: lvl.name, enemies, strategies, isFixed: idx === 0, loadoutSize: lvl.loadoutSize || LOADOUT_SIZE,
                 archetype: lvl.archetype || '', hint: lvl.enemyPreviewHint || '', starGoals: lvl.starGoals || {},
+                signatureEnemy: signatureDef ? { id: signatureDef.id, name: signatureDef.name, color: signatureDef.color, role: signatureDef.role, hint: signatureDef.hint, ability: signatureDef.ability } : null,
+                sceneMonsters: sceneTable ? {
+                    scene: sceneTable.scene,
+                    theme: sceneTable.theme,
+                    monsters: sceneTable.monsters.map(id => ENEMIES[id]).filter(Boolean).map(e => ({ id: e.id, name: e.name, color: e.color, role: e.role }))
+                } : null,
                 isBoss: !!lvl.isBoss, isChallenge: !!lvl.isChallenge, chapterId: lvl.chapterId || '',
                 goal: lvl.goal || lvl.tip || '',
                 recommendedTools: lvl.recommendedTools || Object.keys(TOWERS),
@@ -1711,9 +1877,9 @@
                         const eDef = ENEMIES[grp.e];
                         const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : Math.floor(Math.random() * this.R);
                         this.spawnState.nextRow = null;
-                        const difficulty = LEVELS[this.levelIdx].difficulty || 1.0;
-                        const hp = eDef.hp * difficulty, spd = eDef.spd * (1 + (difficulty - 1) * 0.2) * (this.challengeRule === 'speed' ? 1.2 : 1), dmg = eDef.dmg * difficulty;
-                        this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
+                        const scaled = scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule);
+                        const hp = scaled.hp, spd = scaled.spd, dmg = scaled.dmg;
+                        this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, baseDmg: dmg, threatTier: scaled.threatTier, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
                         this.collectEnemySticker(grp.e); // Phase C：遇到即收集敌人贴纸
                         this.spawnState.mobsLeftInGroup--; this.spawnState.timer = grp.interval;
                         if (this.spawnState.mobsLeftInGroup <= 0) {
@@ -1740,17 +1906,28 @@
                     else if (o.type === 'tower') {
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
-                            this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { this.damageEnemy(e, o.data.dmg, '#F56565'); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
+                            const bombDmg = o.atkOverride || o.data.dmg;
+                            this.objs.forEach(e => { if (e.type === 'enemy' && rowsToBomb.includes(e.r) && e.x < this.w) { this.damageEnemy(e, bombDmg, '#F56565'); this.floatText("BOOM!", e.x, e.y, '#F56565', 40, 30); } });
                             this.spawnParticles(o.x, o.y, '#F56565', 50); this.objs.splice(i, 1); continue;
                         }
-                        if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, 40); o.cd=0; } }
+                        if (o.silenceTimer > 0) {
+                            o.silenceTimer--;
+                            if (this.frame % 45 === 0) this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#94a3b8', 5);
+                        }
+                        else if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, o.orbValueOverride || 40); o.cd=0; } }
                         else if (o.data.type === 'shoot') {
                             const atk = o.atkOverride || o.data.dmg, fireRate = o.rateOverride || o.data.rate, slowDur = o.slowDurOverride || 180;
                             o.cd--; if(o.cd<=0) {
-                                const target = this.objs.find(e => e.type === 'enemy' && e.r === o.r && e.x > o.x);
+                                const rowTargets = this.objs.filter(e => e.type === 'enemy' && e.r === o.r && e.x > o.x).sort((a, b) => a.x - b.x);
+                                const target = rowTargets[0];
                                 if (!target) {
                                     const eatingEnemy = this.objs.find(e => e.type === 'enemy' && e.r === o.r && Math.abs(e.x - o.x) < this.G && e.x < this.w);
                                     if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: 0, vy: 0 }); o.cd = fireRate; }
+                                } else if (o.data.pierce) {
+                                    const hitCount = Math.max(1, o.pierceCountOverride || o.data.pierceCount || 2);
+                                    rowTargets.slice(0, hitCount).forEach((e, idx) => this.damageEnemy(e, Math.round(atk * (idx === 0 ? 1 : 0.72)), o.data.color));
+                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, dmg: 0, color: o.data.color, vx: 18, vy: 0, pierceVisual: true, life: 24 });
+                                    o.cd = fireRate;
                                 } else {
                                     const ang = Math.atan2((target.y+this.G/2)-(o.y+this.G/4), (target.x+this.G/2)-(o.x+this.G/2));
                                     this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
@@ -1765,6 +1942,61 @@
                         if(o.shieldFlash>0) o.shieldFlash--;
                         const frozen = this.freezeTimer > 0;
                         let spd = Math.abs(o.vx);
+                        if (!o.baseDmg) o.baseDmg = o.dmg || 0;
+                        if(o.hurryTimer > 0) o.hurryTimer--;
+                        const bossCfg = BOSS_MECHANICS[o.id] || null;
+                        if(o.data && o.data.ability === 'sunSteal') {
+                            const cfg = bossCfg || { stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 };
+                            o.sunCooldown = Math.max(0, (o.sunCooldown || 0) - 1);
+                            if (o.sunCooldown <= 0) {
+                                let nearest = null, best = Infinity;
+                                this.objs.forEach(s => {
+                                    if (s.type === 'orb') {
+                                        const d = Math.hypot((s.x - (o.x + this.G / 2)), (s.y - (o.y + this.G / 2)));
+                                        if (d < this.G * cfg.stealRange && d < best) { nearest = s; best = d; }
+                                    }
+                                });
+                                if (nearest) {
+                                    const si = this.objs.indexOf(nearest);
+                                    if (si >= 0) this.objs.splice(si, 1);
+                                    o.sunEaten = (o.sunEaten || 0) + 1;
+                                    o.sunCooldown = 18;
+                                    this.spawnParticles(nearest.x, nearest.y, '#facc15', 10);
+                                    this.floatText('抢阳光 ' + o.sunEaten + '/' + cfg.boostEvery, o.x, o.y, '#facc15', 36, 18);
+                                    if (o.sunEaten % cfg.boostEvery === 0) {
+                                        o.powerStacks = Math.min(cfg.maxStacks || 5, (o.powerStacks || 0) + 1);
+                                        this.floatText('变强 +' + Math.round((cfg.stackBoost || 0.2) * 100) + '%', o.x, o.y - 18, '#f97316', 58, 24);
+                                    }
+                                }
+                            }
+                        }
+                        if(o.data && o.data.ability === 'whistleBoost' && this.frame % 135 === 0) {
+                            let boosted = 0;
+                            this.objs.forEach(e => {
+                                if (e.type === 'enemy' && e !== o && e.r === o.r && Math.abs(e.x - o.x) < this.G * 3.2) {
+                                    e.hurryTimer = Math.max(e.hurryTimer || 0, 90);
+                                    boosted++;
+                                }
+                            });
+                            if (boosted) { this.floatText('吹哨加速!', o.x, o.y, '#0ea5e9', 42, 20); this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#0ea5e9', 8); }
+                        }
+                        if(o.data && o.data.ability === 'quietAura' && this.frame % 160 === 0) {
+                            const targetTower = this.objs
+                                .filter(t => t.type === 'tower' && t.r === o.r && Math.abs((t.x + this.G / 2) - (o.x + this.G / 2)) < this.G * 3)
+                                .sort((a, b) => Math.abs(a.x - o.x) - Math.abs(b.x - o.x))[0];
+                            if (targetTower) {
+                                targetTower.silenceTimer = Math.max(targetTower.silenceTimer || 0, 110);
+                                targetTower.hitFlash = Math.max(targetTower.hitFlash || 0, 8);
+                                this.floatText('安静!', targetTower.x, targetTower.y, '#94a3b8', 48, 22);
+                                this.spawnParticles(targetTower.x + this.G / 2, targetTower.y + this.G / 2, '#94a3b8', 8);
+                            }
+                        }
+                        const rageCfg = bossCfg && bossCfg.rageRush ? bossCfg.rageRush : (o.data && o.data.ability === 'rageRush' ? { hpRatio: 0.45, duration: 150, statBoost: 1.3 } : null);
+                        if(rageCfg && !o.rageUsed && o.hp > 0 && o.hp <= o.maxHp * rageCfg.hpRatio) {
+                            o.rageUsed = true; o.rageTimer = rageCfg.duration || 150;
+                            this.floatText('暴走!', o.x, o.y, '#ef4444', 70, 30);
+                            this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#ef4444', 20);
+                        }
                         if(o.data && o.data.ability === 'schoolRush' && !o.rushUsed && o.x < this.OX + this.C * this.G * 0.66) {
                             o.rushUsed = true; o.rushTimer = 90;
                             this.floatText('冲刺！', o.x, o.y, '#E85D5D', 45, 24);
@@ -1795,6 +2027,12 @@
                                 this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#EC4899', 8);
                             }
                         }
+                        const powerBoost = 1 + ((o.powerStacks || 0) * ((bossCfg && bossCfg.stackBoost) || 0.2));
+                        let dmgBoost = powerBoost;
+                        if(o.rageTimer > 0) { spd *= (rageCfg && rageCfg.statBoost) || 1.3; dmgBoost *= (rageCfg && rageCfg.statBoost) || 1.3; o.rageTimer--; }
+                        if(o.hurryTimer > 0) spd *= 1.25;
+                        if(o.powerStacks > 0) spd *= powerBoost;
+                        o.dmg = o.baseDmg * dmgBoost;
                         if(o.rushTimer > 0) { spd *= 1.75; o.rushTimer--; }
                         if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
                         let move = true;
@@ -1810,6 +2048,12 @@
                     }
                     else if (o.type === 'bullet') {
                         let dx = o.vx, dy = o.vy;
+                        if (o.pierceVisual) {
+                            o.life--;
+                            o.x += dx; o.y += dy;
+                            if(o.life <= 0 || o.x > this.w || o.x < 0 || o.y > this.h || o.y < 0) this.objs.splice(i,1);
+                            continue;
+                        }
                         if(o.target && o.target.hp>0) {
                             const dist = Math.sqrt(((o.target.x+this.G/2)-o.x)**2 + ((o.target.y+this.G/2)-o.y)**2);
                             if(dist<30) { this.damageEnemy(o.target, o.dmg, o.color); if(o.isSlow) o.target.slowTimer=Math.max(o.target.slowTimer||0, o.slowDur||180); this.objs.splice(i,1); continue; }
@@ -1839,6 +2083,9 @@
             if (o.hitFlash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(sprite, -size/2, -size/2, size, size); }
             ctx.restore();
             if (o.rushTimer > 0) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('冲!', o.x + G * 0.15, o.y - 8); }
+            if (o.hurryTimer > 0) { ctx.fillStyle = '#0ea5e9'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('快!', o.x + G * 0.48, o.y - 8); }
+            if (o.rageTimer > 0) { ctx.fillStyle = '#ef4444'; ctx.font = `bold ${Math.max(13, G*0.28)}px Arial`; ctx.fillText('暴!', o.x + G * 0.18, o.y - 30); }
+            if (o.powerStacks > 0) { ctx.fillStyle = '#facc15'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('阳+' + o.powerStacks, o.x + G * 0.12, o.y - 8); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(o.x + 10, o.y + 10, G - 20, G - 20); }
             if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
             if (o.hp < o.maxHp) {
@@ -1953,6 +2200,9 @@
             }
             if (o.isEating) { ctx.fillStyle = 'red'; ctx.font = `bold ${Math.max(12, G*0.3)}px Arial`; ctx.fillText('咬!', x, y); }
             if (o.rushTimer > 0) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('冲!', x + G * 0.15, y - 8); }
+            if (o.hurryTimer > 0) { ctx.fillStyle = '#0ea5e9'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('快!', x + G * 0.48, y - 8); }
+            if (o.rageTimer > 0) { ctx.fillStyle = '#ef4444'; ctx.font = `bold ${Math.max(13, G*0.28)}px Arial`; ctx.fillText('暴!', x + G * 0.18, y - 30); }
+            if (o.powerStacks > 0) { ctx.fillStyle = '#facc15'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('阳+' + o.powerStacks, x + G * 0.12, y - 8); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(x + 10, y + 10, G - 20, G - 20); }
             ctx.restore();
             if (o.hp < o.maxHp) {
@@ -2145,6 +2395,7 @@
                 this.objs.forEach(o => {
                     if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
                     if(o.type==='tower') {
+                        const towerIcon = (o.up && o.up.icon) || o.data.icon;
                         const tSprite = ASSETS.get('tower_' + o.id);
                         if (tSprite) {
                             const age = this.frame - (o.placedFrame || 0);
@@ -2159,15 +2410,24 @@
                         if(o.data.type==='wall') { ctx.fillRect(o.x+10, o.y+10, G-20, G-20); ctx.strokeStyle='white'; ctx.strokeRect(o.x+10,o.y+10,G-20,G-20); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText('🛡️', o.x+G/3.5, o.y+G/1.5); }
                         else if(o.data.type==='bomb') {
                             ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke();
-                            ctx.fillStyle='white'; ctx.font=`${G*0.6}px Arial`; ctx.fillText('👩‍🏫', o.x+G/4, o.y+G/1.4);
+                            ctx.fillStyle='white'; ctx.font=`${G*0.6}px Arial`; ctx.fillText(towerIcon, o.x+G/4, o.y+G/1.4);
                             ctx.fillStyle='#F6AD55'; ctx.beginPath(); ctx.arc(o.x+G-10, o.y+10, 5, 0, Math.PI*2); ctx.fill();
                         }
-                        else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(o.data.icon, o.x+G/3.5, o.y+G/1.5); }
+                        else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(towerIcon, o.x+G/3.5, o.y+G/1.5); }
                         if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
                         }
                         // 升级标记 + 选中高亮（Phase 2.5）
                         if(o.upgraded) { ctx.fillStyle='#F6D365'; ctx.font=`bold ${Math.max(12,G*0.3)}px Arial`; ctx.textAlign='left'; ctx.fillText('⭐', o.x+G-G*0.36, o.y+G*0.36); }
                         if(o.upgradedPermanent) { ctx.font=`${Math.max(12,G*0.32)}px Arial`; ctx.textAlign='left'; ctx.fillText('✨', o.x+G*0.04, o.y+G*0.34); }
+                        if(o.silenceTimer > 0) {
+                            ctx.fillStyle='rgba(15,23,42,0.48)';
+                            ctx.fillRect(o.x+8, o.y+8, G-16, G-16);
+                            ctx.fillStyle='#cbd5e1';
+                            ctx.font=`bold ${Math.max(14,G*0.34)}px Arial`;
+                            ctx.textAlign='center';
+                            ctx.fillText('静', o.x+G/2, o.y+G*0.58);
+                            ctx.textAlign='left';
+                        }
                         if(o===this.selectedField) { ctx.strokeStyle='#F6D365'; ctx.lineWidth=3; ctx.setLineDash([6,4]); ctx.strokeRect(o.x+4, o.y+4, G-8, G-8); ctx.setLineDash([]); }
                     } else if(o.type==='enemy') { this.drawEnemy(ctx, o, G); }
                     else if(o.type==='bullet') {
@@ -2272,6 +2532,7 @@
             this.badges = {};           // 收集：徽章
             this.shards = 0;            // 知识碎片（永久升级货币）
             this.toolUpgrades = {};     // 已永久升级的文具
+            this.toolLevels = defaultToolLevels(); // v3：每件文具 1-5 级
             // ----- Phase 2.5 UI 状态 -----
             this.activeLoadout = Object.keys(TOWERS); // 道具栏只渲染 loadout 内的文具
             this.prepData = null;       // 备战画面数据（敌人预告 + 推荐策略）
@@ -2577,7 +2838,7 @@
         renderWorkshop() {
             if (this.phase !== 'workshop') return null;
             const shards = this.shards || 0;
-            const ups = this.toolUpgrades || {};
+            const levels = normalizeToolLevels(this.toolLevels, this.toolUpgrades);
             const wrap = this.el('div', {
                 position:'absolute', inset:'0', zIndex:'56', overflowY:'auto', overflowX:'hidden', pointerEvents:'auto',
                 background:'linear-gradient(135deg, #0c4a6e 0%, #1e3a8a 50%, #1e293b 100%)',
@@ -2601,32 +2862,34 @@
             inner.appendChild(head);
 
             Object.values(TOWERS).forEach(t => {
-                const up = TOOL_UPGRADES[t.id];
-                if (!up) return;
-                const done = !!ups[t.id];
-                const afford = shards >= up.cost;
+                const level = getToolLevelFromMap(levels, t.id);
+                const curMeta = getToolLevelMeta(t.id, level);
+                const nextMeta = getNextToolLevelMeta(t.id, level);
+                if (!curMeta) return;
+                const done = level >= MAX_TOOL_LEVEL;
+                const afford = !!nextMeta && shards >= nextMeta.cost;
                 const card = this.el('div', {
                     display:'flex', alignItems:'center', gap:'12px', padding:'12px', borderRadius:'16px',
                     border:'2px solid ' + (done ? '#34d399' : '#334155'), background:'rgba(255,255,255,0.06)'
                 });
-                // 升级前后图示
+                // 当前等级 -> 下一等级图示
                 const icons = this.el('div', { display:'flex', alignItems:'center', gap:'6px', flexShrink:'0' });
                 icons.append(
-                    this.el('div', { width:'40px', height:'40px', borderRadius:'10px', background:'rgba(0,0,0,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px', opacity: done ? '0.5' : '1' }, t.icon),
+                    this.el('div', { width:'40px', height:'40px', borderRadius:'10px', background:'rgba(0,0,0,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px' }, curMeta.icon || t.icon),
                     this.el('div', { color:'#94a3b8', fontWeight:'900' }, '→'),
-                    this.el('div', { width:'44px', height:'44px', borderRadius:'10px', background: done ? 'rgba(52,211,153,0.25)' : 'rgba(56,189,248,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', border:'2px solid ' + (done ? '#34d399' : '#38bdf8') }, up.icon)
+                    this.el('div', { width:'44px', height:'44px', borderRadius:'10px', background: done ? 'rgba(52,211,153,0.25)' : 'rgba(56,189,248,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', border:'2px solid ' + (done ? '#34d399' : '#38bdf8') }, done ? (curMeta.icon || t.icon) : (nextMeta.icon || t.icon))
                 );
                 card.appendChild(icons);
                 const info = this.el('div', { flex:'1', minWidth:'0' });
                 info.append(
-                    this.el('div', { color:'white', fontWeight:'900', fontSize:'15px' }, t.name + ' → ' + up.name),
-                    this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'12px', fontWeight:'bold', lineHeight:'1.4' }, up.blurb)
+                    this.el('div', { color:'white', fontWeight:'900', fontSize:'15px' }, curMeta.name + ' Lv' + level + (done ? '（满级）' : ' → ' + nextMeta.name + ' Lv' + nextMeta.level)),
+                    this.el('div', { color:'rgba(255,255,255,0.8)', fontSize:'12px', fontWeight:'bold', lineHeight:'1.4' }, done ? curMeta.blurb : nextMeta.blurb)
                 );
                 card.appendChild(info);
                 if (done) {
-                    card.appendChild(this.el('div', { color:'#34d399', fontWeight:'900', fontSize:'14px', flexShrink:'0' }, '✅ 已升级'));
+                    card.appendChild(this.el('div', { color:'#34d399', fontWeight:'900', fontSize:'14px', flexShrink:'0' }, '✅ Lv5'));
                 } else {
-                    const buyBtn = this.btn('💎' + up.cost, {
+                    const buyBtn = this.btn('Lv' + nextMeta.level + ' 💎' + nextMeta.cost, {
                         padding:'10px 14px', borderRadius:'12px', border:'2px solid ' + (afford ? '#38bdf8' : '#475569'),
                         background: afford ? '#0ea5e9' : '#334155', color:'white', fontWeight:'900', fontSize:'15px',
                         fontFamily:'inherit', cursor: afford ? 'pointer' : 'not-allowed', flexShrink:'0'
@@ -2688,6 +2951,29 @@
                 enemyRow.appendChild(chip);
             });
             enemyBox.appendChild(enemyRow);
+            if (pd.signatureEnemy) {
+                const sig = pd.signatureEnemy;
+                enemyBox.appendChild(this.el('div', {
+                    marginTop:'8px', padding:'6px 8px', borderRadius:'10px',
+                    background:'rgba(246,211,101,0.14)', color:'#FDE68A', fontSize:'12px', fontWeight:'900', lineHeight:'1.45'
+                }, '本关新怪：' + sig.name + ' - ' + (sig.hint || '观察它的特殊行动')));
+            }
+            if (pd.sceneMonsters) {
+                const sceneLine = this.el('div', { marginTop:'7px', display:'flex', flexWrap:'wrap', gap:'5px', alignItems:'center' });
+                sceneLine.appendChild(this.el('span', { color:'rgba(247,243,232,0.72)', fontSize:'11px', fontWeight:'900' }, pd.sceneMonsters.scene + '怪物表'));
+                (pd.sceneMonsters.monsters || []).forEach(m => {
+                    const chip = this.el('span', {
+                        display:'inline-flex', alignItems:'center', gap:'4px', borderRadius:'999px', padding:'2px 7px',
+                        background:'rgba(255,255,255,0.08)', color:'#F7F3E8', fontSize:'11px', fontWeight:'800'
+                    });
+                    chip.append(
+                        this.el('span', { width:'8px', height:'8px', borderRadius:'3px', background:m.color, display:'inline-block' }),
+                        this.el('span', {}, m.name)
+                    );
+                    sceneLine.appendChild(chip);
+                });
+                enemyBox.appendChild(sceneLine);
+            }
             if (pd.hint) enemyBox.appendChild(this.el('div', { fontSize:'12px', color:'#F7F3E8', marginTop:'6px', opacity:'0.92', lineHeight:'1.5' }, '💡 ' + pd.hint));
             card.appendChild(enemyBox);
 
@@ -2834,10 +3120,11 @@
                 const isCooldown = cooldown > 0;
                 const canAfford = this.stats.mp >= t.cost;
                 const isSelected = this.selectedTower === t.id;
-                // 永久升级：道具栏显示升级后的名称与图示 + ✨
-                const permUp = (this.toolUpgrades && this.toolUpgrades[t.id]) ? TOOL_UPGRADES[t.id] : null;
-                const dispIcon = permUp ? permUp.icon : t.icon;
-                const dispName = permUp ? permUp.name : t.name;
+                // 永久等级：道具栏显示当前等级名称与图示
+                const toolLevel = getToolLevelFromMap(this.toolLevels, t.id);
+                const levelMeta = getToolLevelMeta(t.id, toolLevel);
+                const dispIcon = levelMeta ? levelMeta.icon : t.icon;
+                const dispName = levelMeta ? levelMeta.name : t.name;
 
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
@@ -2860,12 +3147,12 @@
 
                 // Icon（升级后换皮 + ✨ 角标）
                 const iconEl = this.el('div', { position:'relative', fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, dispIcon);
-                if (permUp) iconEl.appendChild(this.el('div', { position:'absolute', top:'-2px', left:'-2px', fontSize:'10px' }, '✨'));
+                if (toolLevel > 1) iconEl.appendChild(this.el('div', { position:'absolute', top:'-2px', left:'-2px', fontSize:'10px', fontWeight:'900', color:'#0f172a', background:'#F6D365', borderRadius:'999px', padding:'0 3px' }, 'Lv' + toolLevel));
 
                 // Name（升级后显示新名）
                 const nameEl = this.el('div', {
-                    backgroundColor: permUp ? '#cdeafe' : '#efe7d3', color:'#6b4a2f', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
-                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid ' + (permUp ? '#7cc8f0' : '#c9a06a')
+                    backgroundColor: toolLevel > 1 ? '#cdeafe' : '#efe7d3', color:'#6b4a2f', fontWeight:'bold', borderRadius:'4px', textAlign:'center',
+                    fontSize: isL && landscapeButtonSize <= 48 ? '7px' : '8px', padding:'2px', width:'90%', marginBottom:'2px', border:'1px solid ' + (toolLevel > 1 ? '#7cc8f0' : '#c9a06a')
                 }, dispName);
 
                 // Cooldown overlay
@@ -3441,6 +3728,7 @@
     let badges = loadGameSave().badges || {};
     let shards = loadGameSave().shards || 0;
     let toolUpgrades = loadGameSave().toolUpgrades || {};
+    let toolLevels = loadGameSave().toolLevels || defaultToolLevels();
     // ----- Phase 2.5 状态 -----
     let activeLoadout = Object.keys(TOWERS);
     let prepData = null;
@@ -3488,9 +3776,9 @@
             results = fresh.results || results;
             stickers = fresh.stickers || stickers;
             badges = fresh.badges || badges;
-            shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || toolUpgrades;
+            shards = fresh.shards || 0; toolLevels = fresh.toolLevels || toolLevels; toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels);
             levelResult = result || null;
-            ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, levelResult });
+            ui.update({ unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades, levelResult });
         },
         onWaveIntro: (info) => {
             waveIntro = info;
@@ -3559,24 +3847,26 @@
     // 装备工坊：打开（读最新碎片/升级）
     ui.onOpenWorkshop = () => {
         const fresh = loadGameSave();
-        shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || {};
+        shards = fresh.shards || 0; toolLevels = fresh.toolLevels || defaultToolLevels(); toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels);
         phase = 'workshop';
-        ui.update({ phase, shards, toolUpgrades });
+        ui.update({ phase, shards, toolLevels, toolUpgrades });
     };
-    // 装备工坊：花碎片升级某文具（永久）
+    // 装备工坊：花碎片逐级升级某文具（永久）
     ui.onUpgradeTool = (toolId) => {
-        const up = TOOL_UPGRADES[toolId]; if (!up) return;
         const save = loadGameSave();
-        if (!save.toolUpgrades) save.toolUpgrades = {};
-        if (save.toolUpgrades[toolId]) return;          // 已升级
-        if ((save.shards || 0) < up.cost) return;       // 碎片不足
-        save.shards -= up.cost;
-        save.toolUpgrades[toolId] = true;
+        save.toolLevels = normalizeToolLevels(save.toolLevels, save.toolUpgrades);
+        const currentLevel = getToolLevelFromMap(save.toolLevels, toolId);
+        const nextMeta = getNextToolLevelMeta(toolId, currentLevel);
+        if (!nextMeta) return;                          // 已满级
+        if ((save.shards || 0) < nextMeta.cost) return; // 碎片不足
+        save.shards -= nextMeta.cost;
+        save.toolLevels[toolId] = currentLevel + 1;
+        save.toolUpgrades = legacyUpgradesFromLevels(save.toolLevels);
         writeGameSave(save);
         engine.save = save;                              // 同步引擎，下一关即生效
-        shards = save.shards; toolUpgrades = save.toolUpgrades;
+        shards = save.shards; toolLevels = save.toolLevels; toolUpgrades = save.toolUpgrades;
         SOUND.play('upgrade');
-        ui.update({ shards, toolUpgrades });            // 仍在 workshop，刷新即可
+        ui.update({ shards, toolLevels, toolUpgrades }); // 仍在 workshop，刷新即可
     };
     // Phase A：进入关卡友善 intro（不需选 loadout，开战给全部文具）
     ui.onOpenPrep = (idx) => {
@@ -3584,7 +3874,7 @@
         prepLevelIdx = idx;
         phase = 'prep';
         // 研究所进阶关：备战预选一组泛用文具（玩家可改）；主线无需选
-        const prepLoadout = prepData.advanced ? ['textbook', 'pencil', 'glue', 'eraser'].slice(0, prepData.loadoutSize || 4) : [];
+        const prepLoadout = prepData.advanced ? ['textbook', 'pencil', 'ruler', 'glue'].slice(0, prepData.loadoutSize || 4) : [];
         ui.update({ phase, prepData, prepLevelIdx, prepLoadout });
     };
     // intro/备战 完成 → 进入战斗（主线全配；研究所用自选 loadout）
@@ -3592,9 +3882,9 @@
         requestLandscapeMode();
         activeLoadout = (loadout && loadout.length) ? loadout.slice() : Object.keys(TOWERS);
         advancedMode = !!(LEVELS[idx] && LEVELS[idx].advanced); // 研究所开放提前上课 / 关卡内升级
-        const fresh = loadGameSave(); toolUpgrades = fresh.toolUpgrades || {}; // 道具栏显示升级后外观
+        const fresh = loadGameSave(); toolLevels = fresh.toolLevels || defaultToolLevels(); toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels); // 道具栏显示升级后外观
         gameOverData = null;
-        ui.update({ activeLoadout, toolUpgrades, advancedMode, gameOverData });
+        ui.update({ activeLoadout, toolLevels, toolUpgrades, advancedMode, gameOverData });
         engine.startLevel(idx, activeLoadout);
     };
     // 兼容旧入口（直接开始指定关）
@@ -3613,10 +3903,10 @@
         const fresh = loadGameSave();
         unlockedLevel = Math.max(unlockedLevel, fresh.unlockedLevel || 0);
         results = fresh.results || results; stickers = fresh.stickers || stickers; badges = fresh.badges || badges;
-        shards = fresh.shards || 0; toolUpgrades = fresh.toolUpgrades || toolUpgrades;
+        shards = fresh.shards || 0; toolLevels = fresh.toolLevels || toolLevels; toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels);
         phase = 'menu';
         gameOverData = null;
-        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges, shards, toolUpgrades });
+        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades });
     };
     ui.onQuizAnswer = (ok) => {
         quizData = null;
@@ -3647,7 +3937,7 @@
     };
 
     // 启动时把存档进度（解锁关卡 + 星级 + 收集）推到选单，确保返回玩家正确显示
-    ui.update({ unlockedLevel, results, stickers, badges, shards, toolUpgrades, advancedMode, soundOn: SOUND.enabled, voiceOn: VOICE.enabled });
+    ui.update({ unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades, advancedMode, soundOn: SOUND.enabled, voiceOn: VOICE.enabled });
 
     // Input handling
     function handleInput(type, x, y) {
@@ -3657,12 +3947,40 @@
     // 菜单等 DOM 按钮的点击也解锁音频
     document.addEventListener('pointerdown', () => SOUND.arm(), { once: true });
 
-    canvas.addEventListener('mousedown', e => handleInput('start', e.clientX, e.clientY));
-    canvas.addEventListener('mousemove', e => handleInput('move', e.clientX, e.clientY));
-    canvas.addEventListener('mouseup', e => handleInput('end', e.clientX, e.clientY));
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput('start', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
-    canvas.addEventListener('touchmove', e => { e.preventDefault(); handleInput('move', e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-    canvas.addEventListener('touchend', e => { e.preventDefault(); handleInput('end', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+    if (window.PointerEvent) {
+        canvas.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (e.isPrimary === false) return;
+            e.preventDefault();
+            if (canvas.setPointerCapture) {
+                try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+            }
+            handleInput('start', e.clientX, e.clientY);
+        }, { passive: false });
+        canvas.addEventListener('pointermove', e => {
+            if (e.isPrimary === false) return;
+            if (e.pointerType === 'mouse' && e.buttons === 0) return;
+            e.preventDefault();
+            handleInput('move', e.clientX, e.clientY);
+        }, { passive: false });
+        const endPointerInput = e => {
+            if (e.isPrimary === false) return;
+            e.preventDefault();
+            if (canvas.releasePointerCapture && canvas.hasPointerCapture && canvas.hasPointerCapture(e.pointerId)) {
+                try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+            }
+            handleInput('end', e.clientX, e.clientY);
+        };
+        canvas.addEventListener('pointerup', endPointerInput, { passive: false });
+        canvas.addEventListener('pointercancel', endPointerInput, { passive: false });
+    } else {
+        canvas.addEventListener('mousedown', e => handleInput('start', e.clientX, e.clientY));
+        canvas.addEventListener('mousemove', e => handleInput('move', e.clientX, e.clientY));
+        canvas.addEventListener('mouseup', e => handleInput('end', e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput('start', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); handleInput('move', e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        canvas.addEventListener('touchend', e => { e.preventDefault(); handleInput('end', e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+    }
 
     // Resize handling
     window.addEventListener('resize', () => {
