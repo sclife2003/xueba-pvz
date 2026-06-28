@@ -183,6 +183,7 @@
       bookmark: { id: 'bookmark', name: '书签怪', hp: 126, spd: 0.66, dmg: 5, val: 0, color: '#14b8a6', type: 'ground', role: 'trick', ability: 'laneHop', hint: '会从书页缝里换路，后排要均衡' },
       paperstorm: { id: 'paperstorm', name: '卷面风暴怪', hp: 135, spd: 0.82, dmg: 6, val: 0, color: '#e2e8f0', type: 'ground', role: 'fast', ability: 'none', hint: '成群推进，喷壶和直尺能处理' },
       deadline: { id: 'deadline', name: '截止铃怪', hp: 920, spd: 0.38, dmg: 18, val: 0, color: '#ef4444', type: 'ground', role: 'boss', ability: 'rageRush', hint: '低血量会暴走冲刺，留控制和爆发' },
+      super_boss: { id: 'super_boss', name: '紫晶魔铠王', hp: 5200, spd: 0.16, dmg: 72, val: 0, color: '#8b5cf6', type: 'ground', role: 'boss', ability: 'titanOverdrive', spriteScale: 1.82, hint: '超大型最终 Boss：紫晶护盾、巨剑重击，低血量会暴走' },
       boss: { id: 'boss', name: '监考官', hp: 2400, spd: 0.23, dmg: 52, val: 0, color: '#e53e3e', type: 'ground', role: 'boss', ability: 'focusDrain', hint: '高血量 Boss；会点名拆防线，低血量暴走 5 秒' },
       elf: { id: 'elf', name: '知识精灵', hp: 50, spd: 2.2, dmg: 0, val: 50, color: '#FAF089', type: 'ground', role: 'elf', hint: '击杀可得能量' }
     };
@@ -190,6 +191,7 @@
     const BOSS_MECHANICS = {
       sunshine: { scene: 'playground', label: '阳光抢夺', stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 },
       deadline: { scene: 'exam', label: '截止铃暴走', rageRush: { hpRatio: 0.45, duration: 150, statBoost: 1.3 } },
+      super_boss: { scene: 'exam', label: '紫晶魔铠', titanShield: { hpRatio: 0.72, damageScale: 0.6 }, titanSlam: { interval: 210, damage: 850 }, rageRush: { hpRatio: 0.38, duration: 180, statBoost: 1.35 } },
       boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 } }
     };
 
@@ -197,8 +199,8 @@
       classroom: { scene: '教室', theme: '基础分路与小测压力', monsters: ['erasercrumb', 'hallpass', 'quizpaper', 'slime', 'note'] },
       playground: { scene: '操场', theme: '速度、冲刺与阳光争夺', monsters: ['whistle', 'jump_rope', 'sunshine', 'bat'] },
       library: { scene: '图书馆', theme: '安静干扰、书堆压线与支援怪', monsters: ['quiet', 'bookstack', 'bookmark', 'doodle'] },
-      exam: { scene: '考场', theme: '倒计时、卷面风暴与高压 Boss', monsters: ['paperstorm', 'deadline', 'boss', 'tank'] },
-      research: { scene: '研究所', theme: '进阶混合机制实验', monsters: ['sunshine', 'quiet', 'deadline', 'boss'] },
+      exam: { scene: '考场', theme: '倒计时、卷面风暴与高压 Boss', monsters: ['paperstorm', 'deadline', 'super_boss', 'boss', 'tank'] },
+      research: { scene: '研究所', theme: '进阶混合机制实验', monsters: ['sunshine', 'quiet', 'deadline', 'super_boss', 'boss'] },
       challenge: { scene: '课外挑战', theme: '规则变体与速度考验', monsters: ['whistle', 'jump_rope', 'bat'] }
     };
 
@@ -362,7 +364,7 @@
       },
       {
         id: '4-2', chapterId: 'exam', archetype: 'boss-stage', isBoss: true,
-        signatureEnemy: 'deadline',
+        signatureEnemy: 'super_boss',
         enemyPreviewHint: '毕业答辩会把所有机制混在一起',
         starGoals: { twoStar: { minHp: 4 }, threeStar: { minHp: 6, maxWrongAnswers: 0 } },
         reward: { type: 'badge', text: '🎓 校园毕业徽章' },
@@ -373,7 +375,7 @@
             { groups: [{ e: 'paperstorm', n: 7, interval: 60, preDelay: 50 }, { e: 'bookmark', n: 5, interval: 90, preDelay: 90 }, { e: 'elf', n: 3, interval: 60, preDelay: 120 }] },
             { groups: [{ e: 'bookstack', n: 3, interval: 150, preDelay: 50 }, { e: 'doodle', n: 4, interval: 170, preDelay: 90 }, { e: 'quiet', n: 3, interval: 180, preDelay: 120 }] },
             { groups: [{ e: 'deadline', n: 2, interval: 340, preDelay: 180 }, { e: 'paperstorm', n: 10, interval: 55, preDelay: 80 }, { e: 'doodle', n: 3, interval: 190, preDelay: 130 }] },
-            { groups: [{ e: 'boss', n: 2, interval: 280, preDelay: 100 }, { e: 'deadline', n: 1, interval: 0, preDelay: 140 }, { e: 'tank', n: 5, interval: 110, preDelay: 80 }, { e: 'bookmark', n: 6, interval: 80, preDelay: 120 }] }
+            { groups: [{ e: 'super_boss', n: 1, interval: 0, preDelay: 130 }, { e: 'paperstorm', n: 8, interval: 55, preDelay: 80 }, { e: 'bookmark', n: 5, interval: 90, preDelay: 120 }, { e: 'quiet', n: 2, interval: 220, preDelay: 150 }] }
         ]
       }
     ];
@@ -435,6 +437,104 @@
       tip: '进阶模式 + 极速：先控速再补输出，抓准升级与提前上课。',
       waves: (LEVELS.find(l => l.id === '3-3') || LEVELS[0]).waves
     });
+
+    // PvZ-style pacing pass: longer stages, visible huge-wave beats, and denser late pressure.
+    const PACING_RULES = {
+      classroom: { targetWaves: 5, density: 1.06 },
+      playground: { targetWaves: 5, density: 1.12 },
+      library: { targetWaves: 6, density: 1.16 },
+      exam: { targetWaves: 6, density: 1.2 },
+      challenge: { targetWaves: 6, density: 1.18 },
+      research: { targetWaves: 6, density: 1.2 }
+    };
+    function getLevelThreatTier(level) {
+      return Math.max(1, Math.round((((level && level.difficulty) || 1) - 0.8) * 5));
+    }
+    function cloneWave(wave) {
+      return {
+        ...wave,
+        groups: (wave.groups || []).map(g => ({ ...g }))
+      };
+    }
+    function appendUnique(list, id) {
+      if (id && ENEMIES[id] && !list.includes(id)) list.push(id);
+    }
+    function enemyPoolForLevel(level) {
+      const ids = [];
+      appendUnique(ids, level && level.signatureEnemy);
+      const table = SCENE_MONSTER_TABLE[(level && level.chapterId) || ''] || null;
+      (table && table.monsters || []).forEach(id => appendUnique(ids, id));
+      ((level && level.waves) || []).forEach(w => (w.groups || []).forEach(g => appendUnique(ids, g.e)));
+      return ids.filter(id => id !== 'elf' && ENEMIES[id]);
+    }
+    function chooseEnemyByRole(pool, roles, fallback) {
+      return pool.find(id => roles.includes(ENEMIES[id].role)) || fallback || pool[0] || 'slime';
+    }
+    function makePressureWave(level, waveNo, rule) {
+      const pool = enemyPoolForLevel(level);
+      const nonBossPool = pool.filter(id => ENEMIES[id].role !== 'boss' && id !== 'super_boss');
+      const threatTier = getLevelThreatTier(level);
+      const pressureLevel = Math.max(1, Math.min(5, Math.ceil((waveNo + threatTier) / 3)));
+      const primary = chooseEnemyByRole(nonBossPool, ['normal', 'fast', 'trick'], nonBossPool[0]);
+      const support = chooseEnemyByRole(nonBossPool, ['support', 'trick'], primary);
+      const tank = chooseEnemyByRole(nonBossPool, ['tank'], primary);
+      const groups = [];
+      const addGroup = (e, n, interval, preDelay) => {
+        if (!ENEMIES[e] || n <= 0) return;
+        const existing = groups.find(g => g.e === e);
+        if (existing) existing.n += n;
+        else groups.push({ e, n, interval, preDelay });
+      };
+      addGroup(primary, 4 + pressureLevel + Math.floor(threatTier / 2), Math.max(55, 105 - pressureLevel * 7), 55);
+      if (support !== primary) addGroup(support, 1 + Math.floor(pressureLevel / 2), 165, 115);
+      if (tank !== primary) addGroup(tank, 1 + Math.floor(pressureLevel / 3), 190, 160);
+      if (level && level.isBoss && waveNo >= 4) {
+        const miniBoss = pool.find(id => id !== 'super_boss' && ENEMIES[id].role === 'boss');
+        if (miniBoss) addGroup(miniBoss, 1, 0, 230);
+      }
+      return {
+        pressureLevel,
+        generatedPressure: true,
+        groups
+      };
+    }
+    function tuneExistingWave(wave, waveIdx, totalWaves, level, rule) {
+      const lateRatio = totalWaves <= 1 ? 1 : waveIdx / (totalWaves - 1);
+      const threatTier = getLevelThreatTier(level);
+      wave.groups = (wave.groups || []).map(g => {
+        const def = ENEMIES[g.e];
+        if (!def || def.role === 'boss' || g.e === 'elf') return g;
+        const pressureBoost = (rule.density - 1) * (0.55 + lateRatio);
+        const tierBoost = Math.max(0, threatTier - 1) * 0.025;
+        const scaled = Math.max(g.n, Math.round(g.n * (1 + pressureBoost + tierBoost)));
+        const lateAdd = waveIdx >= Math.floor(totalWaves / 2) && def.role !== 'tank' ? 1 : 0;
+        return { ...g, n: Math.min(18, scaled + lateAdd) };
+      });
+      return wave;
+    }
+    function applyPacingTuning() {
+      LEVELS.forEach(level => {
+        const rule = PACING_RULES[level.chapterId] || PACING_RULES.classroom;
+        level.threatTier = typeof level.threatTier === 'number' ? level.threatTier : getLevelThreatTier(level);
+        level.originalWaveCount = (level.waves || []).length;
+        level.waves = (level.waves || []).map(cloneWave);
+        while (level.waves.length < rule.targetWaves) {
+          const insertAt = Math.max(0, level.waves.length - 1);
+          level.waves.splice(insertAt, 0, makePressureWave(level, level.waves.length + 1, rule));
+        }
+        const finalIdx = level.waves.length - 1;
+        level.waves.forEach((wave, waveIdx) => {
+          tuneExistingWave(wave, waveIdx, level.waves.length, level, rule);
+          const isFinal = waveIdx === finalIdx;
+          const isFlagBeat = isFinal || (waveIdx > 0 && (waveIdx + 1) % 3 === 0);
+          wave.pressureLevel = Math.max(wave.pressureLevel || 1, Math.min(5, Math.ceil(((waveIdx + 1) / level.waves.length) * 4 + (level.threatTier - 1) * 0.25)));
+          wave.flagWave = !!wave.flagWave || isFlagBeat;
+          if (wave.flagWave && !wave.prepMessage) wave.prepMessage = isFinal ? '期末大波来袭' : '大波怪物来袭';
+        });
+        level.pacingTuned = true;
+      });
+    }
+    applyPacingTuning();
 
     // ==================== CHILD-FRIENDLY MAINLINE (Phase A) ====================
     // 主线文具采用关卡自动解锁，不让小学生做配装选择。
@@ -498,7 +598,7 @@
       'challenge-speed': '速度课堂：节奏更快，挑战你的反应！'
     };
     LEVELS.forEach(l => {
-      if (typeof l.threatTier !== 'number') l.threatTier = Math.max(1, Math.round(((l.difficulty || 1) - 0.8) * 5));
+      if (typeof l.threatTier !== 'number') l.threatTier = getLevelThreatTier(l);
       l.recommendedTools = RECOMMENDED_TOOLS[l.id] || Object.keys(TOWERS);
       l.mainlineLoadout = MAINLINE_LOADOUTS[l.id] || Object.keys(TOWERS);
       l.lessonBeat = LESSON_BEATS[l.id] || null;
@@ -739,6 +839,11 @@
 
     // 存档码：跨装置/浏览器手动搬运进度（纯前端，无需后端、不依赖 cookie）
     // UTF-8 安全的 base64：直接 btoa 遇到 CJK/emoji 会丢 InvalidCharacterError；ASCII 内容下与旧码完全相容
+    function getInterWaveDelay(level, challengeRule) {
+        if (challengeRule === 'speed') return 105;
+        const threatTier = Math.max(1, Math.min(12, parseInt(level && level.threatTier) || 1));
+        return Math.max(180, 300 - Math.min(6, threatTier - 1) * 20);
+    }
     function b64encodeUtf8(str) { return btoa(unescape(encodeURIComponent(str))); }
     function b64decodeUtf8(b64) { return decodeURIComponent(escape(atob(b64))); }
     function exportSave() {
@@ -950,28 +1055,89 @@
     // SVG 精灵外部加载：drawImage 只显示不回读，即使 file:// 下 canvas 被 taint 也不影响渲染。
     // 未提供精灵的单位自动回退旧程序化绘制，迁移期间全程可玩。换成 PNG 只需替换 assets/ 文件。
     const SPRITE_MANIFEST = {
-      enemy_slime: 'assets/sprites/enemy_slime.svg',
-      enemy_bat: 'assets/sprites/enemy_bat.svg',
-      enemy_tank: 'assets/sprites/enemy_tank.svg',
-      enemy_boss: 'assets/sprites/enemy_boss.svg',
-      enemy_elf: 'assets/sprites/enemy_elf.svg',
-      enemy_erasercrumb: 'assets/sprites/enemy_erasercrumb.svg',
-      enemy_hallpass: 'assets/sprites/enemy_hallpass.svg',
-      enemy_quizpaper: 'assets/sprites/enemy_quizpaper.svg',
-      enemy_whistle: 'assets/sprites/enemy_whistle.svg',
-      enemy_jump_rope: 'assets/sprites/enemy_jump_rope.svg',
-      enemy_sunshine: 'assets/sprites/enemy_sunshine.svg',
-      enemy_quiet: 'assets/sprites/enemy_quiet.svg',
-      enemy_bookstack: 'assets/sprites/enemy_bookstack.svg',
-      enemy_bookmark: 'assets/sprites/enemy_bookmark.svg',
-      enemy_paperstorm: 'assets/sprites/enemy_paperstorm.svg',
-      enemy_deadline: 'assets/sprites/enemy_deadline.svg',
-      tower_pencil: 'assets/sprites/tower_pencil.svg',
-      tower_textbook: 'assets/sprites/tower_textbook.svg',
-      tower_watering: 'assets/sprites/tower_watering.svg',
-      tower_glue: 'assets/sprites/tower_glue.svg',
-      tower_eraser: 'assets/sprites/tower_eraser.svg',
-      tower_teacher: 'assets/sprites/tower_teacher.svg'
+      enemy_slime: 'assets/sprites/enemy_slime_painted.webp',
+      enemy_bat: 'assets/sprites/enemy_bat_painted.webp',
+      enemy_tank: 'assets/sprites/enemy_tank_painted.webp',
+      enemy_note: 'assets/sprites/enemy_note_painted.webp',
+      enemy_doodle: 'assets/sprites/enemy_doodle_painted.webp',
+      enemy_erasercrumb: 'assets/sprites/enemy_erasercrumb_painted.webp',
+      enemy_hallpass: 'assets/sprites/enemy_hallpass_painted.webp',
+      enemy_quizpaper: 'assets/sprites/enemy_quizpaper_painted.webp',
+      enemy_whistle: 'assets/sprites/enemy_whistle_painted.webp',
+      enemy_jump_rope: 'assets/sprites/enemy_jump_rope_painted.webp',
+      enemy_sunshine: 'assets/sprites/enemy_sunshine_painted.webp',
+      enemy_quiet: 'assets/sprites/enemy_quiet_painted.webp',
+      enemy_bookstack: 'assets/sprites/enemy_bookstack_painted.webp',
+      enemy_bookmark: 'assets/sprites/enemy_bookmark_painted.webp',
+      enemy_paperstorm: 'assets/sprites/enemy_paperstorm_painted.webp',
+      enemy_deadline: 'assets/sprites/enemy_deadline_painted.webp',
+      enemy_super_boss: 'assets/sprites/enemy_super_boss_painted.webp',
+      enemy_boss: 'assets/sprites/enemy_boss_painted.webp',
+      enemy_elf: 'assets/sprites/enemy_elf_painted.webp',
+      tower_textbook: 'assets/sprites/tower_textbook_painted.webp',
+      tower_textbook_lv1: 'assets/sprites/tower_textbook_lv1.webp',
+      tower_textbook_lv2: 'assets/sprites/tower_textbook_lv2.webp',
+      tower_textbook_lv3: 'assets/sprites/tower_textbook_lv3.webp',
+      tower_textbook_lv4: 'assets/sprites/tower_textbook_lv4.webp',
+      tower_textbook_lv5: 'assets/sprites/tower_textbook_lv5.webp',
+      tower_pencil: 'assets/sprites/tower_pencil_painted.webp',
+      tower_pencil_lv1: 'assets/sprites/tower_pencil_lv1.webp',
+      tower_pencil_lv2: 'assets/sprites/tower_pencil_lv2.webp',
+      tower_pencil_lv3: 'assets/sprites/tower_pencil_lv3.webp',
+      tower_pencil_lv4: 'assets/sprites/tower_pencil_lv4.webp',
+      tower_pencil_lv5: 'assets/sprites/tower_pencil_lv5.webp',
+      tower_watering: 'assets/sprites/tower_watering_painted.webp',
+      tower_watering_lv1: 'assets/sprites/tower_watering_lv1.webp',
+      tower_watering_lv2: 'assets/sprites/tower_watering_lv2.webp',
+      tower_watering_lv3: 'assets/sprites/tower_watering_lv3.webp',
+      tower_watering_lv4: 'assets/sprites/tower_watering_lv4.webp',
+      tower_watering_lv5: 'assets/sprites/tower_watering_lv5.webp',
+      tower_glue: 'assets/sprites/tower_glue_painted.webp',
+      tower_glue_lv1: 'assets/sprites/tower_glue_lv1.webp',
+      tower_glue_lv2: 'assets/sprites/tower_glue_lv2.webp',
+      tower_glue_lv3: 'assets/sprites/tower_glue_lv3.webp',
+      tower_glue_lv4: 'assets/sprites/tower_glue_lv4.webp',
+      tower_glue_lv5: 'assets/sprites/tower_glue_lv5.webp',
+      tower_ruler: 'assets/sprites/tower_ruler_painted.webp',
+      tower_ruler_lv1: 'assets/sprites/tower_ruler_lv1.webp',
+      tower_ruler_lv2: 'assets/sprites/tower_ruler_lv2.webp',
+      tower_ruler_lv3: 'assets/sprites/tower_ruler_lv3.webp',
+      tower_ruler_lv4: 'assets/sprites/tower_ruler_lv4.webp',
+      tower_ruler_lv5: 'assets/sprites/tower_ruler_lv5.webp',
+      tower_eraser: 'assets/sprites/tower_eraser_painted.webp',
+      tower_eraser_lv1: 'assets/sprites/tower_eraser_lv1.webp',
+      tower_eraser_lv2: 'assets/sprites/tower_eraser_lv2.webp',
+      tower_eraser_lv3: 'assets/sprites/tower_eraser_lv3.webp',
+      tower_eraser_lv4: 'assets/sprites/tower_eraser_lv4.webp',
+      tower_eraser_lv5: 'assets/sprites/tower_eraser_lv5.webp',
+      tower_teacher: 'assets/sprites/tower_teacher_painted.webp',
+      tower_teacher_lv1: 'assets/sprites/tower_teacher_lv1.webp',
+      tower_teacher_lv2: 'assets/sprites/tower_teacher_lv2.webp',
+      tower_teacher_lv3: 'assets/sprites/tower_teacher_lv3.webp',
+      tower_teacher_lv4: 'assets/sprites/tower_teacher_lv4.webp',
+      tower_teacher_lv5: 'assets/sprites/tower_teacher_lv5.webp',
+      badge_graduation: 'assets/badges/badge_graduation.webp',
+      badge_campus_graduation: 'assets/badges/badge_campus_graduation.webp',
+      badge_speed_master: 'assets/badges/badge_speed_master.webp',
+      badge_researcher: 'assets/badges/badge_researcher.webp',
+      badge_speed_researcher: 'assets/badges/badge_speed_researcher.webp',
+      badge_world_elementary: 'assets/badges/badge_world_elementary.webp',
+      badge_world_middle: 'assets/badges/badge_world_middle.webp',
+      badge_world_high: 'assets/badges/badge_world_high.webp',
+      badge_world_university: 'assets/badges/badge_world_university.webp',
+      badge_world_research: 'assets/badges/badge_world_research.webp'
+    };
+    const BADGE_ART = {
+      '4-1': 'badge_graduation',
+      '4-2': 'badge_campus_graduation',
+      'challenge-speed': 'badge_speed_master',
+      'r-1': 'badge_researcher',
+      'r-2': 'badge_speed_researcher',
+      'world:elementary': 'badge_world_elementary',
+      'world:middle': 'badge_world_middle',
+      'world:high': 'badge_world_high',
+      'world:university': 'badge_world_university',
+      'world:research': 'badge_world_research'
     };
     const ASSETS = {
       images: {},
@@ -988,6 +1154,11 @@
       },
       get(id) { return this.images[id]; }
     };
+    function getTowerAssetId(id, level) {
+      const lv = clampToolLevel(level);
+      const leveledId = 'tower_' + id + '_lv' + lv;
+      return SPRITE_MANIFEST[leveledId] ? leveledId : 'tower_' + id;
+    }
 
     // ==================== AUDIO + VOICE (P0 多感官回馈，纯前端、无素材) ====================
     // 全程 feature-detect + try/catch：无 AudioContext / SpeechSynthesis（旧浏览器、headless）也不报错。
@@ -1378,7 +1549,10 @@
                 enemies,
                 tip: lvl.tip || '',
                 showTip: this.waveIdx === 0,
-                isLastWave: this.waveIdx === lvl.waves.length - 1
+                isLastWave: this.waveIdx === lvl.waves.length - 1,
+                isFlagWave: !!waveData.flagWave,
+                pressureLevel: waveData.pressureLevel || 1,
+                prepMessage: waveData.prepMessage || ''
             });
             this.pushCombatState();
         }
@@ -1530,6 +1704,13 @@
             if (enemy.data && enemy.data.ability === 'paperShield' && enemy.hp > enemy.maxHp * 0.55) {
                 finalDmg = Math.max(1, Math.round(dmg * 0.55));
                 enemy.shieldFlash = 12;
+            }
+            if (enemy.data && enemy.data.ability === 'titanOverdrive') {
+                const shield = BOSS_MECHANICS[enemy.id] && BOSS_MECHANICS[enemy.id].titanShield;
+                if (shield && (enemy.hp > enemy.maxHp * shield.hpRatio || enemy.titanShieldTimer > 0)) {
+                    finalDmg = Math.max(1, Math.round(finalDmg * shield.damageScale));
+                    enemy.shieldFlash = 16;
+                }
             }
             enemy.hp -= finalDmg;
             enemy.hitFlash = Math.max(enemy.hitFlash || 0, 5);
@@ -1893,7 +2074,7 @@
                     }
                 } else if (!this.spawnState.active && !this.objs.some(o => o.type === 'enemy')) {
                     if (this.waitNextWave === null) {
-                        this.waitNextWave = (this.challengeRule === 'speed') ? 120 : 300; this.floatText("战场打扫时间...", this.w/2, this.h/2, '#F6E05E', 250, 30);
+                        this.waitNextWave = getInterWaveDelay(LEVELS[this.levelIdx], this.challengeRule); this.floatText("战场打扫时间...", this.w/2, this.h/2, '#F6E05E', 250, 30);
                         this.chargeTeacher(15); // 过波存活：技能槽充能
                         this.pushCombatState(); // 显示「提前上课」按钮
                     }
@@ -1991,6 +2172,32 @@
                                 this.spawnParticles(targetTower.x + this.G / 2, targetTower.y + this.G / 2, '#94a3b8', 8);
                             }
                         }
+                        if(o.data && o.data.ability === 'titanOverdrive') {
+                            const cfg = bossCfg || {};
+                            const slam = cfg.titanSlam || { interval: 210, damage: 850 };
+                            if (!o.titanAnnounced) {
+                                o.titanAnnounced = true;
+                                this.floatText('紫晶魔铠王登场!', o.x, o.y - 18, '#a855f7', 90, 30);
+                            }
+                            if (o.titanShieldTimer > 0) o.titanShieldTimer--;
+                            if (!frozen && this.frame % 300 === 0) {
+                                o.titanShieldTimer = 90;
+                                o.shieldFlash = 20;
+                                this.floatText('紫晶护盾!', o.x, o.y - 8, '#a855f7', 58, 24);
+                                this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#a855f7', 18);
+                            }
+                            if (!frozen && this.frame % (slam.interval || 210) === 0) {
+                                const targetTower = this.objs
+                                    .filter(t => t.type === 'tower' && t.r === o.r)
+                                    .sort((a, b) => b.x - a.x)[0];
+                                if (targetTower) {
+                                    targetTower.hp -= slam.damage || 850;
+                                    targetTower.hitFlash = Math.max(targetTower.hitFlash || 0, 10);
+                                    this.floatText('巨剑重击!', targetTower.x, targetTower.y, '#a855f7', 60, 26);
+                                    this.spawnParticles(targetTower.x + this.G / 2, targetTower.y + this.G / 2, '#a855f7', 20);
+                                }
+                            }
+                        }
                         const rageCfg = bossCfg && bossCfg.rageRush ? bossCfg.rageRush : (o.data && o.data.ability === 'rageRush' ? { hpRatio: 0.45, duration: 150, statBoost: 1.3 } : null);
                         if(rageCfg && !o.rageUsed && o.hp > 0 && o.hp <= o.maxHp * rageCfg.hpRatio) {
                             o.rageUsed = true; o.rageTimer = rageCfg.duration || 150;
@@ -2072,7 +2279,7 @@
             const bobY = Math.sin(this.frame * 0.1) * 3;
             const cx = o.x + G/2, cy = o.y + G/2 + bobY;
             const squish = 1 + Math.sin(this.frame * 0.15) * 0.04;
-            const size = G * 1.12;
+            const size = G * ((o.data && o.data.spriteScale) || 1.12);
             if (o.slowTimer > 0 || this.freezeTimer > 0) {
                 ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = '#90CDF4';
                 ctx.beginPath(); ctx.arc(cx, cy, size * 0.52, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -2086,6 +2293,7 @@
             if (o.hurryTimer > 0) { ctx.fillStyle = '#0ea5e9'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('快!', o.x + G * 0.48, o.y - 8); }
             if (o.rageTimer > 0) { ctx.fillStyle = '#ef4444'; ctx.font = `bold ${Math.max(13, G*0.28)}px Arial`; ctx.fillText('暴!', o.x + G * 0.18, o.y - 30); }
             if (o.powerStacks > 0) { ctx.fillStyle = '#facc15'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('阳+' + o.powerStacks, o.x + G * 0.12, o.y - 8); }
+            if (o.titanShieldTimer > 0) { ctx.strokeStyle = 'rgba(168,85,247,0.8)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, cy, size * 0.5, 0, Math.PI * 2); ctx.stroke(); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(o.x + 10, o.y + 10, G - 20, G - 20); }
             if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
             if (o.hp < o.maxHp) {
@@ -2393,10 +2601,16 @@
                     ctx.textAlign = 'left';
                 });
                 this.objs.forEach(o => {
-                    if(o.type!=='orb' && o.type!=='bullet') { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(o.x+G/2, o.y+G-5, G/3, G/6, 0, 0, Math.PI*2); ctx.fill(); }
+                    if(o.type!=='orb' && o.type!=='bullet') {
+                        const shadowScale = o.type === 'enemy' ? ((o.data && o.data.spriteScale) || 1) : 1;
+                        ctx.fillStyle='rgba(0,0,0,0.3)';
+                        ctx.beginPath();
+                        ctx.ellipse(o.x+G/2, o.y+G-5, G/3*shadowScale, G/6*Math.min(1.35, shadowScale), 0, 0, Math.PI*2);
+                        ctx.fill();
+                    }
                     if(o.type==='tower') {
                         const towerIcon = (o.up && o.up.icon) || o.data.icon;
-                        const tSprite = ASSETS.get('tower_' + o.id);
+                        const tSprite = ASSETS.get(getTowerAssetId(o.id, o.toolLevel || 1));
                         if (tSprite) {
                             const age = this.frame - (o.placedFrame || 0);
                             const pop = age < 14 ? 1 + Math.sin(age/14*Math.PI)*0.22 : 1; // 放置弹入
@@ -2787,8 +3001,10 @@
             const tally = (have) => { total++; if (have) got++; };
             const campaign = []; for (let i = 0; i < CAMPAIGN_COUNT; i++) campaign.push(i);
             const enemyIds = Object.keys(ENEMIES).filter(id => id !== 'elf'); // 排除友方知识精灵
+            const rewardBadgeLevels = LEVELS.filter(l => l.reward && l.reward.type === 'badge');
             campaign.forEach(i => tally(!!stickers[LEVELS[i].id]));
             enemyIds.forEach(id => tally(!!stickers['enemy:' + id]));
+            rewardBadgeLevels.forEach(l => tally(!!badges[l.id]));
             WORLDS.filter(w => !w.locked).forEach(w => tally(!!badges['world:' + w.id]));
 
             const head = this.el('div', { display:'flex', alignItems:'center', gap:'12px' });
@@ -2805,6 +3021,34 @@
             inner.appendChild(head);
 
             // 通用区块工厂：items = [{have, label, color}]
+            const badgeLabel = (text, fallback) => String(text || fallback || '').replace(/^[^\w\u4e00-\u9fff]+[\s\u00a0]*/u, '').trim();
+            const artIcon = (it) => {
+                const box = this.el('div', {
+                    width:'50px', height:'50px', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center',
+                    background: it.have ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.08)', position:'relative', overflow:'hidden'
+                });
+                const img = it.asset && ASSETS.get(it.asset);
+                if (img) {
+                    const el = document.createElement('img');
+                    el.src = img.src;
+                    Object.assign(el.style, {
+                        width:'48px', height:'48px', objectFit:'contain',
+                        filter: it.have ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' : 'grayscale(1) brightness(0.55)',
+                        opacity: it.have ? '1' : '0.7'
+                    });
+                    box.appendChild(el);
+                    if (!it.have) box.appendChild(this.el('div', {
+                        position:'absolute', inset:'0', display:'flex', alignItems:'center', justifyContent:'center',
+                        color:'white', fontWeight:'900', fontSize:'18px', textShadow:'0 2px 6px rgba(0,0,0,0.8)'
+                    }, '?'));
+                } else {
+                    box.appendChild(this.el('div', {
+                        width:'30px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center',
+                        fontSize:'18px', background: it.have ? (it.color || '#F6D365') : 'rgba(255,255,255,0.15)'
+                    }, it.have ? (it.emoji || '★') : '?'));
+                }
+                return box;
+            };
             const section = (title, items) => {
                 const sec = this.el('div', { background:'rgba(255,255,255,0.06)', borderRadius:'16px', padding:'12px' });
                 sec.appendChild(this.el('div', { color:'#fde68a', fontWeight:'900', fontSize:'15px', marginBottom:'8px' }, title));
@@ -2816,7 +3060,7 @@
                         background: it.have ? 'rgba(246,211,101,0.16)' : 'rgba(0,0,0,0.22)', opacity: it.have ? '1' : '0.55', minHeight:'72px'
                     });
                     card.append(
-                        this.el('div', { width:'30px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', background: it.have ? (it.color || '#F6D365') : 'rgba(255,255,255,0.15)' }, it.have ? (it.emoji || '★') : '❓'),
+                        artIcon(it),
                         this.el('div', { color: it.have ? 'white' : 'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:'900', textAlign:'center', lineHeight:'1.25' }, it.have ? it.label : '未收集')
                     );
                     grid.appendChild(card);
@@ -2827,7 +3071,8 @@
 
             inner.appendChild(section('🎒 关卡贴纸', campaign.map(i => ({ have: !!stickers[LEVELS[i].id], label: friendlyLevelName(LEVELS[i]), color:'#4A90E2', emoji:'🎒' }))));
             inner.appendChild(section('👾 敌人贴纸', enemyIds.map(id => ({ have: !!stickers['enemy:' + id], label: ENEMIES[id].name, color: ENEMIES[id].color, emoji:'👾' }))));
-            inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, emoji: w.icon }))));
+            inner.appendChild(section('🏅 成就徽章', rewardBadgeLevels.map(l => ({ have: !!badges[l.id], label: badgeLabel(l.reward && l.reward.text, friendlyLevelName(l)), color:'#F6D365', asset: BADGE_ART[l.id], emoji:'🏅' }))));
+            inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, asset: BADGE_ART['world:' + w.id], emoji: w.icon }))));
 
             inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', marginTop:'2px' }, '通关、遇到新朋友、完成整座学校，就能收集更多贴纸喔！'));
             wrap.appendChild(inner);
@@ -2874,10 +3119,23 @@
                 });
                 // 当前等级 -> 下一等级图示
                 const icons = this.el('div', { display:'flex', alignItems:'center', gap:'6px', flexShrink:'0' });
+                const assetBox = (assetId, fallback, size, bg, border) => {
+                    const box = this.el('div', { width:size + 'px', height:size + 'px', borderRadius:'10px', background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:Math.round(size * 0.55) + 'px', border:border || 'none', overflow:'hidden' });
+                    const imgAsset = ASSETS.get(assetId);
+                    if (imgAsset) {
+                        const img = document.createElement('img');
+                        img.src = imgAsset.src;
+                        Object.assign(img.style, { width:Math.round(size * 0.92) + 'px', height:Math.round(size * 0.92) + 'px', objectFit:'contain', filter:'drop-shadow(0 3px 5px rgba(0,0,0,0.35))' });
+                        box.appendChild(img);
+                    } else {
+                        box.appendChild(document.createTextNode(fallback));
+                    }
+                    return box;
+                };
                 icons.append(
-                    this.el('div', { width:'40px', height:'40px', borderRadius:'10px', background:'rgba(0,0,0,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px' }, curMeta.icon || t.icon),
+                    assetBox(getTowerAssetId(t.id, level), curMeta.icon || t.icon, 40, 'rgba(0,0,0,0.25)'),
                     this.el('div', { color:'#94a3b8', fontWeight:'900' }, '→'),
-                    this.el('div', { width:'44px', height:'44px', borderRadius:'10px', background: done ? 'rgba(52,211,153,0.25)' : 'rgba(56,189,248,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', border:'2px solid ' + (done ? '#34d399' : '#38bdf8') }, done ? (curMeta.icon || t.icon) : (nextMeta.icon || t.icon))
+                    assetBox(getTowerAssetId(t.id, done ? level : nextMeta.level), done ? (curMeta.icon || t.icon) : (nextMeta.icon || t.icon), 44, done ? 'rgba(52,211,153,0.25)' : 'rgba(56,189,248,0.18)', '2px solid ' + (done ? '#34d399' : '#38bdf8'))
                 );
                 card.appendChild(icons);
                 const info = this.el('div', { flex:'1', minWidth:'0' });
@@ -3125,6 +3383,7 @@
                 const levelMeta = getToolLevelMeta(t.id, toolLevel);
                 const dispIcon = levelMeta ? levelMeta.icon : t.icon;
                 const dispName = levelMeta ? levelMeta.name : t.name;
+                const towerAsset = ASSETS.get(getTowerAssetId(t.id, toolLevel));
 
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
@@ -3146,7 +3405,20 @@
                 }, String(t.cost));
 
                 // Icon（升级后换皮 + ✨ 角标）
-                const iconEl = this.el('div', { position:'relative', fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' }, dispIcon);
+                const iconEl = this.el('div', { position:'relative', fontSize: isL ? (landscapeButtonSize <= 48 ? '19px' : '22px') : '28px', flex:'1', display:'flex', alignItems:'center', justifyContent:'center' });
+                if (towerAsset) {
+                    const img = document.createElement('img');
+                    img.src = towerAsset.src;
+                    Object.assign(img.style, {
+                        width: isL ? Math.max(34, Math.min(48, landscapeButtonSize - 12)) + 'px' : '48px',
+                        height: isL ? Math.max(34, Math.min(48, landscapeButtonSize - 12)) + 'px' : '48px',
+                        objectFit:'contain',
+                        filter:'drop-shadow(0 3px 4px rgba(0,0,0,0.28))'
+                    });
+                    iconEl.appendChild(img);
+                } else {
+                    iconEl.appendChild(document.createTextNode(dispIcon));
+                }
                 if (toolLevel > 1) iconEl.appendChild(this.el('div', { position:'absolute', top:'-2px', left:'-2px', fontSize:'10px', fontWeight:'900', color:'#0f172a', background:'#F6D365', borderRadius:'999px', padding:'0 3px' }, 'Lv' + toolLevel));
 
                 // Name（升级后显示新名）
@@ -3271,8 +3543,16 @@
                 padding:'6px 16px', borderRadius:'12px', fontSize:'13px', fontWeight:'bold'
             });
             head.className = 'chalk-card';
-            head.append(this.el('span', { color: wi.isLastWave ? '#E85D5D' : '#F6D365', fontWeight:'900' },
-                wi.isLastWave ? `⚠️ 最后一波 (第${wi.wave}/${wi.totalWaves}波)` : `第 ${wi.wave}/${wi.totalWaves} 波`));
+            const waveTone = (wi.isFlagWave || wi.isLastWave) ? '#E85D5D' : '#F6D365';
+            const waveTitle = wi.isFlagWave
+                ? `⚠️ ${wi.prepMessage || '大波怪物来袭'} (第${wi.wave}/${wi.totalWaves}波)`
+                : (wi.isLastWave ? `⚠️ 最后一波 (第${wi.wave}/${wi.totalWaves}波)` : `第 ${wi.wave}/${wi.totalWaves} 波`);
+            head.append(this.el('span', { color: waveTone, fontWeight:'900' }, waveTitle));
+            if ((wi.pressureLevel || 1) > 1) {
+                head.append(this.el('span', {
+                    color:'#111827', background:'#F6D365', borderRadius:'999px', padding:'1px 7px', fontWeight:'900'
+                }, `压力 Lv.${wi.pressureLevel}`));
+            }
             head.append(this.el('span', { color:'rgba(247,243,232,0.6)' }, '｜来袭'));
             (wi.enemies || []).forEach(en => {
                 const chip = this.el('span', { display:'inline-flex', alignItems:'center', gap:'4px', color:'#F7F3E8' });
@@ -3784,7 +4064,8 @@
             waveIntro = info;
             ui.update({ waveIntro });
             if (waveIntroTimeout) clearTimeout(waveIntroTimeout);
-            const dur = (info && info.showTip) ? 5200 : 3600; // 含关卡提示的首波多停一会
+            let dur = (info && info.showTip) ? 5200 : 3600; // 含关卡提示的首波多停一会
+            if (info && info.isFlagWave) dur = Math.max(dur, 4800);
             waveIntroTimeout = setTimeout(() => { waveIntro = null; ui.update({ waveIntro }); }, dur);
         },
         onRewardPicker: (cards) => {
@@ -3810,7 +4091,7 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
-    ASSETS.load(); // 异步预加载 SVG 精灵，加载完成后绘制自动切换（缺图回退旧画法）
+    ASSETS.load().then(() => ui.update({})); // 异步预加载精灵，加载完成后绘制自动切换（缺图回退旧画法）
 
     // Wire UI events
     ui.onSelectTower = (t) => {

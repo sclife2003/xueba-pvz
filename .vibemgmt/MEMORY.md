@@ -1,6 +1,6 @@
 # Vibe Project Memory: xueba-pvz（学霸校园大冒险）
 
-**Last Updated**: 2026-06-28
+**Last Updated**: 2026-06-29
 
 ---
 
@@ -26,6 +26,12 @@
 - [x] 原创概念题包 +24
 - [x] 存档 schema v3 + 文具 5 级资料模型 + 新文具「直尺穿线」+ 怪物 threatTier scaling
 - [x] 每关 signature 新怪 + 场景怪物表 + 阳光怪/监考官 BOSS 机制 + 新怪 SVG sprite
+- [x] 超级大魔王「紫晶魔铠王」：4-2 最终 Boss、超大 SVG sprite、紫晶护盾、巨剑重击、低血量暴走
+- [x] PvZ 式关卡节奏强化：主线每关 5-6 波、旗帜大波提示、压力波自动补齐、后期过波等待缩短
+- [x] 超级大魔王美术升级：改用精致厚涂 sprite（透明背景、紫晶金属装甲风格），替换手写 SVG 作为游戏内显示资产
+- [x] 全敌人美术批量升级：所有 `ENEMIES` 均有 `enemy_*_painted.png` 源图与 `enemy_*_painted.webp` runtime 图，`SPRITE_MANIFEST` 已全量切到精致 WebP；旧 SVG 保留为 fallback 资产
+- [x] 我方文具与徽章美术升级：7 个 `TOWERS` 均有 `tower_*_painted.webp`，10 个成就/世界徽章接入 `assets/badges/*.webp`，收藏馆正式显示徽章图
+- [x] 文具 5 级外观升级：7 个 `TOWERS` 均有 `tower_*_lv1..lv5.webp`，战斗场上、道具栏、装备工坊会按永久等级显示不同外观；`teacher` 明确重画为短发、些许花白、约 40 岁的「刘老师」
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -38,8 +44,12 @@
 ### 架构 / 关键系统（都在 index.html 内分区）
 - **世界地图**: `WORLDS`（小学/初中/高中/大学/研究所）；节点用 `levelIndexById(id)` 解析（id-based，插关稳健）。主线世界按 `unlockedLevel` 解锁；研究所 `advanced:true`，`isCampaignCleared(results)`（通关 4-2）解锁。
 - **关卡**: `LEVELS` = 11 campaign（id `1-1`..`4-2`）+ `challenge-speed` + 研究所 `r-1`/`r-2`（共 14）。`CAMPAIGN_COUNT=11`。
+- **关卡节奏 / 大波**: `PACING_RULES` + `applyPacingTuning()` 在 `LEVELS` 建好后执行，会复制每关 waves、补足目标波数（classroom/playground 5 波，library/exam/challenge/research 6 波）、标记 `flagWave`/`pressureLevel`，并用 `getInterWaveDelay()` 让 threatTier 越高的关卡过波等待越短。
 - **敌人 / 场景怪物表**: `SCENE_MONSTER_TABLE` 依 classroom/playground/library/exam/research/challenge 组织怪物池；11 个主线关卡均有 `signatureEnemy`，并实际写入 waves。新怪包含 erasercrumb/hallpass/quizpaper/whistle/jump_rope/sunshine/quiet/bookstack/bookmark/paperstorm/deadline，均有 `assets/sprites/enemy_*.svg`。
 - **BOSS 机制**: `BOSS_MECHANICS` 管理 sunshine/deadline/boss。阳光怪(sunSteal)会抢场上 orb，每 5 个阳光叠 1 层，攻击与速度 +20%；监考官(boss)高血量，保留 focusDrain 红笔点名，并在低血量触发 rageRush 暴走 5 秒，攻击与速度 +30%；deadline 复用 rageRush 作为考场压迫型小 Boss。
+- **超级大魔王**: `super_boss` / 「紫晶魔铠王」是 4-2 signature 最终 Boss，runtime 使用 `enemy_super_boss_painted.webp` 与 `spriteScale:1.82`。能力 `titanOverdrive`：高血量阶段紫晶护盾减伤、周期性巨剑重击同路最前文具，低血量走 `BOSS_MECHANICS.super_boss.rageRush` 暴走。
+- **怪物美术方向**: 最终品质怪物使用 `assets/sprites/enemy_*_painted.webp` 精致 runtime raster sprite（透明背景、厚涂光影、清晰剪影），PNG 源图保留在同目录，手写 SVG 只当机制占位或 fallback。`SPRITE_MANIFEST` 现在覆盖所有 `ENEMIES`（包含原本缺 manifest 的 `note` / `doodle`），并全量指向 painted WebP。
+- **我方与徽章美术方向**: 7 个 `TOWERS` 使用 `assets/sprites/tower_*_painted.webp` runtime 基底图（同目录保留 PNG 源图），并扩展为 `tower_*_lv1..lv5.webp` 五阶外观；战斗场上、道具栏、装备工坊均通过 `getTowerAssetId(id, level)` 按等级取图。`teacher` 的角色设定为「刘老师」：约 40 岁、短发、两侧些许花白、严肃但不恐怖。徽章使用 `BADGE_ART` + `assets/badges/badge_*.webp`，收藏馆有「成就徽章」与「世界徽章」两区，未解锁徽章用灰阶资产展示。
 - **进阶系统（deferred → 仅研究所 advanced 关）**: 备战自选 4/6 文具、关卡内升级（selectField/UPGRADES）、提前上课（callNextWaveEarly）、挑战规则（rule:'speed'）。由关卡 `advanced` 旗标驱动 `advancedMode`（主线恒 false）。
 - **装备工坊 / 文具等级**: schema v3 使用 `toolLevels{id:1..5}` 作为正本；旧 `toolUpgrades:true` 自动迁移为 Lv2。`TOOL_LEVELS` 定义每件文具 5 级实战加成（伤害、攻速、产能、血量、穿透数、冷却等），包含新文具「直尺穿线」（直线穿透输出）。碎片 `shards` 逐级购买；`toolUpgrades` 仅保留为 legacy display compatibility。
 - **收藏馆**: 关卡贴纸 / 敌人贴纸(遇到即收集,排除 elf) / 世界徽章。
