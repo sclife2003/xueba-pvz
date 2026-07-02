@@ -1,6 +1,6 @@
 # Vibe Project Memory: xueba-pvz（学霸校园大冒险）
 
-**Last Updated**: 2026-06-29
+**Last Updated**: 2026-07-03
 
 ---
 
@@ -32,6 +32,8 @@
 - [x] 全敌人美术批量升级：所有 `ENEMIES` 均有 `enemy_*_painted.png` 源图与 `enemy_*_painted.webp` runtime 图，`SPRITE_MANIFEST` 已全量切到精致 WebP；旧 SVG 保留为 fallback 资产
 - [x] 我方文具与徽章美术升级：7 个 `TOWERS` 均有 `tower_*_painted.webp`，10 个成就/世界徽章接入 `assets/badges/*.webp`，收藏馆正式显示徽章图
 - [x] 文具 5 级外观升级：7 个 `TOWERS` 均有 `tower_*_lv1..lv5.webp`，战斗场上、道具栏、装备工坊会按永久等级显示不同外观；`teacher` 明确重画为短发、些许花白、约 40 岁的「刘老师」
+- [x] 高清 Canvas + 怪物设施破坏强化：主画布与离屏场景缓存改为 DPR backing store，输入坐标维持 CSS 像素；所有非友方怪物都有 `SPECIAL_ATTACKS` 特色攻击，可伤害、停摆、延迟或破坏我方文具设施
+- [x] PvZ 式波段与怪物攻击规划：`MONSTER_ATTACK_PLAN` 覆盖非 elf 怪物 archetype，`WAVE_BEATS` 让 opener/swarm/support/siege/flag/finale 形成可读波段；每组怪通过 `laneMode` 形成 focus/split/sweep 路线压力
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -44,8 +46,9 @@
 ### 架构 / 关键系统（都在 index.html 内分区）
 - **世界地图**: `WORLDS`（小学/初中/高中/大学/研究所）；节点用 `levelIndexById(id)` 解析（id-based，插关稳健）。主线世界按 `unlockedLevel` 解锁；研究所 `advanced:true`，`isCampaignCleared(results)`（通关 4-2）解锁。
 - **关卡**: `LEVELS` = 11 campaign（id `1-1`..`4-2`）+ `challenge-speed` + 研究所 `r-1`/`r-2`（共 14）。`CAMPAIGN_COUNT=11`。
-- **关卡节奏 / 大波**: `PACING_RULES` + `applyPacingTuning()` 在 `LEVELS` 建好后执行，会复制每关 waves、补足目标波数（classroom/playground 5 波，library/exam/challenge/research 6 波）、标记 `flagWave`/`pressureLevel`，并用 `getInterWaveDelay()` 让 threatTier 越高的关卡过波等待越短。
+- **关卡节奏 / 大波**: `PACING_RULES` + `WAVE_BEATS` + `applyPacingTuning()` 在 `LEVELS` 建好后执行，会复制每关 waves、补足目标波数（classroom/playground 5 波，library/exam/challenge/research 6 波）、标记 `beat`/`flagWave`/`pressureLevel`，并用 `getInterWaveDelay()` 让 threatTier 越高的关卡过波等待越短。波段按 opener/swarm/support_mix/siege/flag/finale 增压，group-level `laneMode` 让 focus/split/sweep 路线压力可读。
 - **敌人 / 场景怪物表**: `SCENE_MONSTER_TABLE` 依 classroom/playground/library/exam/research/challenge 组织怪物池；11 个主线关卡均有 `signatureEnemy`，并实际写入 waves。新怪包含 erasercrumb/hallpass/quizpaper/whistle/jump_rope/sunshine/quiet/bookstack/bookmark/paperstorm/deadline，均有 `assets/sprites/enemy_*.svg`。
+- **怪物特色攻击 / 设施破坏**: `SPECIAL_ATTACKS` 覆盖所有非 `elf` 怪物；`MONSTER_ATTACK_PLAN` 将怪物规划为 melee/rush/ranged/support/siege/economy/boss archetype；`findSpecialAttackTarget` 只锁定同路、接近防线的存活文具，`resolveSpecialAttack` 统一处理伤害、静音、射击延迟和能量扣减；`damageTower` 是设施破坏入口（啃咬、红笔点名、紫晶重击、特色攻击都走此路径），方便后续按怪物或关卡调难度。
 - **BOSS 机制**: `BOSS_MECHANICS` 管理 sunshine/deadline/boss。阳光怪(sunSteal)会抢场上 orb，每 5 个阳光叠 1 层，攻击与速度 +20%；监考官(boss)高血量，保留 focusDrain 红笔点名，并在低血量触发 rageRush 暴走 5 秒，攻击与速度 +30%；deadline 复用 rageRush 作为考场压迫型小 Boss。
 - **超级大魔王**: `super_boss` / 「紫晶魔铠王」是 4-2 signature 最终 Boss，runtime 使用 `enemy_super_boss_painted.webp` 与 `spriteScale:1.82`。能力 `titanOverdrive`：高血量阶段紫晶护盾减伤、周期性巨剑重击同路最前文具，低血量走 `BOSS_MECHANICS.super_boss.rageRush` 暴走。
 - **怪物美术方向**: 最终品质怪物使用 `assets/sprites/enemy_*_painted.webp` 精致 runtime raster sprite（透明背景、厚涂光影、清晰剪影），PNG 源图保留在同目录，手写 SVG 只当机制占位或 fallback。`SPRITE_MANIFEST` 现在覆盖所有 `ENEMIES`（包含原本缺 manifest 的 `note` / `doodle`），并全量指向 painted WebP。
@@ -55,6 +58,7 @@
 - **收藏馆**: 关卡贴纸 / 敌人贴纸(遇到即收集,排除 elf) / 世界徽章。
 - **音效/语音**: `SOUND`(WebAudio 振荡器) + `VOICE`(speechSynthesis)，全 feature-detect + try/catch；首手势解锁 AudioContext；开关存 `xueba_pvz_settings`（独立 localStorage，不动存档 schema）。
 - **美术**: 每章 offscreen-cache 舞台（`getStageCacheKey` 含 chapterId；`paintTiles` 共用；稳态每帧仅 1 drawImage + 轻量动画 overlay）。
+- **高清渲染**: `GameEngine.resize()` 使用 `window.devicePixelRatio`（上限 3）设置 canvas backing store，`draw()` 每帧重设 DPR transform；`renderStageCache()` 也用 DPR 离屏缓存并以 CSS 尺寸贴回主画布。输入换算一律用 `this.w/this.h`，避免高 DPI 下鼠标/触屏偏移。
 
 ### 存档 schema（`xueba_pvz_save_v1`，payload schemaVersion:3）
 `{ schemaVersion, unlockedLevel, hp, results{id:{stars,bestHp,bestWrong}}, stickers{}, badges{}, worldProgress{}, shards, toolLevels{}, toolUpgrades{} }`
@@ -67,6 +71,7 @@
 
 ### Tech Debt / 已知
 - 平衡：4-1/4-2 effHP 偏高（28-30k，但有班主任炸弹+升级抵消，待真机）；2-2 偏低；3-x 涂鸦怪回血可能拖关。详见 `.vibemgmt/reviews/BALANCE_2026-06-14_audit-tuning.md`。
+- 真机平衡重点（2026-07-03）：1-2 啃咬 DPS、2-2 阳光怪抢 orb + mpDrain、3-x 安静魔 silence 链、4-1 监考官点名 + 拆防、4-2 紫晶魔铠王 titanSlam + 紫晶斩是否叠成无解。
 - iOS Safari 不支援 orientation lock → 用「请横放手机」遮罩 fallback（预期行为，非 bug）。
 
 ---
@@ -88,7 +93,7 @@ d6ce574 GDD 修订（Document Status + 存档 schema + 世界映射）
 ```
 
 ## 审查报告（`.vibemgmt/reviews/`）
-phaseAB-worldmap / phaseC-collection / combat-overhaul / phaseD-classroom-vertical-slice / content-expansion / shard-equipment-upgrade（皆 PASS）、BALANCE 审计、landscape-viewport cross review。
+phaseAB-worldmap / phaseC-collection / combat-overhaul / phaseD-classroom-vertical-slice / content-expansion / shard-equipment-upgrade（皆 PASS）、BALANCE 审计、landscape-viewport cross review、`CROSSREVIEW_2026-07-03_monster-facility-damage.md`、`CLAUDE_PLAN_2026-07-03_pvz-wave-archetypes.md`。
 
 ---
 

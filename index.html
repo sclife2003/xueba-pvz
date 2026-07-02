@@ -195,6 +195,78 @@
       boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 } }
     };
 
+    const SPECIAL_ATTACKS = {
+      slime: { label: '黏液腐蚀', interval: 105, range: 1.15, damageScale: 0.85, silenceFrames: 24, color: '#48bb78' },
+      bat: { label: '迟到撞击', interval: 78, range: 1.28, damageScale: 1.1, cdPenalty: 30, color: '#9f7aea' },
+      tank: { label: '作业山压垮', interval: 140, range: 1.15, damageScale: 1.6, silenceFrames: 34, color: '#a0aec0' },
+      note: { label: '纸条贴满', interval: 112, range: 1.35, damageScale: 0.55, cdPenalty: 70, color: '#f59e0b' },
+      doodle: { label: '涂鸦污染', interval: 130, range: 1.55, damageScale: 0.65, silenceFrames: 80, color: '#ec4899' },
+      erasercrumb: { label: '橡皮屑磨损', interval: 94, range: 1.2, damageScale: 0.75, cdPenalty: 24, color: '#f9a8d4' },
+      hallpass: { label: '走廊撞门', interval: 104, range: 1.3, damageScale: 0.9, silenceFrames: 42, color: '#38bdf8' },
+      quizpaper: { label: '错题扣分', interval: 128, range: 1.2, damageScale: 1.15, cdPenalty: 90, color: '#f97316' },
+      whistle: { label: '刺耳哨音', interval: 120, range: 1.65, damageScale: 0.55, silenceFrames: 70, color: '#0ea5e9' },
+      jump_rope: { label: '跳绳绊倒', interval: 84, range: 1.35, damageScale: 0.95, silenceFrames: 34, color: '#22c55e' },
+      sunshine: { label: '阳光灼烧', interval: 100, range: 1.85, damageScale: 0.9, mpDrain: 15, color: '#facc15' },
+      quiet: { label: '静音封锁', interval: 138, range: 1.8, damageScale: 0.6, silenceFrames: 105, color: '#64748b' },
+      bookstack: { label: '书堆砸压', interval: 155, range: 1.2, damageScale: 1.45, silenceFrames: 45, color: '#8b5cf6' },
+      bookmark: { label: '书签割裂', interval: 100, range: 1.45, damageScale: 0.85, cdPenalty: 45, color: '#14b8a6' },
+      paperstorm: { label: '卷面风暴', interval: 96, range: 1.55, damageScale: 0.75, cdPenalty: 45, color: '#e2e8f0' },
+      deadline: { label: '截止铃冲撞', interval: 110, range: 1.45, damageScale: 1.45, silenceFrames: 45, color: '#ef4444' },
+      super_boss: { label: '紫晶斩', interval: 130, range: 2.2, damageScale: 1.35, silenceFrames: 60, color: '#8b5cf6' },
+      boss: { label: '红笔拆防', interval: 135, range: 2.0, damageScale: 1.3, cdPenalty: 80, color: '#e53e3e' }
+    };
+
+    const MONSTER_ATTACK_PLAN = {
+      slime: { archetype: 'melee', laneMode: 'random', lesson: '基础啃咬压力' },
+      bat: { archetype: 'rush', laneMode: 'sweep', lesson: '快攻换线' },
+      tank: { archetype: 'siege', laneMode: 'focus', lesson: '攻城压线' },
+      note: { archetype: 'ranged', laneMode: 'split', lesson: '远程拆节奏' },
+      doodle: { archetype: 'support', laneMode: 'split', lesson: '支援污染' },
+      erasercrumb: { archetype: 'melee', laneMode: 'random', lesson: '小怪磨损' },
+      hallpass: { archetype: 'rush', laneMode: 'sweep', lesson: '走廊突袭' },
+      quizpaper: { archetype: 'siege', laneMode: 'focus', lesson: '厚卷攻城' },
+      whistle: { archetype: 'support', laneMode: 'split', lesson: '加速支援' },
+      jump_rope: { archetype: 'rush', laneMode: 'sweep', lesson: '连续冲线' },
+      sunshine: { archetype: 'economy', laneMode: 'split', lesson: '经济压制' },
+      quiet: { archetype: 'support', laneMode: 'focus', lesson: '静音封锁' },
+      bookstack: { archetype: 'siege', laneMode: 'focus', lesson: '重型攻城' },
+      bookmark: { archetype: 'ranged', laneMode: 'split', lesson: '后排割裂' },
+      paperstorm: { archetype: 'ranged', laneMode: 'sweep', lesson: '远程群压' },
+      deadline: { archetype: 'siege', laneMode: 'focus', lesson: '暴走攻城' },
+      super_boss: { archetype: 'boss', laneMode: 'focus', lesson: '最终攻城' },
+      boss: { archetype: 'boss', laneMode: 'focus', lesson: '拆防 Boss' }
+    };
+
+    function getMonsterAttackPlan(id) {
+      return MONSTER_ATTACK_PLAN[id] || { archetype: 'melee', laneMode: 'random', lesson: '基础推进' };
+    }
+
+    function laneModeForArchetype(id, waveNo) {
+      const plan = getMonsterAttackPlan(id);
+      if (plan.archetype === 'boss' || plan.archetype === 'siege') return 'focus';
+      if (plan.archetype === 'support' || plan.archetype === 'economy') return waveNo % 2 === 0 ? 'split' : 'focus';
+      if (plan.archetype === 'ranged') return 'split';
+      if (plan.archetype === 'rush') return 'sweep';
+      return plan.laneMode || 'random';
+    }
+
+    function chooseSpawnRowForGroup(grp, wave, rowCount) {
+      const rows = Math.max(1, rowCount || 1);
+      const mode = (grp && grp.laneMode) || (wave && wave.laneMode) || 'random';
+      const seed = Math.abs((grp && grp.laneSeed) || (wave && wave.laneSeed) || ((grp && grp.e || '').length * 3));
+      const cursor = grp ? (grp._laneCursor || 0) : 0;
+      if (grp) grp._laneCursor = cursor + 1;
+      if (mode === 'focus') return seed % rows;
+      if (mode === 'split') {
+        const a = seed % rows;
+        const b = (a + Math.max(1, Math.floor(rows / 2))) % rows;
+        return (cursor % 2 === 0) ? a : b;
+      }
+      if (mode === 'sweep') return (seed + cursor) % rows;
+      if (mode === 'edges') return (cursor % 2 === 0) ? 0 : rows - 1;
+      return Math.floor(Math.random() * rows);
+    }
+
     const SCENE_MONSTER_TABLE = {
       classroom: { scene: '教室', theme: '基础分路与小测压力', monsters: ['erasercrumb', 'hallpass', 'quizpaper', 'slime', 'note'] },
       playground: { scene: '操场', theme: '速度、冲刺与阳光争夺', monsters: ['whistle', 'jump_rope', 'sunshine', 'bat'] },
@@ -447,6 +519,14 @@
       challenge: { targetWaves: 6, density: 1.18 },
       research: { targetWaves: 6, density: 1.2 }
     };
+    const WAVE_BEATS = [
+      { id: 'opener', roles: ['normal', 'trick'], countBonus: 0, intervalShift: 0 },
+      { id: 'swarm', roles: ['fast', 'normal'], countBonus: 2, intervalShift: -12 },
+      { id: 'support_mix', roles: ['support', 'trick', 'normal'], countBonus: 1, intervalShift: 4 },
+      { id: 'siege', roles: ['tank', 'support', 'trick'], countBonus: 0, intervalShift: 12 },
+      { id: 'flag', roles: ['fast', 'tank', 'support'], countBonus: 3, intervalShift: -16 },
+      { id: 'finale', roles: ['tank', 'fast', 'support'], countBonus: 4, intervalShift: -18 }
+    ];
     function getLevelThreatTier(level) {
       return Math.max(1, Math.round((((level && level.difficulty) || 1) - 0.8) * 5));
     }
@@ -468,24 +548,25 @@
       return ids.filter(id => id !== 'elf' && ENEMIES[id]);
     }
     function chooseEnemyByRole(pool, roles, fallback) {
-      return pool.find(id => roles.includes(ENEMIES[id].role)) || fallback || pool[0] || 'slime';
+      return pool.find(id => roles.includes(ENEMIES[id].role) || roles.includes(getMonsterAttackPlan(id).archetype)) || fallback || pool[0] || 'slime';
     }
     function makePressureWave(level, waveNo, rule) {
       const pool = enemyPoolForLevel(level);
       const nonBossPool = pool.filter(id => ENEMIES[id].role !== 'boss' && id !== 'super_boss');
       const threatTier = getLevelThreatTier(level);
       const pressureLevel = Math.max(1, Math.min(5, Math.ceil((waveNo + threatTier) / 3)));
-      const primary = chooseEnemyByRole(nonBossPool, ['normal', 'fast', 'trick'], nonBossPool[0]);
-      const support = chooseEnemyByRole(nonBossPool, ['support', 'trick'], primary);
+      const beat = WAVE_BEATS[Math.min(WAVE_BEATS.length - 1, Math.max(0, waveNo - 1))] || WAVE_BEATS[WAVE_BEATS.length - 1];
+      const primary = chooseEnemyByRole(nonBossPool, beat.roles, nonBossPool[0]);
+      const support = chooseEnemyByRole(nonBossPool, ['support', 'trick', 'ranged'], primary);
       const tank = chooseEnemyByRole(nonBossPool, ['tank'], primary);
       const groups = [];
       const addGroup = (e, n, interval, preDelay) => {
         if (!ENEMIES[e] || n <= 0) return;
         const existing = groups.find(g => g.e === e);
         if (existing) existing.n += n;
-        else groups.push({ e, n, interval, preDelay });
+        else groups.push({ e, n, interval, preDelay, laneMode: laneModeForArchetype(e, waveNo), laneSeed: waveNo + groups.length * 2 });
       };
-      addGroup(primary, 4 + pressureLevel + Math.floor(threatTier / 2), Math.max(55, 105 - pressureLevel * 7), 55);
+      addGroup(primary, 4 + pressureLevel + Math.floor(threatTier / 2) + beat.countBonus, Math.max(45, 105 - pressureLevel * 7 + beat.intervalShift), 55);
       if (support !== primary) addGroup(support, 1 + Math.floor(pressureLevel / 2), 165, 115);
       if (tank !== primary) addGroup(tank, 1 + Math.floor(pressureLevel / 3), 190, 160);
       if (level && level.isBoss && waveNo >= 4) {
@@ -493,6 +574,8 @@
         if (miniBoss) addGroup(miniBoss, 1, 0, 230);
       }
       return {
+        beat: beat.id,
+        laneMode: beat.id === 'flag' || beat.id === 'finale' ? 'sweep' : 'split',
         pressureLevel,
         generatedPressure: true,
         groups
@@ -508,7 +591,7 @@
         const tierBoost = Math.max(0, threatTier - 1) * 0.025;
         const scaled = Math.max(g.n, Math.round(g.n * (1 + pressureBoost + tierBoost)));
         const lateAdd = waveIdx >= Math.floor(totalWaves / 2) && def.role !== 'tank' ? 1 : 0;
-        return { ...g, n: Math.min(18, scaled + lateAdd) };
+        return { ...g, n: Math.min(18, scaled + lateAdd), laneMode: g.laneMode || laneModeForArchetype(g.e, waveIdx + 1), laneSeed: g.laneSeed || (waveIdx + 1) };
       });
       return wave;
     }
@@ -525,6 +608,9 @@
         const finalIdx = level.waves.length - 1;
         level.waves.forEach((wave, waveIdx) => {
           tuneExistingWave(wave, waveIdx, level.waves.length, level, rule);
+          const beat = WAVE_BEATS[Math.min(WAVE_BEATS.length - 1, waveIdx)] || WAVE_BEATS[WAVE_BEATS.length - 1];
+          wave.beat = wave.beat || beat.id;
+          wave.laneMode = wave.laneMode || (beat.id === 'flag' || beat.id === 'finale' ? 'sweep' : 'split');
           const isFinal = waveIdx === finalIdx;
           const isFlagBeat = isFinal || (waveIdx > 0 && (waveIdx + 1) % 3 === 0);
           wave.pressureLevel = Math.max(wave.pressureLevel || 1, Math.min(5, Math.ceil(((waveIdx + 1) / level.waves.length) * 4 + (level.threatTier - 1) * 0.25)));
@@ -1228,6 +1314,7 @@
             this.objs = []; this.particles = []; this.floatTexts = [];
             this.savedTowers = []; this.towerCooldowns = {};
             this.frame = 0; this.R = 5;
+            this.dpr = 1;
             this.waitNextWave = null;
             this.laneWarnings = []; // 路线预警（敌人出现前闪红）
             this.laneRescueUsed = {}; // 每一路一次自动救场，让压线有戏剧性但不直接失败
@@ -1294,9 +1381,19 @@
             const oldG = this.G || 1;
             const oldOX = this.OX || 0;
             const oldOY = this.OY || 0;
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.w = this.canvas.width; this.h = this.canvas.height;
+            const cssW = Math.max(1, Math.floor(window.innerWidth || document.documentElement.clientWidth || 1));
+            const cssH = Math.max(1, Math.floor(window.innerHeight || document.documentElement.clientHeight || 1));
+            this.dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            this.canvas.width = Math.round(cssW * this.dpr);
+            this.canvas.height = Math.round(cssH * this.dpr);
+            this.canvas.style.width = cssW + 'px';
+            this.canvas.style.height = cssH + 'px';
+            this.w = cssW; this.h = cssH;
+            if (this.ctx) {
+                this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+                this.ctx.imageSmoothingEnabled = true;
+                this.ctx.imageSmoothingQuality = 'high';
+            }
             const isLandscape = this.w > this.h;
             let topM, bottomM, leftM, rightM;
             if (isLandscape) {
@@ -1413,7 +1510,7 @@
         mazeTap(sx, sy) {
             if (!this.maze) return;
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width, scaleY = this.canvas.height / rect.height;
+            const scaleX = this.w / rect.width, scaleY = this.h / rect.height;
             const cx = (sx - rect.left) * scaleX, cy = (sy - rect.top) * scaleY;
             const m = this.maze;
             const gx = Math.floor((cx - m.mx) / m.cs), gy = Math.floor((cy - m.my) / m.cs);
@@ -1461,8 +1558,8 @@
         handleClick(x, y) {
             if (this.phase !== 'td' || this.combatPaused) return false;
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            const scaleX = this.w / rect.width;
+            const scaleY = this.h / rect.height;
             const cx = (x - rect.left) * scaleX;
             const cy = (y - rect.top) * scaleY;
             for (let i = this.objs.length - 1; i >= 0; i--) {
@@ -1598,7 +1695,7 @@
             if (!this.currentTouch) return;
             const cs = m.cs, mx = m.mx, my = m.my;
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width, scaleY = this.canvas.height / rect.height;
+            const scaleX = this.w / rect.width, scaleY = this.h / rect.height;
             const touchX = (this.currentTouch.x - rect.left) * scaleX;
             const touchY = (this.currentTouch.y - rect.top) * scaleY;
             const playerScreenX = mx + m.px * cs + cs/2;
@@ -1715,6 +1812,65 @@
             enemy.hp -= finalDmg;
             enemy.hitFlash = Math.max(enemy.hitFlash || 0, 5);
             if (sourceColor) this.spawnParticles(enemy.x, enemy.y, sourceColor, 4);
+        }
+
+        damageTower(tower, amount, sourceColor, label, size = 20) {
+            if (!tower || tower.type !== 'tower' || tower.destroyed) return false;
+            const dmg = Math.max(1, Math.round(amount || 1));
+            tower.hp -= dmg;
+            tower.hitFlash = Math.max(tower.hitFlash || 0, 10);
+            tower.lastHitColor = sourceColor || '#E85D5D';
+            this.spawnParticles(tower.x + this.G / 2, tower.y + this.G / 2, tower.lastHitColor, Math.min(18, Math.max(5, Math.round(dmg / 30))));
+            if (label) this.floatText(label, tower.x + this.G / 2, tower.y + this.G * 0.22, tower.lastHitColor, 42, size);
+            if (tower.hp <= 0) {
+                tower.destroyed = true;
+                this.spawnParticles(tower.x + this.G / 2, tower.y + this.G / 2, tower.lastHitColor, 18);
+                this.floatText('设施被破坏!', tower.x + this.G / 2, tower.y + this.G * 0.62, '#E85D5D', 48, Math.max(16, size));
+            }
+            return true;
+        }
+
+        applyTowerCooldownPenalty(tower, frames) {
+            if (!tower || !frames) return;
+            const penalty = Math.max(0, Math.round(frames || 0));
+            if (!penalty) return;
+            // Producer cd counts up toward production; attacker cd counts down toward firing.
+            if (tower.data && tower.data.type === 'producer') {
+                tower.cd = Math.max(0, (tower.cd || 0) - penalty);
+                return;
+            }
+            tower.cd = Math.max(tower.cd || 0, penalty);
+        }
+        findSpecialAttackTarget(enemy, cfg) {
+            if (!enemy || !cfg) return null;
+            const enemyCenter = enemy.x + this.G / 2;
+            const reach = this.G * (cfg.range || 1.2);
+            return this.objs
+                .filter(t => t.type === 'tower' && t.r === enemy.r && t.hp > 0 && !t.destroyed)
+                .filter(t => {
+                    const towerCenter = t.x + this.G / 2;
+                    return towerCenter <= enemyCenter + this.G * 0.45 && enemyCenter - towerCenter <= reach;
+                })
+                .sort((a, b) => Math.abs(enemyCenter - (a.x + this.G / 2)) - Math.abs(enemyCenter - (b.x + this.G / 2)))[0] || null;
+        }
+
+        resolveSpecialAttack(enemy, target, cfg) {
+            if (!enemy || !target || !cfg) return false;
+            const sourceColor = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
+            const damage = Math.max(1, Math.round((enemy.dmg || enemy.baseDmg || 1) * (cfg.damageScale || 1)));
+            this.damageTower(target, damage, sourceColor, cfg.label, 19);
+            if (cfg.silenceFrames) {
+                target.silenceTimer = Math.max(target.silenceTimer || 0, cfg.silenceFrames);
+            }
+            if (cfg.cdPenalty) {
+                this.applyTowerCooldownPenalty(target, cfg.cdPenalty);
+            }
+            if (cfg.mpDrain) {
+                this.mp = Math.max(0, this.mp - cfg.mpDrain);
+                this.updateStats();
+            }
+            enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
+            return true;
         }
 
         triggerLaneRescue(enemy) {
@@ -2032,7 +2188,7 @@
                                 this.floatText('红笔点名被化解！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#4A90E2', 60, 24);
                             } else {
                                 const ts = this.objs.filter(o => o.type === 'tower' && o.r === mk.r).sort((a, b) => b.x - a.x);
-                                if (ts.length) { const t = ts[0]; t.hp -= 2000; t.hitFlash = 6; this.spawnParticles(t.x + this.G / 2, t.y + this.G / 2, '#E85D5D', 16); this.floatText('红笔点名！', t.x, t.y, '#E85D5D', 60, 26); }
+                                if (ts.length) { const t = ts[0]; this.damageTower(t, 2000, '#E85D5D', '红笔点名！', 26); }
                                 else { this.floatText('红笔点名！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#E85D5D', 60, 24); }
                             }
                             this.bossMarks.splice(bi, 1);
@@ -2048,19 +2204,22 @@
                     this.spawnState.timer--;
                     // 敌人生成前预先确定出现路线并闪红预警（让玩家来得及部署该路）
                     if (this.spawnState.timer <= 75 && this.spawnState.nextRow == null) {
-                        const wr = Math.floor(Math.random() * this.R);
+                        const wave = LEVELS[this.levelIdx].waves[this.waveIdx];
+                        const grp = wave.groups[this.spawnState.groupIdx];
+                        const wr = chooseSpawnRowForGroup(grp, wave, this.R);
                         this.spawnState.nextRow = wr;
                         const wlife = Math.max(40, this.spawnState.timer + 12);
                         this.laneWarnings.push({ r: wr, life: wlife, max: wlife });
                     }
                     if (this.spawnState.timer <= 0) {
-                        const grp = LEVELS[this.levelIdx].waves[this.waveIdx].groups[this.spawnState.groupIdx];
+                        const wave = LEVELS[this.levelIdx].waves[this.waveIdx];
+                        const grp = wave.groups[this.spawnState.groupIdx];
                         const eDef = ENEMIES[grp.e];
-                        const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : Math.floor(Math.random() * this.R);
+                        const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : chooseSpawnRowForGroup(grp, wave, this.R);
                         this.spawnState.nextRow = null;
                         const scaled = scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule);
                         const hp = scaled.hp, spd = scaled.spd, dmg = scaled.dmg;
-                        this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, baseDmg: dmg, threatTier: scaled.threatTier, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, levelIdx: this.levelIdx });
+                        this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, baseDmg: dmg, threatTier: scaled.threatTier, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, specialCd: 45 + Math.floor(Math.random() * 55), levelIdx: this.levelIdx });
                         this.collectEnemySticker(grp.e); // Phase C：遇到即收集敌人贴纸
                         this.spawnState.mobsLeftInGroup--; this.spawnState.timer = grp.interval;
                         if (this.spawnState.mobsLeftInGroup <= 0) {
@@ -2085,6 +2244,8 @@
                     const o = this.objs[i];
                     if (o.type === 'orb' || o.type === 'star') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
                     else if (o.type === 'tower') {
+                        if (o.hp <= 0 || o.destroyed) { this.objs.splice(i,1); continue; }
+                        if (o.hitFlash > 0) o.hitFlash--;
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
                             const bombDmg = o.atkOverride || o.data.dmg;
@@ -2116,10 +2277,10 @@
                                 }
                             }
                         }
-                        if (o.hp <= 0) this.objs.splice(i,1);
                     }
                     else if (o.type === 'enemy') {
                         if(o.hitFlash>0) o.hitFlash--;
+                        if(o.specialFlash>0) o.specialFlash--;
                         if(o.shieldFlash>0) o.shieldFlash--;
                         const frozen = this.freezeTimer > 0;
                         let spd = Math.abs(o.vx);
@@ -2191,10 +2352,7 @@
                                     .filter(t => t.type === 'tower' && t.r === o.r)
                                     .sort((a, b) => b.x - a.x)[0];
                                 if (targetTower) {
-                                    targetTower.hp -= slam.damage || 850;
-                                    targetTower.hitFlash = Math.max(targetTower.hitFlash || 0, 10);
-                                    this.floatText('巨剑重击!', targetTower.x, targetTower.y, '#a855f7', 60, 26);
-                                    this.spawnParticles(targetTower.x + this.G / 2, targetTower.y + this.G / 2, '#a855f7', 20);
+                                    this.damageTower(targetTower, slam.damage || 850, '#a855f7', '巨剑重击!', 26);
                                 }
                             }
                         }
@@ -2242,9 +2400,29 @@
                         o.dmg = o.baseDmg * dmgBoost;
                         if(o.rushTimer > 0) { spd *= 1.75; o.rushTimer--; }
                         if(o.slowTimer>0) { spd*=0.5; o.slowTimer--; }
+                        if(o.specialCd > 0) o.specialCd--;
+                        const specialCfg = SPECIAL_ATTACKS[o.id];
+                        if(!frozen && specialCfg && o.specialCd <= 0) {
+                            const specialTarget = this.findSpecialAttackTarget(o, specialCfg);
+                            if (specialTarget) {
+                                this.resolveSpecialAttack(o, specialTarget, specialCfg);
+                                o.specialCd = Math.max(40, specialCfg.interval || 110);
+                            } else {
+                                o.specialCd = 18;
+                            }
+                        }
                         let move = true;
-                        const eating = this.objs.find(t=>t.type==='tower' && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
-                        if(eating) { move=false; o.isEating=true; if(this.frame%30===0 && !frozen) eating.hp-=o.dmg; } else o.isEating=false;
+                        const eating = this.objs.find(t=>t.type==='tower' && t.hp > 0 && !t.destroyed && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
+                        if(eating) {
+                            move=false; o.isEating=true;
+                            if(!frozen) {
+                                o.eatCd = Math.max(0, (o.eatCd || 0) - 1);
+                                if(o.eatCd <= 0) {
+                                    this.damageTower(eating, Math.max(1, Math.round(o.dmg * 1.4)), '#E85D5D', '啃咬!', 18);
+                                    o.eatCd = 24;
+                                }
+                            }
+                        } else { o.isEating=false; o.eatCd=0; }
                         if(frozen) move=false; // 全班安静：定身
                         if(move) o.x -= spd;
                         if(o.x < this.OX-20) {
@@ -2295,6 +2473,7 @@
             if (o.powerStacks > 0) { ctx.fillStyle = '#facc15'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('阳+' + o.powerStacks, o.x + G * 0.12, o.y - 8); }
             if (o.titanShieldTimer > 0) { ctx.strokeStyle = 'rgba(168,85,247,0.8)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, cy, size * 0.5, 0, Math.PI * 2); ctx.stroke(); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(o.x + 10, o.y + 10, G - 20, G - 20); }
+            if (o.specialFlash > 0) { ctx.strokeStyle = 'rgba(248,113,113,0.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, size * 0.56, 0, Math.PI * 2); ctx.stroke(); }
             if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
             if (o.hp < o.maxHp) {
                 const barY = o.y - 6;
@@ -2412,6 +2591,7 @@
             if (o.rageTimer > 0) { ctx.fillStyle = '#ef4444'; ctx.font = `bold ${Math.max(13, G*0.28)}px Arial`; ctx.fillText('暴!', x + G * 0.18, y - 30); }
             if (o.powerStacks > 0) { ctx.fillStyle = '#facc15'; ctx.font = `bold ${Math.max(11, G*0.24)}px Arial`; ctx.fillText('阳+' + o.powerStacks, x + G * 0.12, y - 8); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(x + 10, y + 10, G - 20, G - 20); }
+            if (o.specialFlash > 0) { ctx.strokeStyle = 'rgba(248,113,113,0.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, G * 0.58, 0, Math.PI * 2); ctx.stroke(); }
             ctx.restore();
             if (o.hp < o.maxHp) {
                 const barY = y - 10;
@@ -2437,7 +2617,7 @@
 
         // ----- Phase D 通用舞台：每章一个场景，离屏缓存（key 含 chapterId，切关不串场） -----
         getStageCacheKey(G, chapterId) {
-            return [chapterId, this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100)].join(':');
+            return [chapterId, this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100), Math.round((this.dpr || 1) * 100)].join(':');
         }
 
         // 共用：每格主题地砖（圆角 + 渐层 + 描边 + 可选点缀）+ 格线
@@ -2462,8 +2642,13 @@
 
         renderStageCache(G, chapterId) {
             const canvas = document.createElement('canvas');
-            canvas.width = this.w; canvas.height = this.h;
+            const dpr = this.dpr || 1;
+            canvas.width = Math.round(this.w * dpr);
+            canvas.height = Math.round(this.h * dpr);
             const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
             const gridX = this.OX, gridY = this.OY, gridW = this.C * G, gridH = this.R * G;
             let overlay = null;
 
@@ -2538,7 +2723,7 @@
             const key = this.getStageCacheKey(G, chapterId);
             if (!this.stageCache || this.stageCache.key !== key) this.stageCache = this.renderStageCache(G, chapterId);
             const cache = this.stageCache, ov = cache.overlay;
-            ctx.drawImage(cache.canvas, 0, 0);
+            ctx.drawImage(cache.canvas, 0, 0, this.w, this.h);
             if (!ov) return;
             if (ov.chalk) { // 教室：动态粉笔线
                 const { bx, by, bw, boardH } = ov.chalk;
@@ -2556,6 +2741,9 @@
         draw() {
             if (!this.ctx) return;
             const ctx = this.ctx, G = this.G;
+            ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
             ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, this.w, this.h);
             if (this.phase === 'td') {
                 const chapterId = (LEVELS[this.levelIdx] && LEVELS[this.levelIdx].chapterId) || '';
@@ -2629,6 +2817,10 @@
                         }
                         else { ctx.beginPath(); ctx.arc(o.x+G/2, o.y+G/2, G/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText(towerIcon, o.x+G/3.5, o.y+G/1.5); }
                         if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
+                        }
+                        if(o.hitFlash > 0) {
+                            ctx.fillStyle='rgba(248,113,113,' + Math.min(0.55, 0.18 + o.hitFlash * 0.035) + ')';
+                            ctx.fillRect(o.x+7, o.y+7, G-14, G-14);
                         }
                         // 升级标记 + 选中高亮（Phase 2.5）
                         if(o.upgraded) { ctx.fillStyle='#F6D365'; ctx.font=`bold ${Math.max(12,G*0.3)}px Arial`; ctx.textAlign='left'; ctx.fillText('⭐', o.x+G-G*0.36, o.y+G*0.36); }
