@@ -217,28 +217,28 @@
     };
 
     const MONSTER_ATTACK_PLAN = {
-      slime: { archetype: 'melee', laneMode: 'random', lesson: '基础啃咬压力' },
-      bat: { archetype: 'rush', laneMode: 'sweep', lesson: '快攻换线' },
-      tank: { archetype: 'siege', laneMode: 'focus', lesson: '攻城压线' },
-      note: { archetype: 'ranged', laneMode: 'split', lesson: '远程拆节奏' },
-      doodle: { archetype: 'support', laneMode: 'split', lesson: '支援污染' },
-      erasercrumb: { archetype: 'melee', laneMode: 'random', lesson: '小怪磨损' },
-      hallpass: { archetype: 'rush', laneMode: 'sweep', lesson: '走廊突袭' },
-      quizpaper: { archetype: 'siege', laneMode: 'focus', lesson: '厚卷攻城' },
-      whistle: { archetype: 'support', laneMode: 'split', lesson: '加速支援' },
-      jump_rope: { archetype: 'rush', laneMode: 'sweep', lesson: '连续冲线' },
-      sunshine: { archetype: 'economy', laneMode: 'split', lesson: '经济压制' },
-      quiet: { archetype: 'support', laneMode: 'focus', lesson: '静音封锁' },
-      bookstack: { archetype: 'siege', laneMode: 'focus', lesson: '重型攻城' },
-      bookmark: { archetype: 'ranged', laneMode: 'split', lesson: '后排割裂' },
-      paperstorm: { archetype: 'ranged', laneMode: 'sweep', lesson: '远程群压' },
-      deadline: { archetype: 'siege', laneMode: 'focus', lesson: '暴走攻城' },
-      super_boss: { archetype: 'boss', laneMode: 'focus', lesson: '最终攻城' },
-      boss: { archetype: 'boss', laneMode: 'focus', lesson: '拆防 Boss' }
+      slime: { archetype: 'melee', rangeBand: 'melee', laneMode: 'random', lesson: '基础啃咬压力' },
+      bat: { archetype: 'rush', rangeBand: 'melee', laneMode: 'sweep', lesson: '快攻换线' },
+      tank: { archetype: 'siege', rangeBand: 'melee', laneMode: 'focus', lesson: '攻城压线' },
+      note: { archetype: 'ranged', rangeBand: 'ranged', laneMode: 'split', lesson: '远程拆节奏' },
+      doodle: { archetype: 'support', rangeBand: 'mid', laneMode: 'split', lesson: '支援污染' },
+      erasercrumb: { archetype: 'melee', rangeBand: 'melee', laneMode: 'random', lesson: '小怪磨损' },
+      hallpass: { archetype: 'rush', rangeBand: 'melee', laneMode: 'sweep', lesson: '走廊突袭' },
+      quizpaper: { archetype: 'siege', rangeBand: 'mid', laneMode: 'focus', lesson: '厚卷攻城' },
+      whistle: { archetype: 'support', rangeBand: 'ranged', laneMode: 'split', lesson: '加速支援' },
+      jump_rope: { archetype: 'rush', rangeBand: 'melee', laneMode: 'sweep', lesson: '连续冲线' },
+      sunshine: { archetype: 'economy', rangeBand: 'ranged', laneMode: 'split', lesson: '经济压制' },
+      quiet: { archetype: 'support', rangeBand: 'ranged', laneMode: 'focus', lesson: '静音封锁' },
+      bookstack: { archetype: 'siege', rangeBand: 'melee', laneMode: 'focus', lesson: '重型攻城' },
+      bookmark: { archetype: 'ranged', rangeBand: 'ranged', laneMode: 'split', lesson: '后排割裂' },
+      paperstorm: { archetype: 'ranged', rangeBand: 'ranged', laneMode: 'sweep', lesson: '远程群压' },
+      deadline: { archetype: 'siege', rangeBand: 'mid', laneMode: 'focus', lesson: '暴走攻城' },
+      super_boss: { archetype: 'boss', rangeBand: 'ranged', laneMode: 'focus', lesson: '最终攻城' },
+      boss: { archetype: 'boss', rangeBand: 'ranged', laneMode: 'focus', lesson: '拆防 Boss' }
     };
 
     function getMonsterAttackPlan(id) {
-      return MONSTER_ATTACK_PLAN[id] || { archetype: 'melee', laneMode: 'random', lesson: '基础推进' };
+      return MONSTER_ATTACK_PLAN[id] || { archetype: 'melee', rangeBand: 'melee', laneMode: 'random', lesson: '基础推进' };
     }
 
     function laneModeForArchetype(id, waveNo) {
@@ -527,6 +527,24 @@
       { id: 'flag', roles: ['fast', 'tank', 'support'], countBonus: 3, intervalShift: -16 },
       { id: 'finale', roles: ['tank', 'fast', 'support'], countBonus: 4, intervalShift: -18 }
     ];
+    const SCENE_BEAT_PROFILES = {
+      classroom: ['opener', 'support_mix', 'swarm', 'siege', 'flag'],
+      playground: ['opener', 'swarm', 'swarm', 'support_mix', 'flag'],
+      library: ['opener', 'support_mix', 'siege', 'support_mix', 'flag', 'finale'],
+      exam: ['opener', 'siege', 'support_mix', 'flag', 'siege', 'finale'],
+      challenge: ['swarm', 'support_mix', 'siege', 'flag', 'finale', 'finale'],
+      research: ['opener', 'support_mix', 'swarm', 'siege', 'flag', 'finale']
+    };
+    function getWaveBeatById(id) {
+      return WAVE_BEATS.find(beat => beat.id === id) || WAVE_BEATS[0];
+    }
+    function beatForWave(level, waveIdx, totalWaves) {
+      const chapterId = (level && level.chapterId) || 'classroom';
+      const profile = SCENE_BEAT_PROFILES[chapterId] || SCENE_BEAT_PROFILES.classroom;
+      const index = Math.max(0, Math.min(profile.length - 1, waveIdx));
+      const fallbackId = waveIdx >= Math.max(0, totalWaves - 1) ? 'finale' : 'support_mix';
+      return getWaveBeatById(profile[index] || fallbackId);
+    }
     function getLevelThreatTier(level) {
       return Math.max(1, Math.round((((level && level.difficulty) || 1) - 0.8) * 5));
     }
@@ -555,7 +573,7 @@
       const nonBossPool = pool.filter(id => ENEMIES[id].role !== 'boss' && id !== 'super_boss');
       const threatTier = getLevelThreatTier(level);
       const pressureLevel = Math.max(1, Math.min(5, Math.ceil((waveNo + threatTier) / 3)));
-      const beat = WAVE_BEATS[Math.min(WAVE_BEATS.length - 1, Math.max(0, waveNo - 1))] || WAVE_BEATS[WAVE_BEATS.length - 1];
+      const beat = beatForWave(level, Math.max(0, waveNo - 1), rule.targetWaves);
       const primary = chooseEnemyByRole(nonBossPool, beat.roles, nonBossPool[0]);
       const support = chooseEnemyByRole(nonBossPool, ['support', 'trick', 'ranged'], primary);
       const tank = chooseEnemyByRole(nonBossPool, ['tank'], primary);
@@ -608,7 +626,7 @@
         const finalIdx = level.waves.length - 1;
         level.waves.forEach((wave, waveIdx) => {
           tuneExistingWave(wave, waveIdx, level.waves.length, level, rule);
-          const beat = WAVE_BEATS[Math.min(WAVE_BEATS.length - 1, waveIdx)] || WAVE_BEATS[WAVE_BEATS.length - 1];
+          const beat = beatForWave(level, waveIdx, level.waves.length);
           wave.beat = wave.beat || beat.id;
           wave.laneMode = wave.laneMode || (beat.id === 'flag' || beat.id === 'finale' ? 'sweep' : 'split');
           const isFinal = waveIdx === finalIdx;
@@ -913,14 +931,66 @@
         return Math.round(3 + d * 3); // 第一章6 → 第四章8
     }
     const HP_CAP = 15; // 存档生命上限，防止数值爆表
-    function scaleEnemyStats(enemyDef, level, challengeRule) {
+    const BASELINE_LANE_DPS = 78;
+    const MIN_SURVIVAL_SECONDS = {
+        normal: 3.2,
+        fast: 2.4,
+        trick: 3.4,
+        support: 4.3,
+        tank: 7.2,
+        boss: 18,
+        elf: 0.8
+    };
+    const ARCHETYPE_HP_MULT = {
+        melee: 1.08,
+        rush: 1.18,
+        ranged: 1.26,
+        support: 1.34,
+        siege: 1.28,
+        economy: 1.18,
+        boss: 1.08
+    };
+    const BEAT_HP_MULT = {
+        opener: 1,
+        swarm: 1.12,
+        support_mix: 1.2,
+        siege: 1.28,
+        flag: 1.34,
+        finale: 1.42
+    };
+    function getWavePressureMultiplier(enemyDef, level, wave) {
+        const plan = getMonsterAttackPlan(enemyDef && enemyDef.id);
+        const role = (enemyDef && enemyDef.role) || 'normal';
+        const beatId = (wave && wave.beat) || 'opener';
+        const pressure = Math.max(1, Math.min(5, parseInt(wave && wave.pressureLevel) || 1));
+        const isBoss = role === 'boss' || plan.archetype === 'boss';
+        if (isBoss) {
+            const bossBeat = beatId === 'flag' || beatId === 'finale' ? 1.14 : 1.05;
+            return Math.min(1.36, bossBeat * (1 + (pressure - 1) * 0.045));
+        }
+        const archetypeMult = ARCHETYPE_HP_MULT[plan.archetype] || 1.08;
+        const beatMult = BEAT_HP_MULT[beatId] || 1.16;
+        const pressureMult = 1 + (pressure - 1) * 0.095;
+        const rangeMult = plan.rangeBand === 'ranged' ? 1.1 : plan.rangeBand === 'mid' ? 1.05 : 1;
+        return archetypeMult * beatMult * pressureMult * rangeMult;
+    }
+    function scaleEnemyStats(enemyDef, level, challengeRule, wave) {
         const difficulty = (level && level.difficulty) || 1.0;
         const threatTier = Math.max(1, Math.min(12, parseInt(level && level.threatTier) || 1));
         const tierBoost = Math.max(0, threatTier - 1);
-        const hp = enemyDef.hp * difficulty * (1 + tierBoost * 0.12);
+        const role = (enemyDef && enemyDef.role) || 'normal';
+        const pressureLevel = Math.max(1, Math.min(5, parseInt(wave && wave.pressureLevel) || 1));
+        const waveMultiplier = getWavePressureMultiplier(enemyDef, level, wave);
+        const survivalTarget = MIN_SURVIVAL_SECONDS[role] || MIN_SURVIVAL_SECONDS.normal;
+        const levelPressure = 0.7 + Math.min(0.35, Math.max(0, difficulty - 1) * 0.45) + Math.min(0.18, tierBoost * 0.025);
+        const minimumHp = BASELINE_LANE_DPS * survivalTarget * levelPressure;
+        const hp = Math.max(
+            enemyDef.hp * difficulty * (1 + tierBoost * 0.12) * waveMultiplier,
+            minimumHp * waveMultiplier
+        );
         const spd = enemyDef.spd * (1 + (difficulty - 1) * 0.2) * (1 + tierBoost * 0.025) * (challengeRule === 'speed' ? 1.2 : 1);
-        const dmg = enemyDef.dmg * difficulty * (1 + tierBoost * 0.08);
-        return { hp, spd, dmg, threatTier };
+        const dmg = enemyDef.dmg * difficulty * (1 + tierBoost * 0.08) * (1 + (pressureLevel - 1) * 0.035);
+        return { hp, spd, dmg, threatTier, waveMultiplier };
     }
 
     // 存档码：跨装置/浏览器手动搬运进度（纯前端，无需后端、不依赖 cookie）
@@ -2217,7 +2287,7 @@
                         const eDef = ENEMIES[grp.e];
                         const r = (this.spawnState.nextRow != null) ? this.spawnState.nextRow : chooseSpawnRowForGroup(grp, wave, this.R);
                         this.spawnState.nextRow = null;
-                        const scaled = scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule);
+                        const scaled = scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule, wave);
                         const hp = scaled.hp, spd = scaled.spd, dmg = scaled.dmg;
                         this.objs.push({ type: 'enemy', id: grp.e, r, x: this.OX + this.C*this.G, y: this.OY + r*this.G, hp, maxHp: hp, dmg, baseDmg: dmg, threatTier: scaled.threatTier, data: eDef, vx: -spd, fly: eDef.type === 'air', slowTimer: 0, isEating: false, hitFlash: 0, specialCd: 45 + Math.floor(Math.random() * 55), levelIdx: this.levelIdx });
                         this.collectEnemySticker(grp.e); // Phase C：遇到即收集敌人贴纸

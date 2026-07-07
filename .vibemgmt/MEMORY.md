@@ -1,6 +1,6 @@
 # Vibe Project Memory: xueba-pvz（学霸校园大冒险）
 
-**Last Updated**: 2026-07-03
+**Last Updated**: 2026-07-07
 
 ---
 
@@ -34,6 +34,7 @@
 - [x] 文具 5 级外观升级：7 个 `TOWERS` 均有 `tower_*_lv1..lv5.webp`，战斗场上、道具栏、装备工坊会按永久等级显示不同外观；`teacher` 明确重画为短发、些许花白、约 40 岁的「刘老师」
 - [x] 高清 Canvas + 怪物设施破坏强化：主画布与离屏场景缓存改为 DPR backing store，输入坐标维持 CSS 像素；所有非友方怪物都有 `SPECIAL_ATTACKS` 特色攻击，可伤害、停摆、延迟或破坏我方文具设施
 - [x] PvZ 式波段与怪物攻击规划：`MONSTER_ATTACK_PLAN` 覆盖非 elf 怪物 archetype，`WAVE_BEATS` 让 opener/swarm/support/siege/flag/finale 形成可读波段；每组怪通过 `laneMode` 形成 focus/split/sweep 路线压力
+- [x] PvZ 式存活压力调校：`SCENE_BEAT_PROFILES` 让各场景使用不同波段顺序，`MIN_SURVIVAL_SECONDS` + `getWavePressureMultiplier()` 让怪物按角色、场景波段、pressureLevel 保底存活，避免小怪一出场就被秒杀
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -47,6 +48,7 @@
 - **世界地图**: `WORLDS`（小学/初中/高中/大学/研究所）；节点用 `levelIndexById(id)` 解析（id-based，插关稳健）。主线世界按 `unlockedLevel` 解锁；研究所 `advanced:true`，`isCampaignCleared(results)`（通关 4-2）解锁。
 - **关卡**: `LEVELS` = 11 campaign（id `1-1`..`4-2`）+ `challenge-speed` + 研究所 `r-1`/`r-2`（共 14）。`CAMPAIGN_COUNT=11`。
 - **关卡节奏 / 大波**: `PACING_RULES` + `WAVE_BEATS` + `applyPacingTuning()` 在 `LEVELS` 建好后执行，会复制每关 waves、补足目标波数（classroom/playground 5 波，library/exam/challenge/research 6 波）、标记 `beat`/`flagWave`/`pressureLevel`，并用 `getInterWaveDelay()` 让 threatTier 越高的关卡过波等待越短。波段按 opener/swarm/support_mix/siege/flag/finale 增压，group-level `laneMode` 让 focus/split/sweep 路线压力可读。
+- **存活压力 / 场景节奏**: `SCENE_BEAT_PROFILES` 决定各 chapter 的波段顺序（操场偏 swarm、图书馆偏 support/siege、考场偏 siege/finale）。`scaleEnemyStats(enemyDef, level, challengeRule, wave)` 现在接收当前 wave，使用 `MIN_SURVIVAL_SECONDS` 与 `getWavePressureMultiplier()` 做最低存活时间保底；小怪、快怪、支援怪、坦克、Boss 分开调，Boss 倍率有上限以避免纯磨血。
 - **敌人 / 场景怪物表**: `SCENE_MONSTER_TABLE` 依 classroom/playground/library/exam/research/challenge 组织怪物池；11 个主线关卡均有 `signatureEnemy`，并实际写入 waves。新怪包含 erasercrumb/hallpass/quizpaper/whistle/jump_rope/sunshine/quiet/bookstack/bookmark/paperstorm/deadline，均有 `assets/sprites/enemy_*.svg`。
 - **怪物特色攻击 / 设施破坏**: `SPECIAL_ATTACKS` 覆盖所有非 `elf` 怪物；`MONSTER_ATTACK_PLAN` 将怪物规划为 melee/rush/ranged/support/siege/economy/boss archetype；`findSpecialAttackTarget` 只锁定同路、接近防线的存活文具，`resolveSpecialAttack` 统一处理伤害、静音、射击延迟和能量扣减；`damageTower` 是设施破坏入口（啃咬、红笔点名、紫晶重击、特色攻击都走此路径），方便后续按怪物或关卡调难度。
 - **BOSS 机制**: `BOSS_MECHANICS` 管理 sunshine/deadline/boss。阳光怪(sunSteal)会抢场上 orb，每 5 个阳光叠 1 层，攻击与速度 +20%；监考官(boss)高血量，保留 focusDrain 红笔点名，并在低血量触发 rageRush 暴走 5 秒，攻击与速度 +30%；deadline 复用 rageRush 作为考场压迫型小 Boss。

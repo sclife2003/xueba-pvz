@@ -83,10 +83,16 @@ assert(script.includes('const MONSTER_ATTACK_PLAN = {'), 'monster attack archety
 assert(script.includes("archetype: 'ranged'"), 'ranged monster archetypes are represented');
 assert(script.includes("archetype: 'siege'"), 'siege monster archetypes are represented');
 assert(script.includes("archetype: 'support'"), 'support monster archetypes are represented');
+assert(script.includes("rangeBand: 'ranged'"), 'monster plan distinguishes ranged pressure');
+assert(script.includes("rangeBand: 'melee'"), 'monster plan distinguishes melee pressure');
 assert(script.includes('const WAVE_BEATS = ['), 'PvZ-style wave beat table exists');
+assert(script.includes('const SCENE_BEAT_PROFILES = {'), 'scene-specific wave beat profiles exist');
 assert(script.includes("beat: beat.id"), 'generated pressure waves record their beat');
 assert(script.includes('laneMode: laneModeForArchetype'), 'generated groups receive readable lane modes');
 assert(script.includes('chooseSpawnRowForGroup(grp, wave, this.R)'), 'spawn routing uses group lane modes');
+assert(script.includes('function getWavePressureMultiplier(enemyDef, level, wave)'), 'wave-aware enemy survival scaling exists');
+assert(script.includes('MIN_SURVIVAL_SECONDS'), 'enemy scaling targets minimum survival time');
+assert(script.includes('scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule, wave)'), 'spawn scaling receives current wave pressure');
 assert(script.includes('specialCd: 45 + Math.floor(Math.random() * 55)'), 'enemy spawn initializes specialCd');
 assert(script.includes('if (o.silenceTimer > 0) {'), 'tower silence state is consumed in the update loop');
 assert(script.includes('o.eatCd = 24;'), 'bite damage cadence is explicit');
