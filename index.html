@@ -362,7 +362,7 @@
       bat: { label: '迟到撞击', interval: 78, range: 1.28, damageScale: 1.1, cdPenalty: 30, color: '#9f7aea' },
       tank: { label: '作业山压垮', interval: 140, range: 1.15, damageScale: 1.6, silenceFrames: 34, color: '#a0aec0' },
       note: { label: '纸条贴满', interval: 112, range: 1.35, damageScale: 0.55, cdPenalty: 70, color: '#f59e0b' },
-      doodle: { label: '涂鸦污染', interval: 130, range: 1.55, damageScale: 0.65, silenceFrames: 80, color: '#ec4899' },
+      doodle: { label: '涂鸦污染', interval: 118, range: 1.75, damageScale: 0.65, silenceFrames: 80, dirtyZone: true, zoneDuration: 300, color: '#ec4899' },
       erasercrumb: { label: '橡皮屑磨损', interval: 94, range: 1.2, damageScale: 0.75, cdPenalty: 24, color: '#f9a8d4' },
       hallpass: { label: '走廊撞门', interval: 104, range: 1.3, damageScale: 0.9, silenceFrames: 42, color: '#38bdf8' },
       quizpaper: { label: '错题扣分', interval: 128, range: 1.2, damageScale: 1.15, cdPenalty: 90, color: '#f97316' },
@@ -377,6 +377,29 @@
       super_boss: { label: '紫晶斩', interval: 130, range: 2.2, damageScale: 1.35, silenceFrames: 60, color: '#8b5cf6' },
       boss: { label: '红笔拆防', interval: 135, range: 2.0, damageScale: 1.3, cdPenalty: 80, color: '#e53e3e' }
     };
+
+    const PVZ_ZOMBIE_PATTERN_STUDY = {
+      catapultRanged: { source: 'catapult/bungee pressure', lesson: 'ranged enemies should show delayed projectiles and threaten backline tools before contact.' },
+      vaultBypass: { source: 'pole/dolphin/pogo bypass', lesson: 'runner enemies should sometimes jump over the first blocker so a single wall is not enough.' },
+      supportSummon: { source: 'dancing backup pressure', lesson: 'support enemies should add lane pressure by summoning helpers instead of only buffing.' },
+      armorRage: { source: 'newspaper/ladder shield break', lesson: 'armor or shield phases should change speed and attack cadence when broken.' },
+      smashOrExplode: { source: 'gargantuar/jack-in-box threat', lesson: 'late enemies need visible facility-damaging spikes, not only larger numbers.' }
+    };
+
+    const PVZ_SPECIAL_ATTACK_UPGRADES = {
+      bat: { vault: true, vaultBoost: 46 },
+      note: { projectile: true, targeting: 'backline', range: 3.7, projectileSpeed: 8.2 },
+      hallpass: { vault: true, vaultBoost: 62 },
+      whistle: { summon: 'slime', summonCount: 2, summonRows: 'adjacent', summonHpScale: 0.68 },
+      jump_rope: { vault: true, vaultBoost: 56 },
+      sunshine: { projectile: true, targeting: 'backline', range: 3.2, projectileSpeed: 7.4 },
+      quiet: { projectile: true, targeting: 'backline', range: 3.0, projectileSpeed: 6.8 },
+      bookmark: { projectile: true, targeting: 'backline', range: 3.4, projectileSpeed: 9.2 },
+      paperstorm: { projectile: true, splash: true, targeting: 'backline', range: 3.1, projectileSpeed: 8.8 },
+      super_boss: { projectile: true, splash: true, targeting: 'backline', range: 3.8, projectileSpeed: 7.8 },
+      boss: { projectile: true, targeting: 'backline', range: 3.4, projectileSpeed: 8.0 }
+    };
+    Object.keys(PVZ_SPECIAL_ATTACK_UPGRADES).forEach(id => Object.assign(SPECIAL_ATTACKS[id], PVZ_SPECIAL_ATTACK_UPGRADES[id]));
 
     const MONSTER_SKILL_DESIGN = {
       runner: { label: '跑', lesson: '短时间冲刺换线，逼玩家提前放胶水或补路', examples: ['bat', 'jump_rope', 'hallpass'] },
@@ -1499,8 +1522,28 @@
       'world:university': 'badge_world_university',
       'world:research': 'badge_world_research'
     };
+    function fallbackUrlForAsset(url) {
+      return (typeof url === 'string' && /\.webp$/i.test(url)) ? url.replace(/\.webp$/i, '.png') : '';
+    }
+    function hasExpectedAsset(id) {
+      return !!(id && SPRITE_MANIFEST[id]);
+    }
+    function drawMissingPaintedAsset(ctx, x, y, size, label, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(15,23,42,0.38)';
+      ctx.strokeStyle = color || '#f8fafc';
+      ctx.lineWidth = Math.max(2, size * 0.04);
+      ctx.beginPath(); ctx.arc(0, 0, size * 0.42, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.86)';
+      ctx.font = 'bold ' + Math.max(12, Math.floor(size * 0.2)) + 'px Arial';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label || '?', 0, 0);
+      ctx.restore();
+    }
     const ASSETS = {
       images: {},
+      failed: {},
       ready: false,
       load() {
         const entries = Object.entries(SPRITE_MANIFEST);
@@ -1508,7 +1551,15 @@
         return Promise.all(entries.map(([id, url]) => new Promise(res => {
           const img = new Image();
           img.onload = () => { this.images[id] = img; res(); };
-          img.onerror = () => { res(); }; // 缺图不阻塞启动
+          img.onerror = () => {
+            const fallback = fallbackUrlForAsset(url);
+            if (fallback && fallback !== url) {
+              const png = new Image();
+              png.onload = () => { this.images[id] = png; res(); };
+              png.onerror = () => { this.failed[id] = true; res(); };
+              png.src = fallback;
+            } else { this.failed[id] = true; res(); }
+          };
           img.src = url;
         }))).then(() => { this.ready = true; });
       },
@@ -2301,22 +2352,198 @@
             if (!enemy || !cfg) return null;
             const enemyCenter = enemy.x + this.G / 2;
             const reach = this.G * (cfg.range || 1.2);
-            return this.objs
+            const targets = this.objs
                 .filter(t => t.type === 'tower' && t.r === enemy.r && t.hp > 0 && !t.destroyed)
                 .filter(t => {
                     const towerCenter = t.x + this.G / 2;
                     return towerCenter <= enemyCenter + this.G * 0.45 && enemyCenter - towerCenter <= reach;
-                })
-                .sort((a, b) => Math.abs(enemyCenter - (a.x + this.G / 2)) - Math.abs(enemyCenter - (b.x + this.G / 2)))[0] || null;
+                });
+            if (cfg.targeting === 'backline') return targets.sort((a, b) => a.x - b.x)[0] || null;
+            return targets.sort((a, b) => Math.abs(enemyCenter - (a.x + this.G / 2)) - Math.abs(enemyCenter - (b.x + this.G / 2)))[0] || null;
+        }
+
+        spawnSpecialFx(enemy, target, cfg) {
+            if (!enemy || !target || !cfg) return;
+            const color = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
+            this.objs.push({
+                type: 'skillFx',
+                x1: enemy.x + this.G / 2, y1: enemy.y + this.G / 2,
+                x2: target.x + this.G / 2, y2: target.y + this.G / 2,
+                color, label: cfg.label || '特殊攻击',
+                life: 28, maxLife: 28
+            });
+        }
+
+        spawnDirtyZone(enemy, target, cfg) {
+            if (!enemy || !target || !cfg) return;
+            const c = Math.max(0, Math.min(this.C - 1, target.c || 0));
+            const r = Math.max(0, Math.min(this.R - 1, target.r || 0));
+            const zone = {
+                type: 'dirtyZone',
+                x: this.OX + c * this.G,
+                y: this.OY + r * this.G,
+                c, r,
+                w: Math.min(2, this.C - c) * this.G,
+                h: Math.min(2, this.R - r) * this.G,
+                hp: 220, maxHp: 220,
+                life: cfg.zoneDuration || 260,
+                maxLife: cfg.zoneDuration || 260,
+                tick: 0,
+                color: cfg.color || '#ec4899'
+            };
+            this.objs.push(zone);
+            this.floatText('2x2 污染区!', zone.x + zone.w / 2, zone.y + 16, zone.color, 58, 21);
+        }
+
+        spawnEnemyProjectile(enemy, target, cfg) {
+            if (!enemy || !target || !cfg) return false;
+            const color = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
+            const damage = Math.max(1, Math.round((enemy.dmg || enemy.baseDmg || 1) * (cfg.damageScale || 1)));
+            const sx = enemy.x + this.G * 0.45, sy = enemy.y + this.G * 0.36;
+            const tx = target.x + this.G / 2, ty = target.y + this.G / 2;
+            const ang = Math.atan2(ty - sy, tx - sx);
+            const speed = cfg.projectileSpeed || 8;
+            this.objs.push({
+                type: 'enemyProjectile',
+                x: sx, y: sy,
+                target,
+                dmg: damage,
+                color,
+                label: cfg.label || 'Special',
+                silenceFrames: cfg.silenceFrames || 0,
+                cdPenalty: cfg.cdPenalty || 0,
+                mpDrain: cfg.mpDrain || 0,
+                splash: !!cfg.splash,
+                vx: Math.cos(ang) * speed,
+                vy: Math.sin(ang) * speed,
+                life: 150,
+                maxLife: 150
+            });
+            return true;
+        }
+
+        updateEnemyProjectile(projectile) {
+            projectile.life--;
+            const target = projectile.target;
+            if (!target || target.destroyed || target.hp <= 0) { projectile.life = 0; return; }
+            const tx = target.x + this.G / 2, ty = target.y + this.G / 2;
+            const dist = Math.hypot(tx - projectile.x, ty - projectile.y);
+            if (dist < 28) {
+                this.damageTower(target, projectile.dmg, projectile.color, projectile.label, 18);
+                if (projectile.silenceFrames) target.silenceTimer = Math.max(target.silenceTimer || 0, projectile.silenceFrames);
+                if (projectile.cdPenalty) this.applyTowerCooldownPenalty(target, projectile.cdPenalty);
+                if (projectile.mpDrain) { this.mp = Math.max(0, this.mp - projectile.mpDrain); this.updateStats(); }
+                if (projectile.splash) {
+                    this.objs.forEach(t => {
+                        if (t.type !== 'tower' || t === target || t.destroyed || t.hp <= 0 || t.r !== target.r) return;
+                        if (Math.abs(t.x - target.x) <= this.G * 1.05) this.damageTower(t, Math.round(projectile.dmg * 0.45), projectile.color, 'splash', 14);
+                    });
+                }
+                projectile.life = 0;
+                return;
+            }
+            const speed = Math.max(4, Math.hypot(projectile.vx || 0, projectile.vy || 0) || 8);
+            const ang = Math.atan2(ty - projectile.y, tx - projectile.x);
+            projectile.vx = Math.cos(ang) * speed;
+            projectile.vy = Math.sin(ang) * speed;
+            projectile.x += projectile.vx;
+            projectile.y += projectile.vy;
+        }
+
+        tryVaultTower(enemy, tower, cfg) {
+            if (!enemy || !tower || !cfg || !cfg.vault || enemy.vaultUsed) return false;
+            enemy.vaultUsed = true;
+            enemy.isEating = false;
+            enemy.eatCd = 0;
+            enemy.hurryTimer = Math.max(enemy.hurryTimer || 0, cfg.vaultBoost || 45);
+            enemy.x = Math.max(this.OX - 10, tower.x - this.G * 0.82);
+            this.spawnSpecialFx(enemy, tower, Object.assign({}, cfg, { label: cfg.vaultLabel || cfg.label || 'Vault' }));
+            this.spawnParticles(tower.x + this.G / 2, tower.y + this.G / 2, cfg.color || '#38bdf8', 10);
+            this.floatText('跳过防线!', tower.x + this.G / 2, tower.y - 4, cfg.color || '#38bdf8', 46, 20);
+            return true;
+        }
+
+        summonSupportEnemies(enemy, cfg) {
+            if (!enemy || !cfg || !cfg.summon) return 0;
+            enemy.summonsUsed = enemy.summonsUsed || 0;
+            const summonCap = cfg.summonCap || 6;
+            if (enemy.summonsUsed >= summonCap) return 0;
+            const eDef = ENEMIES[cfg.summon] || ENEMIES.slime;
+            const currentWave = LEVELS[this.levelIdx] && LEVELS[this.levelIdx].waves ? LEVELS[this.levelIdx].waves[this.waveIdx] : null;
+            const scaled = scaleEnemyStats(eDef, LEVELS[this.levelIdx], this.challengeRule, currentWave);
+            const rows = [enemy.r];
+            if (cfg.summonRows === 'adjacent') {
+                if (enemy.r > 0) rows.push(enemy.r - 1);
+                if (enemy.r < this.R - 1) rows.push(enemy.r + 1);
+            }
+            const count = Math.min(cfg.summonCount || 1, summonCap - enemy.summonsUsed);
+            let spawned = 0;
+            for (let n = 0; n < count; n++) {
+                const r = rows[n % rows.length];
+                const hp = Math.max(8, Math.round(scaled.hp * (cfg.summonHpScale || 0.72)));
+                const x = Math.min(this.OX + this.C * this.G, enemy.x + this.G * (0.72 + n * 0.18));
+                this.objs.push({
+                    type: 'enemy',
+                    id: eDef.id,
+                    r,
+                    x,
+                    y: this.OY + r * this.G,
+                    hp,
+                    maxHp: hp,
+                    dmg: Math.max(1, Math.round(scaled.dmg * 0.75)),
+                    baseDmg: Math.max(1, Math.round(scaled.dmg * 0.75)),
+                    threatTier: scaled.threatTier,
+                    data: eDef,
+                    vx: -Math.max(0.12, scaled.spd * 1.04),
+                    fly: eDef.type === 'air',
+                    slowTimer: 0,
+                    isEating: false,
+                    hitFlash: 0,
+                    specialCd: 80,
+                    levelIdx: this.levelIdx,
+                    summoned: true
+                });
+                spawned++;
+            }
+            enemy.summonsUsed += spawned;
+            if (spawned) {
+                this.spawnSpecialFx(enemy, { x: enemy.x + this.G * 0.75, y: enemy.y, r: enemy.r }, cfg);
+                this.floatText('召唤支援!', enemy.x, enemy.y - 8, cfg.color || '#0ea5e9', 52, 22);
+            }
+            return spawned;
+        }
+
+        updateDirtyZone(zone) {
+            zone.life--;
+            zone.tick = (zone.tick || 0) + 1;
+            if (zone.tick % 32 !== 0) return;
+            const zx2 = zone.x + zone.w, zy2 = zone.y + zone.h;
+            this.objs.forEach(t => {
+                if (t.type !== 'tower' || t.destroyed || t.hp <= 0) return;
+                const cx = t.x + this.G / 2, cy = t.y + this.G / 2;
+                if (cx >= zone.x && cx <= zx2 && cy >= zone.y && cy <= zy2) {
+                    t.silenceTimer = Math.max(t.silenceTimer || 0, 70);
+                    this.damageTower(t, 18, zone.color, '污染!', 16);
+                }
+            });
         }
 
         resolveSpecialAttack(enemy, target, cfg) {
             if (!enemy || !target || !cfg) return false;
             const sourceColor = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
             const damage = Math.max(1, Math.round((enemy.dmg || enemy.baseDmg || 1) * (cfg.damageScale || 1)));
+            this.spawnSpecialFx(enemy, target, cfg);
+            if (cfg.projectile) {
+                this.spawnEnemyProjectile(enemy, target, cfg);
+                enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
+                return true;
+            }
             this.damageTower(target, damage, sourceColor, cfg.label, 19);
             if (cfg.silenceFrames) {
                 target.silenceTimer = Math.max(target.silenceTimer || 0, cfg.silenceFrames);
+            }
+            if (cfg.dirtyZone) {
+                this.spawnDirtyZone(enemy, target, cfg);
             }
             if (cfg.cdPenalty) {
                 this.applyTowerCooldownPenalty(target, cfg.cdPenalty);
@@ -2707,6 +2934,9 @@
                 for (let i = this.objs.length - 1; i >= 0; i--) {
                     const o = this.objs[i];
                     if (o.type === 'orb' || o.type === 'star') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'skillFx') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'enemyProjectile') { this.updateEnemyProjectile(o); if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'dirtyZone') { this.updateDirtyZone(o); if(o.life<=0 || o.hp<=0) this.objs.splice(i,1); }
                     else if (o.type === 'tower') {
                         if (o.hp <= 0 || o.destroyed) { this.objs.splice(i,1); continue; }
                         if (o.hitFlash > 0) o.hitFlash--;
@@ -2872,6 +3102,8 @@
                             if (specialTarget) {
                                 this.resolveSpecialAttack(o, specialTarget, specialCfg);
                                 o.specialCd = Math.max(40, specialCfg.interval || 110);
+                            } else if (this.summonSupportEnemies(o, specialCfg)) {
+                                o.specialCd = Math.max(70, specialCfg.interval || 120);
                             } else {
                                 o.specialCd = 18;
                             }
@@ -2879,6 +3111,7 @@
                         let move = true;
                         const eating = this.objs.find(t=>t.type==='tower' && t.hp > 0 && !t.destroyed && t.r===o.r && t.x<o.x+this.G/2 && t.x+this.G>o.x);
                         if(eating) {
+                            if(!frozen && this.tryVaultTower(o, eating, specialCfg)) continue;
                             move=false; o.isEating=true;
                             if(!frozen) {
                                 o.eatCd = Math.max(0, (o.eatCd || 0) - 1);
@@ -2949,8 +3182,13 @@
         }
 
         drawEnemy(ctx, o, G) {
-            const sprite = ASSETS.get('enemy_' + o.id);
+            const assetId = 'enemy_' + o.id;
+            const sprite = ASSETS.get(assetId);
             if (sprite) { this.drawEnemySprite(ctx, o, G, sprite); return; }
+            if (hasExpectedAsset(assetId)) {
+                drawMissingPaintedAsset(ctx, o.x + G / 2, o.y + G / 2, G * 0.95, (o.data && o.data.name || '?').slice(0, 1), o.data && o.data.color);
+                return;
+            }
             const bobY = Math.sin(this.frame * 0.1) * 3;
             const x = o.x, y = o.y + bobY;
             const cx = x + G/2, cy = y + G/2;
@@ -3302,16 +3540,73 @@
                     ctx.textAlign = 'left';
                 });
                 this.objs.forEach(o => {
-                    if(o.type!=='orb' && o.type!=='bullet') {
+                    if(o.type!=='orb' && o.type!=='bullet' && o.type!=='skillFx' && o.type!=='dirtyZone' && o.type!=='enemyProjectile') {
                         const shadowScale = o.type === 'enemy' ? ((o.data && o.data.spriteScale) || 1) : 1;
                         ctx.fillStyle='rgba(0,0,0,0.3)';
                         ctx.beginPath();
                         ctx.ellipse(o.x+G/2, o.y+G-5, G/3*shadowScale, G/6*Math.min(1.35, shadowScale), 0, 0, Math.PI*2);
                         ctx.fill();
                     }
-                    if(o.type==='tower') {
+                    if(o.type==='dirtyZone') {
+                        const pulse = 0.38 + 0.18 * Math.abs(Math.sin(this.frame * 0.18));
+                        ctx.save();
+                        ctx.globalAlpha = Math.min(0.72, pulse + 0.18);
+                        ctx.fillStyle = o.color || '#ec4899';
+                        ctx.strokeStyle = '#831843';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(o.x + 8, o.y + 16);
+                        ctx.bezierCurveTo(o.x + o.w * 0.26, o.y - 8, o.x + o.w * 0.78, o.y + 12, o.x + o.w - 8, o.y + 18);
+                        ctx.bezierCurveTo(o.x + o.w + 8, o.y + o.h * 0.42, o.x + o.w * 0.78, o.y + o.h + 8, o.x + o.w * 0.42, o.y + o.h - 8);
+                        ctx.bezierCurveTo(o.x + o.w * 0.12, o.y + o.h + 2, o.x - 8, o.y + o.h * 0.58, o.x + 8, o.y + 16);
+                        ctx.fill(); ctx.stroke();
+                        ctx.globalAlpha = 1;
+                        ctx.fillStyle = '#fff7ed';
+                        ctx.font = 'bold ' + Math.max(13, Math.floor(G * 0.26)) + 'px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('污', o.x + o.w / 2, o.y + o.h / 2 + 5);
+                        ctx.textAlign = 'left';
+                        ctx.restore();
+                    } else if(o.type==='skillFx') {
+                        const k = Math.max(0, o.life / (o.maxLife || 1));
+                        ctx.save();
+                        ctx.globalAlpha = Math.min(1, 0.2 + k);
+                        ctx.strokeStyle = o.color || '#f97316';
+                        ctx.lineWidth = 5 + (1 - k) * 6;
+                        ctx.lineCap = 'round';
+                        ctx.shadowBlur = 18;
+                        ctx.shadowColor = o.color || '#f97316';
+                        ctx.beginPath(); ctx.moveTo(o.x1, o.y1); ctx.lineTo(o.x2, o.y2); ctx.stroke();
+                        ctx.fillStyle = o.color || '#f97316';
+                        ctx.beginPath(); ctx.arc(o.x2, o.y2, 12 + (1 - k) * 22, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = '#fff7ed';
+                        ctx.font = 'bold ' + Math.max(12, Math.floor(G * 0.22)) + 'px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(o.label || '技能', (o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2 - 12);
+                        ctx.textAlign = 'left';
+                        ctx.restore();
+                    } else if(o.type==='enemyProjectile') {
+                        const sp = Math.hypot(o.vx || 0, o.vy || 0);
+                        ctx.save();
+                        ctx.shadowBlur = 18;
+                        ctx.shadowColor = o.color || '#f97316';
+                        if (sp > 0.5) {
+                            const tl = 24, tx = o.x - o.vx/sp*tl, ty = o.y - o.vy/sp*tl;
+                            const grad = ctx.createLinearGradient(tx, ty, o.x, o.y);
+                            grad.addColorStop(0, 'rgba(255,255,255,0)');
+                            grad.addColorStop(1, o.color || '#f97316');
+                            ctx.strokeStyle = grad; ctx.lineWidth = 8; ctx.lineCap = 'round';
+                            ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(o.x, o.y); ctx.stroke();
+                        }
+                        ctx.fillStyle = o.color || '#f97316';
+                        ctx.beginPath(); ctx.arc(o.x, o.y, 9, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = '#fff7ed';
+                        ctx.beginPath(); ctx.arc(o.x - 2, o.y - 2, 3, 0, Math.PI*2); ctx.fill();
+                        ctx.restore();
+                    } else if(o.type==='tower') {
                         const towerIcon = (o.up && o.up.icon) || o.data.icon;
-                        const tSprite = ASSETS.get(getTowerAssetId(o.id, o.toolLevel || 1));
+                        const towerAssetId = getTowerAssetId(o.id, o.toolLevel || 1);
+                        const tSprite = ASSETS.get(towerAssetId);
                         if (tSprite) {
                             const age = this.frame - (o.placedFrame || 0);
                             const pop = age < 14 ? 1 + Math.sin(age/14*Math.PI)*0.22 : 1; // 放置弹入
@@ -3320,6 +3615,8 @@
                             ctx.save(); ctx.translate(o.x+G/2, o.y+G/2); ctx.scale(pop, sq);
                             ctx.drawImage(tSprite, -sz/2, -sz/2, sz, sz); ctx.restore();
                             if(o.hp<o.maxHp) { ctx.fillStyle='rgba(255,0,0,0.45)'; ctx.fillRect(o.x+10, o.y+10, G-20, (G-20)*(1-o.hp/o.maxHp)); }
+                        } else if (hasExpectedAsset(towerAssetId)) {
+                            drawMissingPaintedAsset(ctx, o.x + G / 2, o.y + G / 2, G * 0.92, towerIcon, o.data.color);
                         } else {
                         ctx.fillStyle = o.data.color;
                         if(o.data.type==='wall') { ctx.fillRect(o.x+10, o.y+10, G-20, G-20); ctx.strokeStyle='white'; ctx.strokeRect(o.x+10,o.y+10,G-20,G-20); ctx.fillStyle='black'; ctx.font=`${G*0.5}px Arial`; ctx.fillText('🛡️', o.x+G/3.5, o.y+G/1.5); }
@@ -4892,7 +5189,21 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
-    ASSETS.load().then(() => ui.update({})); // 异步预加载精灵，加载完成后绘制自动切换（缺图回退旧画法）
+    isLoading = true;
+    ui.update({ isLoading });
+    const assetLoadPromise = ASSETS.load().then(() => { isLoading = false; ui.update({ isLoading }); });
+
+    function startLevelWhenAssetsReady(idx, loadout) {
+        const begin = () => {
+            isLoading = false;
+            ui.update({ isLoading });
+            engine.startLevel(idx, loadout);
+        };
+        if (ASSETS.ready) { begin(); return; }
+        isLoading = true;
+        ui.update({ isLoading });
+        assetLoadPromise.then(begin);
+    }
 
     // Wire UI events
     ui.onSelectTower = (t) => {
@@ -4967,12 +5278,12 @@
         const fresh = loadGameSave(); toolLevels = fresh.toolLevels || defaultToolLevels(); toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels); // 道具栏显示升级后外观
         gameOverData = null;
         ui.update({ activeLoadout, toolLevels, toolUpgrades, advancedMode, gameOverData });
-        engine.startLevel(idx, activeLoadout);
+        startLevelWhenAssetsReady(idx, activeLoadout);
     };
     // 兼容旧入口（直接开始指定关）
     ui.onStartLevel = (idx) => {
         requestLandscapeMode();
-        engine.startLevel(idx, activeLoadout);
+        startLevelWhenAssetsReady(idx, activeLoadout);
         gameOverData = null;
         ui.update({ gameOverData });
     };

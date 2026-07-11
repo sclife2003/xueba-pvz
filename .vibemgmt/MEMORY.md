@@ -37,6 +37,8 @@
 - [x] PvZ 式存活压力调校：`SCENE_BEAT_PROFILES` 让各场景使用不同波段顺序，`MIN_SURVIVAL_SECONDS` + `getWavePressureMultiplier()` 让怪物按角色、场景波段、pressureLevel 保底存活，避免小怪一出场就被秒杀
 - [x] 收藏馆贴纸/徽章美化：关卡贴纸与敌人贴纸复用 painted enemy WebP，徽章走金属奖章框与红色缎带；已收集/未收集状态有专用卡片、光泽、锁定剪影与稀有度标
 - [x] 印章大招与章间小游戏首轮：每击败 10 只怪获得 1 枚印章，文具可触发专属大招；`MONSTER_SKILL_DESIGN` 规划跑/远程/盾牌/毒气/抢阳光/BOSS 暴走，橡皮盾 CD 减半，章末接入正面射怪小游戏赚下一关开局阳光，题库新增小学 4-5 年级科技题
+- [x] 怪物招式可视化与美术降级修正：怪物专有招式会生成 `skillFx` 光束/爆点，涂鸦怪会生成 2x2 `dirtyZone` 污染区；WebP 失败会回退 PNG，战斗开局等待 painted assets ready，避免退回旧 SVG/程序画风或透明占位
+- [x] PvZ 招式模式落地：`PVZ_ZOMBIE_PATTERN_STUDY` 记录远程投射、跳跃越防线、召唤支援、破盾暴走、重击拆设施等设计参考；远程怪会生成 `enemyProjectile` 延迟命中后排，冲刺怪可 `tryVaultTower()` 跳过第一座设施，支援怪可 `summonSupportEnemies()` 增援同路/邻路压力
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -55,6 +57,8 @@
 - **怪物特色攻击 / 设施破坏**: `SPECIAL_ATTACKS` 覆盖所有非 `elf` 怪物；`MONSTER_ATTACK_PLAN` 将怪物规划为 melee/rush/ranged/support/siege/economy/boss archetype；`findSpecialAttackTarget` 只锁定同路、接近防线的存活文具，`resolveSpecialAttack` 统一处理伤害、静音、射击延迟和能量扣减；`damageTower` 是设施破坏入口（啃咬、红笔点名、紫晶重击、特色攻击都走此路径），方便后续按怪物或关卡调难度。
 - **印章大招 / 文具爆发**: `STAMP_KILLS_REQUIRED = 10`，非友方怪物死亡会通过 `registerEnemyDefeat()` 累积印章（上限 3）。`TOOL_ULTIMATES` 定义课本、铅笔、喷壶、胶水、直尺、橡皮盾、刘老师的专属大招，`releaseStampUltimate(toolId)` 负责消耗印章并触发全场资源、射速、伤害、减速、横扫、回血或定身效果。
 - **章间小游戏**: `chapterMinigameForCompletedLevel(levelIdx)` 会在主线 chapter 切换时返回 `CHAPTER_MINIGAMES` 配置；结算页先进入 `minigame` phase，玩家正面视角点击飞来的怪物赚 `rewardEarned`，`finishChapterMinigame()` 把结果写入 `pendingSunBonus`，下一关 `startLevel()` 自动把这笔阳光加到开局能量。
+- **图片加载保护 / 招式可视化**: `ASSETS.load()` 对 WebP 失败会尝试同名 PNG，`startLevelWhenAssetsReady()` 确保进入战斗前 high-quality painted assets 已 ready。若某张预期资产仍缺失，战场使用 `drawMissingPaintedAsset()` 中性占位，不再回退旧 SVG/程序绘图。`resolveSpecialAttack()` 会调用 `spawnSpecialFx()`，涂鸦类技能会额外 `spawnDirtyZone()`，污染区每隔一段时间沉默并伤害范围内文具。
+- **PvZ 启发怪物招式模式**: `PVZ_ZOMBIE_PATTERN_STUDY` 保留招式研究结论；`PVZ_SPECIAL_ATTACK_UPGRADES` 把远程怪转为 `projectile + targeting:'backline'`，把 hallpass/bat/jump_rope 转为 `vault`，把 whistle 转为 `summon:'slime'`。Runtime 入口为 `spawnEnemyProjectile()` / `updateEnemyProjectile()`、`tryVaultTower()`、`summonSupportEnemies()`，分别制造延迟投射物、越过第一座阻挡设施、召唤同路/邻路支援怪。
 - **BOSS 机制**: `BOSS_MECHANICS` 管理 sunshine/deadline/boss。阳光怪(sunSteal)会抢场上 orb，每 5 个阳光叠 1 层，攻击与速度 +20%；监考官(boss)高血量，保留 focusDrain 红笔点名，并在低血量触发 rageRush 暴走 5 秒，攻击与速度 +30%；deadline 复用 rageRush 作为考场压迫型小 Boss。
 - **超级大魔王**: `super_boss` / 「紫晶魔铠王」是 4-2 signature 最终 Boss，runtime 使用 `enemy_super_boss_painted.webp` 与 `spriteScale:1.82`。能力 `titanOverdrive`：高血量阶段紫晶护盾减伤、周期性巨剑重击同路最前文具，低血量走 `BOSS_MECHANICS.super_boss.rageRush` 暴走。
 - **怪物美术方向**: 最终品质怪物使用 `assets/sprites/enemy_*_painted.webp` 精致 runtime raster sprite（透明背景、厚涂光影、清晰剪影），PNG 源图保留在同目录，手写 SVG 只当机制占位或 fallback。`SPRITE_MANIFEST` 现在覆盖所有 `ENEMIES`（包含原本缺 manifest 的 `note` / `doodle`），并全量指向 painted WebP。
