@@ -97,6 +97,27 @@ assert(script.includes('specialCd: 45 + Math.floor(Math.random() * 55)'), 'enemy
 assert(script.includes('if (o.silenceTimer > 0) {'), 'tower silence state is consumed in the update loop');
 assert(script.includes('o.eatCd = 24;'), 'bite damage cadence is explicit');
 assert(script.includes("t.type==='tower' && t.hp > 0 && !t.destroyed"), 'eating finder ignores destroyed towers');
+assert(script.includes('function levelStickerAsset(level)'), 'collection level stickers use scene/signature art');
+assert(script.includes("asset: 'enemy_' + id"), 'enemy stickers reuse painted enemy assets');
+assert(script.includes("frameKind: 'badge'"), 'badge entries use dedicated medal frames');
+assert(html.includes('.collection-card--owned'), 'collection cards have premium owned styling');
+assert(html.includes('.collection-art--badge'), 'badge art has a dedicated presentation frame');
+assert(html.includes('collectionShimmer'), 'collection cards include gloss/shimmer treatment');
+assert(script.includes("eraser: { id: 'eraser'") && script.includes('recharge: 300'), 'eraser shield cooldown is reduced to 300 frames');
+assert(script.includes('const MONSTER_SKILL_DESIGN = {'), 'monster dedicated skill design table exists');
+assert(script.includes("poisonGas"), 'monster skill planning includes poison gas pressure');
+assert(script.includes('const STAMP_KILLS_REQUIRED = 10'), 'stamp ultimate charges every 10 defeated monsters');
+assert(script.includes('const TOOL_ULTIMATES = {'), 'tool ultimate design table exists');
+assert(script.includes('releaseStampUltimate(toolId)'), 'stamp ultimate release function exists');
+assert(script.includes('this.registerEnemyDefeat(o);'), 'enemy defeat routes through stamp charge handler');
+assert(script.includes('const CHAPTER_MINIGAMES = {'), 'chapter interval sunlight minigame plan exists');
+assert(script.includes('function chapterMinigameForCompletedLevel(levelIdx)'), 'chapter interval minigame boundary helper exists');
+assert(script.includes("this.phase = 'minigame'"), 'chapter interval minigame has an active phase');
+assert(script.includes('startChapterMinigame(levelIdx, nextLevelIdx)'), 'chapter interval minigame can be started');
+assert(script.includes('handleMinigameInput(type, x, y)'), 'chapter interval minigame handles shooting input');
+assert(script.includes('finishChapterMinigame()'), 'chapter interval minigame has a reward finish path');
+assert(script.includes('pendingSunBonus'), 'chapter interval minigame carries sunlight into the next level');
+assert(script.includes("subject: '科技'"), 'question bank includes technology questions for grades 4-5');
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Game contracts verified.');

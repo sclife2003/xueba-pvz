@@ -103,6 +103,168 @@
         background: #F6D365 !important; color: #5b4636 !important;
         border: 1px solid #d9a93f !important; box-shadow: 0 4px 12px rgba(0,0,0,0.22) !important;
       }
+      @keyframes collectionShimmer {
+        0% { transform: translateX(-140%) rotate(18deg); opacity: 0; }
+        45% { opacity: 0.45; }
+        100% { transform: translateX(140%) rotate(18deg); opacity: 0; }
+      }
+      .collection-section {
+        padding: 4px 0 8px;
+        border-top: 1px solid rgba(247,243,232,0.18);
+      }
+      .collection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 10px;
+      }
+      .collection-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 142px;
+        border-radius: 8px;
+        padding: 10px 8px 9px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        isolation: isolate;
+        transition: transform 160ms ease, border-color 160ms ease, filter 160ms ease;
+      }
+      .collection-card::before {
+        content: "";
+        position: absolute;
+        inset: -35% auto -35% -55%;
+        width: 46%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+        animation: collectionShimmer 4.8s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 3;
+      }
+      .collection-card::after {
+        content: "";
+        position: absolute;
+        inset: 7px;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.16);
+        pointer-events: none;
+        z-index: 2;
+      }
+      .collection-card--owned {
+        border: 2px solid rgba(246,211,101,0.92);
+        background:
+          radial-gradient(circle at 24% 12%, rgba(255,255,255,0.34), transparent 26%),
+          linear-gradient(145deg, rgba(47,107,79,0.96), rgba(33,71,61,0.98) 54%, rgba(91,65,45,0.94));
+        box-shadow: 0 12px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.28);
+      }
+      .collection-card--locked {
+        border: 2px solid rgba(148,163,184,0.3);
+        background: linear-gradient(145deg, rgba(15,23,42,0.78), rgba(30,41,59,0.9));
+        filter: saturate(0.45);
+      }
+      .collection-card:hover {
+        transform: translateY(-2px);
+      }
+      .collection-art {
+        position: relative;
+        width: 74px;
+        height: 74px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .collection-art img {
+        position: relative;
+        z-index: 2;
+        max-width: 92%;
+        max-height: 92%;
+        object-fit: contain;
+      }
+      .collection-art--sticker {
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 28% 18%, rgba(255,255,255,0.72), transparent 26%),
+          linear-gradient(145deg, #fff7d6, #f2c969 58%, #d4893f);
+        border: 2px solid rgba(255,255,255,0.74);
+        box-shadow: 0 8px 14px rgba(0,0,0,0.28), inset 0 -5px 0 rgba(120,53,15,0.14);
+        transform: rotate(-2deg);
+      }
+      .collection-art--badge {
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 36% 26%, #fff8cf 0 13%, transparent 14%),
+          conic-gradient(from 18deg, #7c2d12, #fbbf24, #fff4b0, #b45309, #f59e0b, #7c2d12);
+        border: 3px solid #fff2a8;
+        box-shadow: 0 0 0 4px rgba(146,64,14,0.54), 0 12px 24px rgba(0,0,0,0.36);
+      }
+      .collection-art--badge::after {
+        content: "";
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: -13px;
+        height: 24px;
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        clip-path: polygon(0 0, 50% 34%, 100% 0, 86% 100%, 50% 70%, 14% 100%);
+        z-index: 1;
+        filter: drop-shadow(0 4px 5px rgba(0,0,0,0.32));
+      }
+      .collection-label {
+        color: #fff7ed;
+        font-size: 12px;
+        font-weight: 900;
+        text-align: center;
+        line-height: 1.22;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.38);
+        min-height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .collection-rarity {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        z-index: 4;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.68);
+        border: 1px solid rgba(255,255,255,0.22);
+        color: #fde68a;
+        font-size: 9px;
+        font-weight: 900;
+      }
+      .collection-owned-mark {
+        position: absolute;
+        left: 7px;
+        top: 7px;
+        z-index: 4;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #22c55e;
+        color: white;
+        font-size: 14px;
+        font-weight: 900;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.26);
+      }
+      .collection-lock {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255,255,255,0.88);
+        font-size: 24px;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+      }
     </style>
 </head>
 <body>
@@ -161,7 +323,7 @@
       watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100, desc: '高攻速低伤，连续扫射', use: '对付成群的小怪', counter: '蝙蝠等小怪群' },
       glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150, desc: '命中后减速敌人', use: '放在快速敌人的来路前段', counter: '高速敌人' },
       ruler: { id: 'ruler', name: '直尺穿线', cost: 125, type: 'shoot', range: 99, rate: 62, dmg: 34, color: '#f97316', icon: '📏', pierce: true, pierceCount: 2, recharge: 120, desc: '直线穿透攻击同一路多名敌人', use: '敌人排队推进时放在后排打整条线', counter: '排队推进的混合怪' },
-      eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 600, desc: '高血量肉盾，阻挡推进', use: '挡在主力塔前方拖延', counter: '铁桶怪 / 魔王压线' },
+      eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 300, desc: '高血量肉盾，阻挡推进', use: '挡在主力塔前方拖延', counter: '铁桶怪 / 魔王压线' },
       teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
 
@@ -214,6 +376,33 @@
       deadline: { label: '截止铃冲撞', interval: 110, range: 1.45, damageScale: 1.45, silenceFrames: 45, color: '#ef4444' },
       super_boss: { label: '紫晶斩', interval: 130, range: 2.2, damageScale: 1.35, silenceFrames: 60, color: '#8b5cf6' },
       boss: { label: '红笔拆防', interval: 135, range: 2.0, damageScale: 1.3, cdPenalty: 80, color: '#e53e3e' }
+    };
+
+    const MONSTER_SKILL_DESIGN = {
+      runner: { label: '跑', lesson: '短时间冲刺换线，逼玩家提前放胶水或补路', examples: ['bat', 'jump_rope', 'hallpass'] },
+      ranged: { label: '远程', lesson: '在接触前干扰后排，让纯前排肉盾不再万能', examples: ['note', 'bookmark', 'paperstorm'] },
+      shield: { label: '盾牌', lesson: '前半血减伤，要求玩家用穿透、爆发或集火处理', examples: ['tank', 'quizpaper', 'bookstack'] },
+      poisonGas: { label: '毒气', lesson: '污染 2x2 区域，站在里面的文具短暂停摆并持续受损', examples: ['doodle', 'quiet'] },
+      economySteal: { label: '抢阳光', lesson: '抢走掉落能量并强化自己，逼玩家及时收集资源', examples: ['sunshine'] },
+      bossRage: { label: '暴走', lesson: '低血量阶段爆发推进，要求保留印章大招或老师技能', examples: ['deadline', 'boss', 'super_boss'] }
+    };
+
+    const CHAPTER_MINIGAMES = {
+      classroom: { id: 'chalk_shooter', title: '粉笔快射', reward: 120, prompt: '正面视角射掉飞来的小怪，命中越多阳光越多' },
+      playground: { id: 'relay_target', title: '操场靶场', reward: 150, prompt: '横向移动准星，打中冲刺怪赚阳光' },
+      library: { id: 'quiet_snipe', title: '安静狙击', reward: 150, prompt: '在不惊动图书馆的节奏里点掉安静魔' },
+      exam: { id: 'exam_defense', title: '考场防线', reward: 180, prompt: '正面视角挡住试卷风暴，给最终关补资源' }
+    };
+
+    const STAMP_KILLS_REQUIRED = 10;
+    const TOOL_ULTIMATES = {
+      textbook: { label: '知识暴雨', desc: '立刻掉落大量阳光，并让课本短时间产能加速' },
+      pencil: { label: '铅笔连射', desc: '全场铅笔短时间双倍射速' },
+      watering: { label: '喷壶暴雨', desc: '对全场敌人造成多段伤害' },
+      glue: { label: '全场胶水', desc: '所有敌人强力减速' },
+      ruler: { label: '直尺横扫', desc: '每一行发出穿透打击' },
+      eraser: { label: '橡皮堡垒', desc: '所有橡皮盾回血并临时加厚' },
+      teacher: { label: '刘老师总复习', desc: '全场定身并重击 Boss' }
     };
 
     const MONSTER_ATTACK_PLAN = {
@@ -731,6 +920,14 @@
         const last = LEVELS[CAMPAIGN_COUNT - 1];
         return !!(last && results && results[last.id] && (results[last.id].stars || 0) > 0);
     }
+    function chapterMinigameForCompletedLevel(levelIdx) {
+        const level = LEVELS[levelIdx], next = LEVELS[levelIdx + 1];
+        if (!level || !next || level.isChallenge || next.isChallenge) return null;
+        if (levelIdx + 1 >= CAMPAIGN_COUNT || level.chapterId === next.chapterId) return null;
+        const cfg = CHAPTER_MINIGAMES[level.chapterId];
+        if (!cfg) return null;
+        return { ...cfg, chapterId: level.chapterId, nextChapterId: next.chapterId, levelIdx, nextLevelIdx: levelIdx + 1 };
+    }
     // 取关卡友善显示名（去掉「第N章：」前缀与「(难度)」括号）
     // 友善关卡名：去掉「第N章：」前缀与「(难度)」括号，避免「困难/炼狱」等压迫词出现在小学生面前
     function friendlyName(fullName) {
@@ -1163,7 +1360,14 @@
         { q: "影子是怎么形成的？", a: [{t:"光被挡住",ok:1},{t:"风吹来的",ok:0},{t:"水变的",ok:0}], subject: '科学' },
         { q: "一年有几个季节？", a: [{t:"4",ok:1},{t:"3",ok:0},{t:"5",ok:0}], subject: '科学' },
         { q: "鱼用什么呼吸？", a: [{t:"鳃",ok:1},{t:"肺",ok:0},{t:"鼻子",ok:0}], subject: '科学' },
-        { q: "下雨前天空通常？", a: [{t:"乌云密布",ok:1},{t:"万里无云",ok:0},{t:"满天星星",ok:0}], subject: '科学' }
+        { q: "下雨前天空通常？", a: [{t:"乌云密布",ok:1},{t:"万里无云",ok:0},{t:"满天星星",ok:0}], subject: '科学' },
+        // 科技（小学四五年级）
+        { q: "电脑里的 CPU 主要负责？", a: [{t:"计算和控制",ok:1},{t:"喷墨打印",ok:0},{t:"发出香味",ok:0}], subject: '科技' },
+        { q: "机器人用传感器是为了？", a: [{t:"感知环境",ok:1},{t:"吃东西",ok:0},{t:"睡觉",ok:0}], subject: '科技' },
+        { q: "太阳能电池板把阳光变成？", a: [{t:"电能",ok:1},{t:"声音",ok:0},{t:"纸张",ok:0}], subject: '科技' },
+        { q: "3D 打印通常是一层层制造什么？", a: [{t:"物体",ok:1},{t:"风",ok:0},{t:"水滴",ok:0}], subject: '科技' },
+        { q: "互联网可以帮助我们？", a: [{t:"传递信息",ok:1},{t:"改变重力",ok:0},{t:"让水结冰",ok:0}], subject: '科技' },
+        { q: "无人机飞行常用什么定位？", a: [{t:"GPS",ok:1},{t:"温度计",ok:0},{t:"尺子",ok:0}], subject: '科技' }
     ];
     STATIC_QUESTIONS.push(...EXTRA_QUESTIONS);
     // 既有题用平行 STATIC_SUBJECTS 对齐；新题自带 inline subject（优先采用）
@@ -1391,6 +1595,8 @@
             this.combatPaused = false; // 战斗答题/选奖励时暂停战场
             this.freeNextTower = false; // 「免费布置」奖励：下一个塔免费
             this.starTimer = 600; // 知识星掉落计时
+            this.minigame = null;
+            this.pendingSunBonus = 0;
             // ----- Phase 2.5 策略深度状态 -----
             this.activeLoadout = Object.keys(TOWERS); // 本关可用文具（loadout），默认全配
             this.teacherCharge = 0; this.teacherMax = 100; this.teacherReady = false; // 班主任技能槽
@@ -1518,7 +1724,9 @@
             this.levelIdx = idx; this.waveIdx = 0;
             // 主线由关卡自动给文具，不出现配装选择；研究所未来可继续传入 loadout。
             this.activeLoadout = (loadout && loadout.length) ? loadout.slice() : ((LEVELS[idx] && LEVELS[idx].mainlineLoadout) || Object.keys(TOWERS)).slice();
-            const startMp = 400 + Math.round(((LEVELS[idx].difficulty || 1) - 1) * 300);
+            const sunBonus = this.pendingSunBonus || 0;
+            this.pendingSunBonus = 0;
+            const startMp = 400 + Math.round(((LEVELS[idx].difficulty || 1) - 1) * 300) + sunBonus;
             if (isContinuation) {
                 this.mp = Math.max(startMp, this.mp);
             } else {
@@ -1530,6 +1738,7 @@
             this.objs = []; this.particles = []; this.savedTowers = []; this.towerCooldowns = {};
             this.combatPaused = false; this.freeNextTower = false; this.starTimer = 600; this.laneRescueUsed = {};
             this.teacherCharge = 0; this.teacherReady = false; this.freezeTimer = 0; this.clearField();
+            this.stamps = 0; this.stampKills = 0;
             // Phase 4：重置星级计数与 Boss/挑战状态
             this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
             // Phase C：本关学科统计 + 本关错题（错题仅本关、不存档）
@@ -1541,6 +1750,7 @@
             this.startTD();
             this.callbacks.onPhaseChange('td');
             this.updateStats();
+            if (sunBonus > 0) this.floatText('章间小游戏 +' + sunBonus + ' 阳光', this.w / 2, this.OY + this.G * 0.7, '#F6D365', 110, 28);
             this.syncSave();
         }
 
@@ -1565,6 +1775,10 @@
         }
 
         handleInput(type, x, y) {
+            if (this.phase === 'minigame') {
+                this.handleMinigameInput(type, x, y);
+                return;
+            }
             if (type === 'start') {
                 this.touchStart = { x, y };
                 if (this.phase === 'maze') this.mazeTap(x, y);
@@ -1574,6 +1788,127 @@
             } else if (type === 'end') {
                 this.touchStart = null; this.currentTouch = null;
             }
+        }
+
+        startChapterMinigame(levelIdx, nextLevelIdx) {
+            const cfg = chapterMinigameForCompletedLevel(levelIdx);
+            if (!cfg) return false;
+            this.objs = []; this.particles = []; this.floatTexts = [];
+            this.minigame = {
+                ...cfg,
+                nextLevelIdx: typeof nextLevelIdx === 'number' ? nextLevelIdx : cfg.nextLevelIdx,
+                time: 900,
+                maxTime: 900,
+                score: 0,
+                hits: 0,
+                shots: 0,
+                rewardEarned: 0,
+                spawnTimer: 18,
+                targets: [],
+                crosshair: { x: this.w / 2, y: this.h / 2 }
+            };
+            this.phase = 'minigame';
+            this.callbacks.onPhaseChange('minigame');
+            this.callbacks.onMinigameState && this.callbacks.onMinigameState(this.minigame);
+            SOUND.play('tap');
+            return true;
+        }
+
+        minigamePointFromScreen(sx, sy) {
+            const rect = this.canvas.getBoundingClientRect();
+            return {
+                x: (sx - rect.left) * (this.w / rect.width),
+                y: (sy - rect.top) * (this.h / rect.height)
+            };
+        }
+
+        spawnMinigameTarget() {
+            if (!this.minigame) return;
+            const lane = Math.random();
+            const x = this.w * (0.18 + lane * 0.64);
+            const y = this.h * (0.28 + Math.random() * 0.18);
+            const kind = Math.random() < 0.22 ? 'fast' : (Math.random() < 0.38 ? 'shield' : 'normal');
+            const radius = kind === 'shield' ? 34 : 27;
+            const hp = kind === 'shield' ? 2 : 1;
+            this.minigame.targets.push({
+                x, y, radius, hp, maxHp: hp,
+                vx: (Math.random() - 0.5) * (kind === 'fast' ? 3.6 : 1.8),
+                vy: kind === 'fast' ? 2.7 : 1.7,
+                life: 210,
+                maxLife: 210,
+                color: kind === 'shield' ? '#94a3b8' : (kind === 'fast' ? '#f97316' : '#a855f7'),
+                kind
+            });
+        }
+
+        handleMinigameInput(type, x, y) {
+            if (!this.minigame || type === 'end') return;
+            const p = this.minigamePointFromScreen(x, y);
+            this.minigame.crosshair = p;
+            if (type !== 'start') {
+                this.callbacks.onMinigameState && this.callbacks.onMinigameState(this.minigame);
+                return;
+            }
+            this.minigame.shots++;
+            let hitIndex = -1, best = Infinity;
+            this.minigame.targets.forEach((t, i) => {
+                const d = Math.hypot(t.x - p.x, t.y - p.y);
+                if (d <= t.radius + 18 && d < best) { best = d; hitIndex = i; }
+            });
+            if (hitIndex >= 0) {
+                const t = this.minigame.targets[hitIndex];
+                t.hp--;
+                this.spawnParticles(t.x, t.y, '#F6D365', 9);
+                if (t.hp <= 0) {
+                    this.minigame.targets.splice(hitIndex, 1);
+                    this.minigame.hits++;
+                    this.minigame.score += t.kind === 'fast' ? 45 : (t.kind === 'shield' ? 55 : 35);
+                    this.minigame.rewardEarned = Math.min(this.minigame.reward, this.minigame.hits * 30);
+                    this.floatText('+30 阳光', t.x, t.y, '#F6D365', 42, 20);
+                    SOUND.play('hit');
+                }
+            } else {
+                SOUND.play('tap');
+            }
+            this.callbacks.onMinigameState && this.callbacks.onMinigameState(this.minigame);
+        }
+
+        updateChapterMinigame() {
+            if (!this.minigame) return;
+            this.frame++;
+            this.minigame.time--;
+            this.minigame.spawnTimer--;
+            if (this.minigame.spawnTimer <= 0) {
+                this.spawnMinigameTarget();
+                this.minigame.spawnTimer = Math.max(24, 58 - Math.floor((1 - this.minigame.time / this.minigame.maxTime) * 22));
+            }
+            for (let i = this.minigame.targets.length - 1; i >= 0; i--) {
+                const t = this.minigame.targets[i];
+                t.x += t.vx; t.y += t.vy; t.radius += 0.035; t.life--;
+                if (t.x < t.radius || t.x > this.w - t.radius) t.vx *= -1;
+                if (t.life <= 0 || t.y > this.h + t.radius) this.minigame.targets.splice(i, 1);
+            }
+            for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
+            for(let i=this.particles.length-1; i>=0; i--) { const p=this.particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life--; if(p.life<=0) this.particles.splice(i,1); }
+            if (this.frame % 10 === 0) this.callbacks.onMinigameState && this.callbacks.onMinigameState(this.minigame);
+            if (this.minigame.time <= 0) this.finishChapterMinigame();
+        }
+
+        finishChapterMinigame() {
+            if (!this.minigame) return;
+            const result = {
+                reward: Math.min(this.minigame.reward, this.minigame.rewardEarned || 0),
+                hits: this.minigame.hits,
+                shots: this.minigame.shots,
+                nextLevelIdx: this.minigame.nextLevelIdx,
+                title: this.minigame.title
+            };
+            this.pendingSunBonus = result.reward;
+            this.minigame = null;
+            this.phase = 'level_complete';
+            this.callbacks.onMinigameComplete && this.callbacks.onMinigameComplete(result);
+            this.callbacks.onPhaseChange('level_complete');
+            SOUND.play('reward');
         }
 
         // 屏幕坐标 -> 迷宫格子，点击可走格则自动寻路过去
@@ -1884,6 +2219,57 @@
             if (sourceColor) this.spawnParticles(enemy.x, enemy.y, sourceColor, 4);
         }
 
+        registerEnemyDefeat(enemy) {
+            if (!enemy || enemy.id === 'elf') return;
+            this.stampKills = (this.stampKills || 0) + 1;
+            if (this.stampKills >= STAMP_KILLS_REQUIRED) {
+                this.stampKills -= STAMP_KILLS_REQUIRED;
+                this.stamps = Math.min(3, (this.stamps || 0) + 1);
+                this.floatText('获得 1 枚印章！', this.w / 2, this.OY + 28, '#F6D365', 70, 26);
+                this.spawnParticles(this.w / 2, this.OY + 42, '#F6D365', 20);
+            }
+            this.pushCombatState();
+        }
+
+        releaseStampUltimate(toolId) {
+            if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0) return false;
+            const id = toolId || this.selectedTower || (this.activeLoadout && this.activeLoadout[0]) || 'pencil';
+            const meta = TOOL_ULTIMATES[id] || TOOL_ULTIMATES.pencil;
+            this.stamps = Math.max(0, (this.stamps || 0) - 1);
+            if (id === 'textbook') {
+                for (let i = 0; i < 5; i++) this.spawnOrb(this.OX + this.G * (1 + Math.random() * Math.max(1, this.C - 2)), this.OY + this.G * (0.6 + Math.random() * Math.max(1, this.R - 1)), 45);
+                this.objs.forEach(o => { if (o.type === 'tower' && o.id === 'textbook') o.cd = Math.max(0, (o.cd || 0) - 160); });
+            } else if (id === 'pencil') {
+                this.objs.forEach(o => { if (o.type === 'tower' && o.id === 'pencil') o.ultimateTimer = Math.max(o.ultimateTimer || 0, 420); });
+            } else if (id === 'watering') {
+                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, 520, '#38bdf8'); });
+            } else if (id === 'glue') {
+                this.objs.forEach(o => { if (o.type === 'enemy') o.slowTimer = Math.max(o.slowTimer || 0, 520); });
+            } else if (id === 'ruler') {
+                for (let r = 0; r < this.R; r++) {
+                    this.objs.forEach(o => { if (o.type === 'enemy' && o.r === r) this.damageEnemy(o, 620, '#f97316'); });
+                    this.objs.push({ type: 'bullet', x: this.OX, y: this.OY + r * this.G + this.G / 2, dmg: 0, color: '#f97316', vx: 22, vy: 0, pierceVisual: true, life: 30 });
+                }
+            } else if (id === 'eraser') {
+                this.objs.forEach(o => {
+                    if (o.type === 'tower' && o.id === 'eraser') {
+                        const add = Math.round(o.maxHp * 0.35);
+                        o.maxHp += add; o.hp = Math.min(o.maxHp, o.hp + add + 900);
+                        o.hitFlash = Math.max(o.hitFlash || 0, 16);
+                    }
+                });
+            } else if (id === 'teacher') {
+                this.freezeTimer = Math.max(this.freezeTimer || 0, 240);
+                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, o.data && o.data.role === 'boss' ? 1600 : 760, '#F56565'); });
+            } else {
+                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, 500, '#F6D365'); });
+            }
+            this.floatText('印章大招：' + meta.label, this.w / 2, this.h / 2, '#F6D365', 92, 30);
+            this.spawnParticles(this.w / 2, this.h / 2, '#F6D365', 34);
+            this.pushCombatState();
+            return true;
+        }
+
         damageTower(tower, amount, sourceColor, label, size = 20) {
             if (!tower || tower.type !== 'tower' || tower.destroyed) return false;
             const dmg = Math.max(1, Math.round(amount || 1));
@@ -2021,9 +2407,10 @@
             if (this.waveIdx >= lvl.waves.length) {
                 const result = this.computeAndSaveStars();
                 const isLastCampaign = !lvl.isChallenge && this.levelIdx >= CAMPAIGN_COUNT - 1;
+                const minigame = chapterMinigameForCompletedLevel(this.levelIdx);
                 if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) this.syncSave({ unlockedLevel: this.levelIdx + 1 });
                 else this.syncSave();
-                this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign }, result));
+                this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign, minigame }, result));
                 this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete'); SOUND.play('clear');
                 this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);
             } else { this.startTD(); }
@@ -2188,7 +2575,10 @@
             this.callbacks.onCombatState && this.callbacks.onCombatState({
                 teacherCharge: this.teacherCharge / this.teacherMax,
                 teacherReady: this.teacherReady,
-                waitWave: this.waitNextWave !== null && this.waitNextWave > 0
+                waitWave: this.waitNextWave !== null && this.waitNextWave > 0,
+                stamps: this.stamps || 0,
+                stampKills: this.stampKills || 0,
+                stampProgress: (this.stampKills || 0) / STAMP_KILLS_REQUIRED
             });
         }
 
@@ -2216,6 +2606,10 @@
         floatText(text, x, y, color, life = 50, size = 24) { this.floatTexts.push({ text, x, y, color, life, size }); }
 
         update() {
+            if (this.phase === 'minigame') {
+                this.updateChapterMinigame();
+                return;
+            }
             if (this.phase === 'over' || this.phase === 'level_complete' || this.phase === 'rescue_quiz') return;
             if (isOrientationBlocked(this.phase)) return;
             if (this.combatPaused) return; // 战斗答题/选奖励时冻结战场
@@ -2316,6 +2710,7 @@
                     else if (o.type === 'tower') {
                         if (o.hp <= 0 || o.destroyed) { this.objs.splice(i,1); continue; }
                         if (o.hitFlash > 0) o.hitFlash--;
+                        if (o.ultimateTimer > 0) o.ultimateTimer--;
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
                             const bombDmg = o.atkOverride || o.data.dmg;
@@ -2328,7 +2723,7 @@
                         }
                         else if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, o.orbValueOverride || 40); o.cd=0; } }
                         else if (o.data.type === 'shoot') {
-                            const atk = o.atkOverride || o.data.dmg, fireRate = o.rateOverride || o.data.rate, slowDur = o.slowDurOverride || 180;
+                            const atk = o.atkOverride || o.data.dmg, baseFireRate = o.rateOverride || o.data.rate, fireRate = o.ultimateTimer > 0 ? Math.max(4, Math.round(baseFireRate * 0.5)) : baseFireRate, slowDur = o.slowDurOverride || 180;
                             o.cd--; if(o.cd<=0) {
                                 const rowTargets = this.objs.filter(e => e.type === 'enemy' && e.r === o.r && e.x > o.x).sort((a, b) => a.x - b.x);
                                 const target = rowTargets[0];
@@ -2499,7 +2894,7 @@
                             if (this.triggerLaneRescue(o)) continue;
                             this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e');
                         }
-                        else if(o.hp<=0) { this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); if(o.id!=='elf') this.chargeTeacher(3); this.objs.splice(i,1); }
+                        else if(o.hp<=0) { this.registerEnemyDefeat(o); this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); if(o.id!=='elf') this.chargeTeacher(3); this.objs.splice(i,1); }
                     }
                     else if (o.type === 'bullet') {
                         let dx = o.vx, dy = o.vy;
@@ -2808,6 +3203,54 @@
             }
         }
 
+        drawChapterMinigame(ctx) {
+            const mg = this.minigame, w = this.w, h = this.h;
+            const bg = ctx.createLinearGradient(0, 0, 0, h);
+            bg.addColorStop(0, '#38bdf8'); bg.addColorStop(0.45, '#bfdbfe'); bg.addColorStop(0.46, '#84cc16'); bg.addColorStop(1, '#15803d');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            for (let i = 0; i < 5; i++) {
+                const cx = (i * 220 + this.frame * 0.18) % (w + 180) - 90, cy = 50 + (i % 3) * 34;
+                ctx.beginPath(); ctx.ellipse(cx, cy, 54, 18, 0, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(21,128,61,0.24)';
+            for (let i = 0; i < 8; i++) {
+                const x = i * w / 7;
+                ctx.beginPath(); ctx.moveTo(w / 2, h * 0.42); ctx.lineTo(x, h); ctx.lineTo(x + w / 12, h); ctx.closePath(); ctx.fill();
+            }
+            ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center';
+            ctx.font = 'bold ' + Math.max(20, Math.floor(w * 0.028)) + 'px Arial';
+            ctx.fillText((mg && mg.title) || '阳光小游戏', w / 2, 44);
+            ctx.font = 'bold ' + Math.max(15, Math.floor(w * 0.018)) + 'px Arial';
+            ctx.fillStyle = '#fff7ed';
+            ctx.fillText('点击飞来的怪物，命中越多，下一关开局阳光越多', w / 2, 74);
+            (mg && mg.targets || []).forEach(t => {
+                const pulse = 1 + Math.sin(this.frame * 0.16 + t.x) * 0.04;
+                ctx.save(); ctx.translate(t.x, t.y); ctx.scale(pulse, pulse);
+                ctx.shadowBlur = 18; ctx.shadowColor = t.color; ctx.fillStyle = t.color;
+                if (t.kind === 'shield') {
+                    ctx.beginPath();
+                    ctx.moveTo(0, -t.radius); ctx.lineTo(t.radius * 0.82, -t.radius * 0.28); ctx.lineTo(t.radius * 0.54, t.radius * 0.9); ctx.lineTo(-t.radius * 0.54, t.radius * 0.9); ctx.lineTo(-t.radius * 0.82, -t.radius * 0.28); ctx.closePath();
+                    ctx.fill(); ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 4; ctx.stroke();
+                } else {
+                    ctx.beginPath(); ctx.arc(0, 0, t.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = t.kind === 'fast' ? '#7c2d12' : '#312e81';
+                    ctx.beginPath(); ctx.arc(-t.radius * 0.26, -t.radius * 0.08, 4, 0, Math.PI * 2); ctx.arc(t.radius * 0.26, -t.radius * 0.08, 4, 0, Math.PI * 2); ctx.fill();
+                }
+                if (t.hp > 1) {
+                    ctx.fillStyle = '#fef3c7'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.fillText('盾', 0, 7);
+                }
+                ctx.restore();
+            });
+            const aim = mg && mg.crosshair ? mg.crosshair : { x: w / 2, y: h / 2 };
+            ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(aim.x, aim.y, 22, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(aim.x - 32, aim.y); ctx.lineTo(aim.x - 10, aim.y); ctx.moveTo(aim.x + 10, aim.y); ctx.lineTo(aim.x + 32, aim.y);
+            ctx.moveTo(aim.x, aim.y - 32); ctx.lineTo(aim.x, aim.y - 10); ctx.moveTo(aim.x, aim.y + 10); ctx.lineTo(aim.x, aim.y + 32);
+            ctx.stroke(); ctx.textAlign = 'left';
+        }
+
         draw() {
             if (!this.ctx) return;
             const ctx = this.ctx, G = this.G;
@@ -2932,6 +3375,8 @@
                         ctx.restore();
                     }
                 });
+            } else if (this.phase === 'minigame' && this.minigame) {
+                this.drawChapterMinigame(ctx);
             } else if (this.phase === 'maze' && this.maze) {
                 const m = this.maze, cs = m.cs, mx = m.mx, my = m.my;
                 for(let y=0; y<m.h; y++) for(let x=0; x<m.w; x++) {
@@ -2998,6 +3443,7 @@
             this.waveIntro = null;
             this.rewardCards = null;
             this.combatToast = null;
+            this.minigameData = null;
             this.isLoading = false;
             this.unlockedLevel = 0;
             this.isLandscape = window.innerWidth > window.innerHeight;
@@ -3016,6 +3462,9 @@
             this.prepLoadout = [];      // 备战画面当前勾选的 loadout（仅进阶模式用）
             this.teacherCharge = 0;     // 班主任技能槽进度 0-1
             this.teacherReady = false;
+            this.stamps = 0;
+            this.stampKills = 0;
+            this.stampProgress = 0;
             this.waitWave = false;      // 是否显示「提前上课」按钮
             this.fieldSel = null;       // 选中的场上单位（升级面板）
             this.results = {};          // Phase 4：关卡星级最佳成绩
@@ -3038,7 +3487,9 @@
             this.onConfirmPrep = null;  // intro 完成 → 开始战斗
             this.onEarlyCall = null;    // 提前上课
             this.onTeacherSkill = null; // 释放班主任技能
+            this.onStampUltimate = null; // 释放印章大招
             this.onUpgrade = null;      // 关卡内升级
+            this.onStartMinigame = null; // 章间阳光小游戏
             this.onRetry = null;        // 重玩本关
             this.render();
         }
@@ -3251,7 +3702,7 @@
             const badges = this.badges || {};
             const wrap = this.el('div', {
                 position:'absolute', inset:'0', zIndex:'56', overflowY:'auto', overflowX:'hidden', pointerEvents:'auto',
-                background:'linear-gradient(135deg, #312e81 0%, #581c87 50%, #1e293b 100%)',
+                background:'radial-gradient(circle at 18% 10%, rgba(246,211,101,0.24), transparent 28%), radial-gradient(circle at 82% 4%, rgba(72,144,226,0.18), transparent 24%), linear-gradient(135deg, #12362e 0%, #275b46 48%, #6e422b 100%)',
                 display:'flex', justifyContent:'center', boxSizing:'border-box',
                 padding:'calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))'
             });
@@ -3284,57 +3735,67 @@
 
             // 通用区块工厂：items = [{have, label, color}]
             const badgeLabel = (text, fallback) => String(text || fallback || '').replace(/^[^\w\u4e00-\u9fff]+[\s\u00a0]*/u, '').trim();
+            function levelStickerAsset(level) {
+                const id = level && level.signatureEnemy;
+                return id && SPRITE_MANIFEST['enemy_' + id] ? 'enemy_' + id : null;
+            }
+            const collectionRarity = (it) => {
+                if (it.frameKind === 'badge') return it.worldBadge ? '世界' : '徽章';
+                if (it.role === 'boss') return 'BOSS';
+                if (it.role === 'support' || it.role === 'tank') return '稀有';
+                if (it.kind === 'level') return '关卡';
+                return '贴纸';
+            };
             const artIcon = (it) => {
-                const box = this.el('div', {
-                    width:'50px', height:'50px', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center',
-                    background: it.have ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.08)', position:'relative', overflow:'hidden'
-                });
+                const box = this.el('div', {});
+                box.className = 'collection-art ' + (it.frameKind === 'badge' ? 'collection-art--badge' : 'collection-art--sticker');
                 const img = it.asset && ASSETS.get(it.asset);
                 if (img) {
                     const el = document.createElement('img');
                     el.src = img.src;
                     Object.assign(el.style, {
-                        width:'48px', height:'48px', objectFit:'contain',
-                        filter: it.have ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' : 'grayscale(1) brightness(0.55)',
-                        opacity: it.have ? '1' : '0.7'
+                        filter: it.have ? 'drop-shadow(0 5px 8px rgba(0,0,0,0.42))' : 'grayscale(1) brightness(0.58) contrast(0.9)',
+                        opacity: it.have ? '1' : '0.42'
                     });
                     box.appendChild(el);
-                    if (!it.have) box.appendChild(this.el('div', {
-                        position:'absolute', inset:'0', display:'flex', alignItems:'center', justifyContent:'center',
-                        color:'white', fontWeight:'900', fontSize:'18px', textShadow:'0 2px 6px rgba(0,0,0,0.8)'
-                    }, '?'));
                 } else {
                     box.appendChild(this.el('div', {
-                        width:'30px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:'18px', background: it.have ? (it.color || '#F6D365') : 'rgba(255,255,255,0.15)'
+                        width:'48px', height:'48px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center',
+                        fontSize:'26px', background: it.have ? (it.color || '#F6D365') : 'rgba(255,255,255,0.14)',
+                        filter: it.have ? 'drop-shadow(0 4px 7px rgba(0,0,0,0.35))' : 'grayscale(1)'
                     }, it.have ? (it.emoji || '★') : '?'));
                 }
                 return box;
             };
             const section = (title, items) => {
-                const sec = this.el('div', { background:'rgba(255,255,255,0.06)', borderRadius:'16px', padding:'12px' });
-                sec.appendChild(this.el('div', { color:'#fde68a', fontWeight:'900', fontSize:'15px', marginBottom:'8px' }, title));
-                const grid = this.el('div', { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(86px, 1fr))', gap:'8px' });
+                const sec = this.el('div', {});
+                sec.className = 'collection-section';
+                sec.appendChild(this.el('div', { color:'#fde68a', fontWeight:'900', fontSize:'16px', margin:'2px 0 9px', textShadow:'0 2px 5px rgba(0,0,0,0.28)' }, title));
+                const grid = this.el('div', {});
+                grid.className = 'collection-grid';
                 items.forEach(it => {
-                    const card = this.el('div', {
-                        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'4px', padding:'10px 4px', borderRadius:'12px',
-                        border:'2px solid ' + (it.have ? '#F6D365' : 'rgba(255,255,255,0.12)'),
-                        background: it.have ? 'rgba(246,211,101,0.16)' : 'rgba(0,0,0,0.22)', opacity: it.have ? '1' : '0.55', minHeight:'72px'
-                    });
-                    card.append(
-                        artIcon(it),
-                        this.el('div', { color: it.have ? 'white' : 'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:'900', textAlign:'center', lineHeight:'1.25' }, it.have ? it.label : '未收集')
-                    );
+                    const card = this.el('div', {});
+                    card.className = 'collection-card ' + (it.have ? 'collection-card--owned' : 'collection-card--locked');
+                    const rarity = this.el('div', {}, collectionRarity(it));
+                    rarity.className = 'collection-rarity';
+                    const state = this.el('div', {}, it.have ? '✓' : '?');
+                    state.className = it.have ? 'collection-owned-mark' : 'collection-lock';
+                    const label = this.el('div', {}, it.have ? it.label : '未收集');
+                    label.className = 'collection-label';
+                    card.append(rarity, artIcon(it), state, label);
                     grid.appendChild(card);
                 });
                 sec.appendChild(grid);
                 return sec;
             };
 
-            inner.appendChild(section('🎒 关卡贴纸', campaign.map(i => ({ have: !!stickers[LEVELS[i].id], label: friendlyLevelName(LEVELS[i]), color:'#4A90E2', emoji:'🎒' }))));
-            inner.appendChild(section('👾 敌人贴纸', enemyIds.map(id => ({ have: !!stickers['enemy:' + id], label: ENEMIES[id].name, color: ENEMIES[id].color, emoji:'👾' }))));
-            inner.appendChild(section('🏅 成就徽章', rewardBadgeLevels.map(l => ({ have: !!badges[l.id], label: badgeLabel(l.reward && l.reward.text, friendlyLevelName(l)), color:'#F6D365', asset: BADGE_ART[l.id], emoji:'🏅' }))));
-            inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, asset: BADGE_ART['world:' + w.id], emoji: w.icon }))));
+            inner.appendChild(section('🎒 关卡贴纸', campaign.map(i => {
+                const level = LEVELS[i];
+                return { have: !!stickers[level.id], label: friendlyLevelName(level), color:'#4A90E2', asset: levelStickerAsset(level), emoji:'🎒', kind:'level', frameKind: 'sticker' };
+            })));
+            inner.appendChild(section('👾 敌人贴纸', enemyIds.map(id => ({ have: !!stickers['enemy:' + id], label: ENEMIES[id].name, color: ENEMIES[id].color, asset: 'enemy_' + id, role: ENEMIES[id].role, emoji:'👾', kind:'enemy', frameKind: 'sticker' }))));
+            inner.appendChild(section('🏅 成就徽章', rewardBadgeLevels.map(l => ({ have: !!badges[l.id], label: badgeLabel(l.reward && l.reward.text, friendlyLevelName(l)), color:'#F6D365', asset: BADGE_ART[l.id], emoji:'🏅', frameKind: 'badge' }))));
+            inner.appendChild(section('🏆 世界徽章', WORLDS.filter(w => !w.locked).map(w => ({ have: !!badges['world:' + w.id], label: w.name, color: w.color, asset: BADGE_ART['world:' + w.id], emoji: w.icon, frameKind: 'badge', worldBadge:true }))));
 
             inner.appendChild(this.el('div', { color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', marginTop:'2px' }, '通关、遇到新朋友、完成整座学校，就能收集更多贴纸喔！'));
             wrap.appendChild(inner);
@@ -3634,6 +4095,28 @@
                     inner.appendChild(skill);
                 }
             }
+
+            const selectedUltimateId = this.selectedTower || (ids.includes('pencil') ? 'pencil' : ids[0]);
+            const ultimateMeta = TOOL_ULTIMATES[selectedUltimateId] || TOOL_ULTIMATES.pencil;
+            const stampReady = (this.stamps || 0) > 0;
+            const stampBtn = this.el('button', {
+                margin: isL ? '0 4px 5px' : '0',
+                padding: isL ? '6px 5px' : '8px 12px',
+                borderRadius:'10px',
+                border:'2px solid ' + (stampReady ? '#F6D365' : '#475569'),
+                background: stampReady ? 'linear-gradient(135deg,#92400e,#f59e0b)' : '#1e293b',
+                color:'white', fontWeight:'900', fontFamily:'inherit',
+                cursor: stampReady ? 'pointer' : 'default',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:'2px',
+                flexShrink:'0',
+                boxShadow: stampReady ? '0 0 16px rgba(246,211,101,0.42)' : 'none'
+            });
+            stampBtn.append(
+                this.el('div', { fontSize:isL ? '10px' : '12px' }, '🏅 印章 x' + (this.stamps || 0)),
+                this.el('div', { fontSize:isL ? '9px' : '11px', color: stampReady ? '#fff7ed' : '#cbd5e1' }, stampReady ? ultimateMeta.label : Math.floor((this.stampProgress || 0) * 10) + '/' + STAMP_KILLS_REQUIRED)
+            );
+            if (stampReady) stampBtn.onclick = (e) => { e.stopPropagation(); this.onStampUltimate && this.onStampUltimate(selectedUltimateId); };
+            inner.appendChild(stampBtn);
 
             towerList.forEach(t => {
                 const cooldown = this.stats.cooldowns?.[t.id] || 0;
@@ -3964,6 +4447,34 @@
             return overlay;
         }
 
+        renderMinigameHUD() {
+            if (this.phase !== 'minigame' || !this.minigameData) return null;
+            const mg = this.minigameData;
+            const seconds = Math.max(0, Math.ceil((mg.time || 0) / 60));
+            const wrap = this.el('div', {
+                position:'absolute', inset:'0', pointerEvents:'none', zIndex:'24',
+                padding:'calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))',
+                boxSizing:'border-box'
+            });
+            const bar = this.el('div', {
+                margin:'0 auto', maxWidth:'620px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px',
+                background:'rgba(15,23,42,0.72)', border:'1px solid rgba(255,255,255,0.22)', borderRadius:'8px', padding:'8px',
+                color:'#fff7ed', boxShadow:'0 10px 24px rgba(0,0,0,0.28)', backdropFilter:'blur(4px)'
+            });
+            const cell = (label, value, color) => this.el('div', { textAlign:'center', minWidth:'0' },
+                this.el('div', { fontSize:'11px', color:'#cbd5e1', fontWeight:'900' }, label),
+                this.el('div', { fontSize:'18px', color, fontWeight:'900', lineHeight:'1.2' }, value)
+            );
+            bar.append(
+                cell('时间', seconds + 's', '#fef3c7'),
+                cell('命中', (mg.hits || 0) + '/' + Math.ceil((mg.reward || 120) / 30), '#bae6fd'),
+                cell('阳光', '+' + (mg.rewardEarned || 0), '#fde68a')
+            );
+            const tip = this.el('div', { margin:'8px auto 0', maxWidth:'620px', textAlign:'center', color:'#f8fafc', fontSize:'13px', fontWeight:'900', textShadow:'0 2px 4px rgba(0,0,0,0.45)' }, (mg.prompt || '点击飞来的怪物赚阳光'));
+            wrap.append(bar, tip);
+            return wrap;
+        }
+
         renderCombatToast() {
             if (!this.combatToast) return null;
             const wrap = this.el('div', { position:'absolute', top:'calc(12px + env(safe-area-inset-top))', left:'50%', transform:'translateX(-50%)', pointerEvents:'none', zIndex:'68', maxWidth:'92%' });
@@ -4090,9 +4601,11 @@
             if (r.stickerText) box.appendChild(this.el('div', { color:'#9333ea', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, r.stickerText));
             if (r.shardsEarned) box.appendChild(this.el('div', { color:'#0ea5e9', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '💎 +' + r.shardsEarned + ' 知识碎片（共 ' + (r.shardsTotal != null ? r.shardsTotal : '-') + '）·到装备工坊升级文具！'));
             if (r.gotWorldBadge) box.appendChild(this.el('div', { color:'#b45309', fontWeight:'900', fontSize:'14px', marginBottom:'4px' }, '🏆 解锁世界徽章：' + r.gotWorldBadge + '！'));
+            if (r.minigame && !r.minigameDone) box.appendChild(this.el('div', { background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:'12px', padding:'8px 10px', color:'#c2410c', fontWeight:'900', fontSize:'13px', margin:'8px 0' }, '下一章前可玩「' + r.minigame.title + '」赚开局阳光'));
+            if (r.minigameDone) box.appendChild(this.el('div', { background:'#ecfdf5', border:'1px solid #a7f3d0', borderRadius:'12px', padding:'8px 10px', color:'#047857', fontWeight:'900', fontSize:'13px', margin:'8px 0' }, '小游戏获得 +' + (r.minigameReward || 0) + ' 阳光，下一关开局自动带入'));
 
             // Phase C：今天我学会了（学科分类统计）
-            const SUBJ_META = { '数学':'➗ 数学', '语文':'📖 语文', '英语':'🔤 英语', '科学':'🔬 科学', '常识':'💡 常识' };
+            const SUBJ_META = { '数学':'➗ 数学', '语文':'📖 语文', '英语':'🔤 英语', '科学':'🔬 科学', '科技':'🤖 科技', '常识':'💡 常识' };
             const subj = r.subjectsLearned || {};
             const subjKeys = Object.keys(subj).filter(k => subj[k] > 0);
             if (subjKeys.length) {
@@ -4132,13 +4645,16 @@
                     border:'2px solid #34d399', boxShadow:'0 5px 0 #065f46', cursor:'pointer', fontFamily:'inherit'
                 }, () => this.onRestart && this.onRestart()));
             } else {
-                btnRow.appendChild(this.btn('下一章 ➤', {
+                const needsMinigame = !!(r.minigame && !r.minigameDone);
+                const nextLabel = needsMinigame ? ('玩' + r.minigame.title + ' ➤') : ((r.minigameDone && r.minigameReward) ? ('带着 +' + r.minigameReward + ' 阳光下一章 ➤') : '下一章 ➤');
+                btnRow.appendChild(this.btn(nextLabel, {
                     flex:'1', padding:'13px', borderRadius:'14px', backgroundColor:'#10b981', color:'white', fontWeight:'900', fontSize:'17px',
                     border:'2px solid #34d399', boxShadow:'0 5px 0 #065f46', cursor:'pointer', fontFamily:'inherit'
                 }, () => {
                     const cur = LEVELS.findIndex(l => l.name === this.stats.levelName);
                     const next = (cur !== -1 ? cur : 0) + 1;
-                    if (next < CAMPAIGN_COUNT && this.onOpenPrep) this.onOpenPrep(next);
+                    if (needsMinigame && this.onStartMinigame) this.onStartMinigame(r.levelIdx, r.minigame.nextLevelIdx);
+                    else if (next < CAMPAIGN_COUNT && this.onOpenPrep) this.onOpenPrep(next);
                 }));
             }
             box.appendChild(btnRow);
@@ -4192,6 +4708,12 @@
             if (this.phase === 'prep') {
                 const prep = this.renderPrep();
                 if (prep) this.root.appendChild(prep);
+                return;
+            }
+
+            if (this.phase === 'minigame') {
+                const mg = this.renderMinigameHUD();
+                if (mg) this.root.appendChild(mg);
                 return;
             }
 
@@ -4260,6 +4782,7 @@
     let rewardCards = null;
     let combatToast = null;
     let combatToastTimeout = null;
+    let minigameData = null;
     let isLoading = false;
     let unlockedLevel = loadGameSave().unlockedLevel || 0;
     let isLandscape = window.innerWidth > window.innerHeight;
@@ -4276,6 +4799,7 @@
     let prepData = null;
     let prepLevelIdx = 0;
     let teacherCharge = 0, teacherReady = false, waitWave = false;
+    let stamps = 0, stampKills = 0, stampProgress = 0;
     let fieldSel = null;
     // ----- Phase 4 状态 -----
     let results = loadGameSave().results || {};
@@ -4343,11 +4867,26 @@
         },
         onCombatState: (s) => {
             teacherCharge = s.teacherCharge; teacherReady = s.teacherReady; waitWave = s.waitWave;
-            ui.update({ teacherCharge, teacherReady, waitWave });
+            stamps = s.stamps || 0; stampKills = s.stampKills || 0; stampProgress = s.stampProgress || 0;
+            ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress });
         },
         onFieldSelect: (info) => {
             fieldSel = info;
             ui.update({ fieldSel });
+        },
+        onMinigameState: (data) => {
+            minigameData = data ? { ...data, targets: data.targets ? data.targets.map(t => ({ ...t })) : [] } : null;
+            ui.update({ minigameData });
+        },
+        onMinigameComplete: (result) => {
+            minigameData = null;
+            levelResult = Object.assign({}, levelResult || {}, {
+                minigameDone: true,
+                minigameReward: result.reward || 0,
+                minigameHits: result.hits || 0,
+                minigameShots: result.shots || 0
+            });
+            ui.update({ minigameData, levelResult });
         }
     };
 
@@ -4440,7 +4979,9 @@
     // Phase 2.5：提前上课 / 班主任技能 / 关卡内升级
     ui.onEarlyCall = () => engine.callNextWaveEarly();
     ui.onTeacherSkill = () => engine.releaseTeacherSkill();
+    ui.onStampUltimate = (toolId) => engine.releaseStampUltimate(toolId);
     ui.onUpgrade = () => engine.upgradeSelectedField();
+    ui.onStartMinigame = (levelIdx, nextLevelIdx) => engine.startChapterMinigame(levelIdx, nextLevelIdx);
     ui.onRestart = () => {
         // 回主选单：重新同步存档（含战斗中/失败关收集到的贴纸、最新解锁与星级）
         const fresh = loadGameSave();
