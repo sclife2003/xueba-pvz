@@ -1201,9 +1201,9 @@
         let s = 0; for (const k in (results || {})) s += (results[k] && results[k].stars) || 0; return s;
     }
     let accountService = null;
-    function writeGameSave(data) {
+    function writeGameSave(data, options = {}) {
         try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
-        if (accountService) accountService.queueSave(data);
+        if (accountService && options.cloudSync === true) accountService.queueSave(data);
     }
 
     // ACCOUNT_SERVICE_CORE_START
@@ -2054,12 +2054,12 @@
 
         setSelectedTower(t) { this.selectedTower = t; if (t) this.clearField(); }
 
-        syncSave(extra) {
+        syncSave(extra, options = {}) {
             this.save.hp = Math.min(HP_CAP, Math.max(0, this.hp));
             if (extra && typeof extra.unlockedLevel === 'number') {
                 this.save.unlockedLevel = Math.max(this.save.unlockedLevel || 0, extra.unlockedLevel);
             }
-            writeGameSave(this.save);
+            writeGameSave(this.save, options);
         }
 
         resize() {
@@ -3169,8 +3169,11 @@
                 const result = this.computeAndSaveStars();
                 const isLastCampaign = !lvl.isChallenge && this.levelIdx >= CAMPAIGN_COUNT - 1;
                 const minigame = chapterMinigameForCompletedLevel(this.levelIdx);
-                if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) this.syncSave({ unlockedLevel: this.levelIdx + 1 });
-                else this.syncSave();
+                if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) {
+                    this.syncSave({ unlockedLevel: this.levelIdx + 1 }, { cloudSync: true });
+                } else {
+                    this.syncSave(null, { cloudSync: true });
+                }
                 this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign, minigame }, result));
                 this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete'); SOUND.play('clear');
                 this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);

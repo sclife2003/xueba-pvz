@@ -9,9 +9,16 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const configPath = path.join(root, 'account-service.json');
 const match = html.match(/\/\/ ACCOUNT_SERVICE_CORE_START([\s\S]*?)\/\/ ACCOUNT_SERVICE_CORE_END/);
 assert.ok(match, 'account service core block must exist in index.html');
+const writeGameSaveMatch = html.match(/function writeGameSave\([^)]*\) \{[\s\S]*?\n    \}/);
+assert.ok(writeGameSaveMatch, 'writeGameSave must exist in index.html');
 
 const factory = new Function(`${match[1]}\nreturn { AccountApiError, AccountService, isDefaultSave, stableSaveJson };`);
 const { AccountService, isDefaultSave, stableSaveJson } = factory();
+const createWriteGameSave = (localStorage, accountService) => new Function(
+    'localStorage',
+    'accountService',
+    `const SAVE_KEY = 'test-save';\n${writeGameSaveMatch[0]}\nreturn writeGameSave;`
+)(localStorage, accountService);
 
 class MemoryStorage {
     constructor() { this.values = new Map(); }
@@ -82,7 +89,27 @@ async function run() {
     assert.equal(publicConfig.apiBaseUrl, 'https://xueba-pvz-account.sclife2003.workers.dev');
     console.log('[OK] public config enables the production Worker and contains no secrets');
 
-    assert.match(html, /function writeGameSave\(data\)[\s\S]*?localStorage\.setItem\(SAVE_KEY[\s\S]*?accountService\.queueSave\(data\)/);
+    {
+        const localWrites = [];
+        const cloudWrites = [];
+        const writeGameSave = createWriteGameSave(
+            { setItem: (key, value) => localWrites.push({ key, value }) },
+            { queueSave: save => cloudWrites.push(save) }
+        );
+        const save = gameSave(1);
+
+        writeGameSave(save);
+        assert.equal(localWrites.length, 1);
+        assert.equal(cloudWrites.length, 0, 'ordinary progress changes must remain local-only');
+
+        writeGameSave(save, { cloudSync: true });
+        assert.equal(localWrites.length, 2);
+        assert.equal(cloudWrites.length, 1, 'explicit completion sync must queue one cloud save');
+        assert.match(html, /syncSave\(extra, options = \{\}\)[\s\S]{0,400}writeGameSave\(this\.save, options\)/);
+        assert.match(html, /if \(!lvl\.isChallenge[\s\S]{0,300}cloudSync: true/);
+        assert.match(html, /ui\.onAccountSync[\s\S]{0,200}accountService\.syncNow\(loadGameSave\(\)\)/);
+        console.log('[OK] ordinary progress stays local while completion and manual sync reach the cloud');
+    }
     assert.ok(html.includes('renderAccountPanel()'));
     assert.ok(html.includes("this.onOpenAccount"));
     assert.ok(html.includes("this.onAccountSubmit"));
