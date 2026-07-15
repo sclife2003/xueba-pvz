@@ -1,13 +1,17 @@
 ---
 type: ticket
 status: open
-owner: TBD
+owner: Codex QA
 created: 2026-07-15
 priority: high
-decision: cloud-auth-method-required
+decision: github-worker-private-repo
+takeover_plan: HANDOFF-20260715-001
+architecture_decision: DECISION-20260715-001
 ---
 
 # Ticket: 素材版本化與真正的跨裝置雲端存檔
+
+> 2026-07-15 BOSS 指定「簡單帳號密碼、跨裝置同步、資料存在 GitHub」。已改採 **Cloudflare Worker + PasswordHasher Durable Object + 私有 GitHub data repo + KV session**；本票下方舊 Supabase 規劃保留作歷史背景，但已由 `DECISION-20260715-001` 取代。帳號 UI、local-first、revision conflict、private data repo、KV、secrets、Worker 部署與正式雙裝置 E2E 均已完成；本票仍 open 的剩餘範圍是素材 cache versioning。
 
 ## Context / Root Cause
 

@@ -1,0 +1,16 @@
+# Local dependencies and Cloudflare state
+node_modules/
+worker/node_modules/
+worker/.dev.vars
+worker/.wrangler/
+worker/.wrangler-dry-run/
+worker/**/.wrangler/
+
+# Generic local secrets
+.env
+.env.*
+!.env.example
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db

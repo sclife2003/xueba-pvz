@@ -1200,9 +1200,294 @@
     function totalStars(results) {
         let s = 0; for (const k in (results || {})) s += (results[k] && results[k].stars) || 0; return s;
     }
+    let accountService = null;
     function writeGameSave(data) {
         try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
+        if (accountService) accountService.queueSave(data);
     }
+
+    // ACCOUNT_SERVICE_CORE_START
+    class AccountApiError extends Error {
+        constructor(status, code, message, conflict) {
+            super(message || '雲端服務暫時無法使用。');
+            this.name = 'AccountApiError';
+            this.status = status || 0;
+            this.code = code || 'NETWORK_ERROR';
+            this.conflict = conflict || null;
+        }
+    }
+
+    function isDefaultSave(save) {
+        if (!save || typeof save !== 'object') return true;
+        const hasKeys = key => save[key] && typeof save[key] === 'object' && Object.keys(save[key]).length > 0;
+        const upgraded = save.toolLevels && Object.values(save.toolLevels).some(level => Number(level) > 1);
+        return (Number(save.unlockedLevel) || 0) === 0
+            && (Number(save.hp) || 0) === 0
+            && (Number(save.shards) || 0) === 0
+            && !hasKeys('results')
+            && !hasKeys('stickers')
+            && !hasKeys('badges')
+            && !hasKeys('worldProgress')
+            && !upgraded;
+    }
+
+    function stableSaveJson(value) {
+        const normalize = item => {
+            if (Array.isArray(item)) return item.map(normalize);
+            if (item && typeof item === 'object') {
+                const sorted = {};
+                Object.keys(item).sort().forEach(key => { sorted[key] = normalize(item[key]); });
+                return sorted;
+            }
+            return item;
+        };
+        return JSON.stringify(normalize(value));
+    }
+
+    class AccountService {
+        constructor(options = {}) {
+            this.fetchImpl = options.fetchImpl || window.fetch.bind(window);
+            this.sessionStorage = options.sessionStorage || window.sessionStorage;
+            this.setTimer = options.setTimer || window.setTimeout.bind(window);
+            this.clearTimer = options.clearTimer || window.clearTimeout.bind(window);
+            this.onState = options.onState || (() => {});
+            this.baseUrl = '';
+            this.token = '';
+            this.pendingTimer = null;
+            this.state = {
+                configured: false,
+                authenticated: false,
+                username: '',
+                status: 'local-only',
+                revision: 0,
+                conflict: null,
+                error: ''
+            };
+        }
+
+        emit(patch) {
+            Object.assign(this.state, patch);
+            this.onState({ ...this.state });
+        }
+
+        configure(config) {
+            if (!config || config.enabled !== true || !config.apiBaseUrl) {
+                this.baseUrl = '';
+                this.emit({ configured: false, status: 'local-only', error: '' });
+                return false;
+            }
+            try {
+                const url = new URL(config.apiBaseUrl);
+                const localHttp = url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
+                if (url.protocol !== 'https:' && !localHttp) throw new Error('unsafe protocol');
+                this.baseUrl = url.href.replace(/\/$/, '');
+                this.emit({ configured: true, status: this.state.authenticated ? this.state.status : 'local-only', error: '' });
+                return true;
+            } catch {
+                this.baseUrl = '';
+                this.emit({ configured: false, status: 'local-only', error: '帳號服務設定無效。' });
+                return false;
+            }
+        }
+
+        saveSession() {
+            try {
+                this.sessionStorage.setItem('xueba_pvz_account_session_v1', JSON.stringify({
+                    token: this.token,
+                    username: this.state.username
+                }));
+            } catch (error) {}
+        }
+
+        cancelPendingSave() {
+            if (this.pendingTimer) this.clearTimer(this.pendingTimer);
+            this.pendingTimer = null;
+        }
+
+        clearSession() {
+            this.token = '';
+            this.cancelPendingSave();
+            try { this.sessionStorage.removeItem('xueba_pvz_account_session_v1'); } catch (error) {}
+            this.emit({ authenticated: false, username: '', status: 'local-only', revision: 0, conflict: null, error: '' });
+        }
+
+        setSession(data) {
+            const token = data && data.token;
+            const username = data && data.user && data.user.username;
+            if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token) || typeof username !== 'string') {
+                throw new AccountApiError(502, 'INVALID_SERVICE_RESPONSE', '帳號服務回應格式不正確。');
+            }
+            this.token = token;
+            this.emit({ authenticated: true, username, revision: 0, conflict: null, error: '' });
+            this.saveSession();
+        }
+
+        async request(path, options = {}) {
+            if (!this.baseUrl) throw new AccountApiError(0, 'NOT_CONFIGURED', '雲端帳號服務尚未啟用。');
+            const headers = { ...(options.headers || {}) };
+            if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+            if (this.token) headers.Authorization = `Bearer ${this.token}`;
+            let response;
+            try {
+                response = await this.fetchImpl(this.baseUrl + path, {
+                    method: options.method || 'GET',
+                    headers,
+                    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+                });
+            } catch {
+                throw new AccountApiError(0, 'OFFLINE', '目前離線，進度已安全保存在這台裝置。');
+            }
+            let data = null;
+            if (response.status !== 204) {
+                try { data = await response.json(); } catch { data = null; }
+            }
+            if (!response.ok) {
+                const error = data && data.error;
+                throw new AccountApiError(
+                    response.status,
+                    (error && error.code) || 'SERVICE_ERROR',
+                    (error && error.message) || '雲端服務暫時無法使用。',
+                    data && data.conflict
+                );
+            }
+            return data;
+        }
+
+        async register(username, password, localSave) {
+            this.emit({ status: 'signing-in', error: '', conflict: null });
+            try {
+                const data = await this.request('/v1/register', { method: 'POST', body: { username, password } });
+                this.setSession(data);
+                return await this.syncNow(localSave, 0);
+            } catch (error) {
+                this.emit({ status: 'local-only', error: error.message || '建立帳號失敗。' });
+                throw error;
+            }
+        }
+
+        async login(username, password, localSave) {
+            this.emit({ status: 'signing-in', error: '', conflict: null });
+            try {
+                const data = await this.request('/v1/login', { method: 'POST', body: { username, password } });
+                this.setSession(data);
+                return await this.reconcile(localSave);
+            } catch (error) {
+                if (this.state.authenticated) {
+                    if (error.status === 401) {
+                        this.clearSession();
+                        this.emit({ error: error.message || '登入已失效，請重新登入。' });
+                    } else {
+                        this.emit({ status: 'offline', error: error.message || '目前離線，進度保留在本機。' });
+                    }
+                    return { action: 'local-only', error };
+                }
+                this.emit({ status: 'local-only', error: error.message || '登入失敗。' });
+                throw error;
+            }
+        }
+
+        async restoreSession(localSave) {
+            if (!this.state.configured) return { action: 'local-only' };
+            let saved;
+            try { saved = JSON.parse(this.sessionStorage.getItem('xueba_pvz_account_session_v1') || 'null'); } catch { saved = null; }
+            if (!saved || !/^[A-Za-z0-9_-]{43}$/.test(saved.token || '') || typeof saved.username !== 'string') {
+                return { action: 'local-only' };
+            }
+            this.token = saved.token;
+            this.emit({ authenticated: true, username: saved.username, status: 'syncing', error: '' });
+            try {
+                return await this.reconcile(localSave);
+            } catch (error) {
+                if (error.status === 401) this.clearSession();
+                else this.emit({ status: 'offline', error: error.message || '目前離線。' });
+                return { action: 'local-only' };
+            }
+        }
+
+        async reconcile(localSave) {
+            const cloud = await this.request('/v1/save');
+            this.emit({ revision: cloud.revision || 0 });
+            if (!cloud.save) return this.syncNow(localSave, 0);
+            if (stableSaveJson(cloud.save) === stableSaveJson(localSave)) {
+                this.emit({ status: 'synced', conflict: null, error: '' });
+                return { action: 'synced' };
+            }
+            if (isDefaultSave(localSave)) {
+                this.emit({ status: 'cloud-ready', conflict: null, error: '' });
+                return { action: 'apply-cloud', save: cloud.save, revision: cloud.revision };
+            }
+            const conflict = {
+                revision: cloud.revision,
+                checksum: cloud.checksum || null,
+                updatedAt: cloud.updatedAt || null,
+                save: cloud.save
+            };
+            this.cancelPendingSave();
+            this.emit({ status: 'conflict', conflict, error: '這台裝置與雲端都有進度，請選擇要保留哪一份。' });
+            return { action: 'conflict', conflict };
+        }
+
+        async syncNow(save, expectedRevision = this.state.revision, options = {}) {
+            if (!this.state.configured || !this.state.authenticated || !this.token) return { action: 'local-only' };
+            if (this.state.status === 'conflict' && options.allowConflict !== true) {
+                return { action: 'conflict', conflict: this.state.conflict };
+            }
+            this.emit({ status: 'syncing', error: '' });
+            try {
+                const result = await this.request('/v1/save', {
+                    method: 'PUT',
+                    body: { expectedRevision, payload: save }
+                });
+                this.emit({ status: 'synced', revision: result.revision, conflict: null, error: '' });
+                return { action: 'synced', revision: result.revision };
+            } catch (error) {
+                if (error.status === 409 && error.conflict) {
+                    this.cancelPendingSave();
+                    this.emit({ status: 'conflict', revision: error.conflict.revision, conflict: error.conflict, error: '雲端已有較新的進度，請選擇要保留哪一份。' });
+                    return { action: 'conflict', conflict: error.conflict };
+                }
+                if (error.status === 401) this.clearSession();
+                else this.emit({ status: 'offline', error: error.message || '目前離線，進度保留在本機。' });
+                return { action: 'local-only', error };
+            }
+        }
+
+        queueSave(save) {
+            if (!this.state.configured || !this.state.authenticated || this.state.status === 'conflict') return;
+            let snapshot;
+            try { snapshot = JSON.parse(JSON.stringify(save)); } catch { return; }
+            if (this.pendingTimer) this.clearTimer(this.pendingTimer);
+            this.pendingTimer = this.setTimer(async () => {
+                this.pendingTimer = null;
+                await this.syncNow(snapshot);
+            }, 1500);
+        }
+
+        async keepLocal(localSave) {
+            if (!this.state.conflict) return { action: 'local-only' };
+            const expectedRevision = this.state.conflict.revision;
+            this.cancelPendingSave();
+            this.emit({ conflict: null });
+            return this.syncNow(localSave, expectedRevision, { allowConflict: true });
+        }
+
+        acceptCloud() {
+            if (!this.state.conflict || !this.state.conflict.save) return null;
+            const cloudSave = this.state.conflict.save;
+            this.cancelPendingSave();
+            this.emit({ status: 'synced', revision: this.state.conflict.revision, conflict: null, error: '' });
+            return cloudSave;
+        }
+
+        async logout() {
+            if (this.token && this.baseUrl) {
+                try { await this.request('/v1/logout', { method: 'POST', body: {} }); } catch (error) {}
+            }
+            this.clearSession();
+        }
+    }
+    // ACCOUNT_SERVICE_CORE_END
+
     // 初始生命随难度提升，避免高难度一开局就被淹没
     function defaultHpForLevel(idx) {
         const d = (LEVELS[idx] && LEVELS[idx].difficulty) || 1;
@@ -4104,6 +4389,18 @@
             this.fieldSel = null;       // 选中的场上单位（升级面板）
             this.results = {};          // Phase 4：关卡星级最佳成绩
             this.levelResult = null;    // Phase 4：本次结算结果
+            this.accountPanelOpen = false;
+            this.accountMode = 'login';
+            this.accountBusy = false;
+            this.accountState = {
+                configured: false,
+                authenticated: false,
+                username: '',
+                status: 'local-only',
+                revision: 0,
+                conflict: null,
+                error: ''
+            };
             this.onSelectTower = null;
             this.onStartLevel = null;
             this.onRestart = null;
@@ -4127,6 +4424,13 @@
             this.onUpgrade = null;      // 关卡内升级
             this.onStartMinigame = null; // 章间阳光小游戏
             this.onRetry = null;        // 重玩本关
+            this.onOpenAccount = null;
+            this.onCloseAccount = null;
+            this.onAccountSubmit = null;
+            this.onAccountLogout = null;
+            this.onAccountSync = null;
+            this.onAccountKeepLocal = null;
+            this.onAccountUseCloud = null;
             this.render();
         }
 
@@ -4181,6 +4485,20 @@
             });
             wrap.className = 'hide-scrollbar';
             const inner = this.el('div', { width:'100%', maxWidth:'500px', margin:'auto', display:'flex', flexDirection:'column', alignItems:'center' });
+
+            const account = this.accountState || {};
+            const accountLabel = !account.configured
+                ? '💾 本機進度'
+                : account.authenticated
+                    ? ((account.status === 'synced' ? '☁✓ ' : account.status === 'conflict' ? '☁! ' : '☁ ') + account.username)
+                    : '☁ 跨裝置同步';
+            const accountBtn = this.btn(accountLabel, {
+                alignSelf:'flex-end', maxWidth:'100%', padding:'8px 13px', borderRadius:'999px', border:'1px solid rgba(255,255,255,0.42)',
+                background:'rgba(15,23,42,0.34)', color:'white', fontWeight:'900', fontSize:'13px', fontFamily:'inherit', cursor:'pointer',
+                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'
+            }, () => this.onOpenAccount && this.onOpenAccount());
+            accountBtn.setAttribute('aria-label', '帳號與跨裝置同步');
+            inner.appendChild(accountBtn);
 
             inner.appendChild(this.el('div', { fontSize:'52px', textAlign:'center', animation:'bounce 1s infinite' }, '🎓'));
             inner.appendChild(this.el('h1', { fontSize:'32px', fontWeight:'900', background:'linear-gradient(to right, #fde68a, #f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', margin:'2px 0', textAlign:'center', letterSpacing:'-1px' }, '学霸校园大冒险'));
@@ -4252,6 +4570,160 @@
             inner.appendChild(saveRow);
             wrap.appendChild(inner);
             return wrap;
+        }
+
+        renderAccountPanel() {
+            if (!this.accountPanelOpen) return null;
+            const state = this.accountState || {};
+            const overlay = this.el('div', {
+                position:'absolute', inset:'0', zIndex:'90', padding:'18px', boxSizing:'border-box', pointerEvents:'auto',
+                display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.82)', backdropFilter:'blur(5px)'
+            });
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-labelledby', 'account-panel-title');
+            const card = this.el('div', {
+                width:'100%', maxWidth:'420px', maxHeight:'calc(100vh - 36px)', overflowY:'auto', boxSizing:'border-box',
+                borderRadius:'22px', padding:'20px', color:'#3f342b', background:'linear-gradient(160deg, #fffaf0, #f7e7bd)',
+                border:'3px solid #b9825b', boxShadow:'0 22px 60px rgba(0,0,0,0.46)', pointerEvents:'auto'
+            });
+            const top = this.el('div', { display:'flex', alignItems:'flex-start', gap:'12px' });
+            const heading = this.el('div', { flex:'1' });
+            const title = this.el('h2', { margin:'0', fontSize:'23px', color:'#2f6b4f', fontWeight:'900' }, '🎒 小書包識別牌');
+            title.id = 'account-panel-title';
+            heading.append(
+                title,
+                this.el('div', { marginTop:'3px', color:'#795548', fontSize:'13px', lineHeight:'1.45' }, '用自己的帳號，把學習進度帶到其他裝置。')
+            );
+            const close = this.btn('×', {
+                width:'36px', height:'36px', borderRadius:'50%', border:'1px solid #d6b985', background:'#fff', color:'#6b4f3b',
+                fontSize:'24px', lineHeight:'1', fontWeight:'900', cursor:'pointer'
+            }, () => this.onCloseAccount && this.onCloseAccount());
+            close.setAttribute('aria-label', '關閉帳號面板');
+            top.append(heading, close);
+            card.appendChild(top);
+
+            const noteStyle = { marginTop:'16px', padding:'12px 14px', borderRadius:'13px', fontSize:'13px', lineHeight:'1.55' };
+            if (!state.configured) {
+                card.appendChild(this.el('div', {
+                    ...noteStyle, background:'#e8f5e9', border:'1px solid #9cccaa', color:'#285943'
+                }, '目前使用本機存檔。雲端帳號服務啟用後，就能在這裡建立帳號並跨裝置同步。'));
+                card.appendChild(this.el('div', {
+                    ...noteStyle, background:'#fff8e1', border:'1px dashed #d6a84b', color:'#6d5220'
+                }, '遊戲進度仍會正常保存在這台裝置，也可繼續使用匯出／匯入存檔。'));
+                overlay.appendChild(card);
+                return overlay;
+            }
+
+            if (state.authenticated) {
+                const statusText = state.status === 'synced' ? '已同步到雲端'
+                    : state.status === 'syncing' ? '正在同步…'
+                    : state.status === 'offline' ? '目前離線，本機進度安全保留'
+                    : state.status === 'conflict' ? '發現兩份不同進度'
+                    : '已登入';
+                card.appendChild(this.el('div', {
+                    ...noteStyle, background: state.status === 'conflict' ? '#fff3cd' : '#e8f5e9',
+                    border:'1px solid ' + (state.status === 'conflict' ? '#e2b95b' : '#9cccaa'), color:'#285943'
+                }, '👤 ' + state.username + ' · ' + statusText));
+
+                if (state.status === 'conflict' && state.conflict) {
+                    card.appendChild(this.el('div', {
+                        ...noteStyle, background:'#fff', border:'2px solid #e85d5d', color:'#6b2d2d'
+                    }, '這台裝置和雲端都有進度。系統不會自動覆蓋，請選擇要保留哪一份。'));
+                    const conflictRow = this.el('div', { display:'flex', flexWrap:'wrap', gap:'9px', marginTop:'12px' });
+                    conflictRow.append(
+                        this.btn('保留這台裝置', {
+                            flex:'1 1 150px', padding:'12px', borderRadius:'12px', border:'2px solid #4a90e2', background:'#eaf3ff',
+                            color:'#1f4f82', fontWeight:'900', fontFamily:'inherit'
+                        }, () => this.onAccountKeepLocal && this.onAccountKeepLocal(), this.accountBusy),
+                        this.btn('改用雲端進度', {
+                            flex:'1 1 150px', padding:'12px', borderRadius:'12px', border:'2px solid #2f6b4f', background:'#e8f5e9',
+                            color:'#285943', fontWeight:'900', fontFamily:'inherit'
+                        }, () => this.onAccountUseCloud && this.onAccountUseCloud(), this.accountBusy)
+                    );
+                    card.appendChild(conflictRow);
+                } else {
+                    const actionRow = this.el('div', { display:'flex', gap:'9px', marginTop:'16px' });
+                    actionRow.append(
+                        this.btn(state.status === 'syncing' ? '同步中…' : '立即同步', {
+                            flex:'1', padding:'12px', borderRadius:'12px', border:'2px solid #2f6b4f', background:'#2f6b4f', color:'white',
+                            fontWeight:'900', fontFamily:'inherit'
+                        }, () => this.onAccountSync && this.onAccountSync(), this.accountBusy || state.status === 'syncing'),
+                        this.btn('登出', {
+                            padding:'12px 16px', borderRadius:'12px', border:'1px solid #c69b75', background:'#fff', color:'#6b4f3b',
+                            fontWeight:'900', fontFamily:'inherit'
+                        }, () => this.onAccountLogout && this.onAccountLogout(), this.accountBusy)
+                    );
+                    card.appendChild(actionRow);
+                }
+            } else {
+                const tabs = this.el('div', { display:'flex', gap:'8px', marginTop:'16px' });
+                ['login', 'register'].forEach(mode => {
+                    const active = this.accountMode === mode;
+                    tabs.appendChild(this.btn(mode === 'login' ? '登入' : '建立帳號', {
+                        flex:'1', padding:'10px', borderRadius:'11px', border:'2px solid ' + (active ? '#2f6b4f' : '#d6b985'),
+                        background: active ? '#2f6b4f' : '#fffaf0', color: active ? 'white' : '#6b4f3b', fontWeight:'900', fontFamily:'inherit'
+                    }, () => this.update({ accountMode: mode }), this.accountBusy));
+                });
+                card.appendChild(tabs);
+
+                const form = document.createElement('form');
+                Object.assign(form.style, { display:'flex', flexDirection:'column', gap:'11px', marginTop:'15px' });
+                const makeLabel = (text, input) => {
+                    const label = this.el('label', { display:'flex', flexDirection:'column', gap:'5px', fontSize:'13px', fontWeight:'900', color:'#5b4636' }, text);
+                    label.appendChild(input);
+                    return label;
+                };
+                const inputStyle = {
+                    width:'100%', boxSizing:'border-box', padding:'12px', borderRadius:'11px', border:'2px solid #d6b985',
+                    background:'#fff', color:'#302820', fontSize:'16px', fontFamily:'inherit', outline:'none'
+                };
+                const username = document.createElement('input');
+                Object.assign(username.style, inputStyle);
+                username.name = 'username';
+                username.autocomplete = 'username';
+                username.inputMode = 'text';
+                username.minLength = 3;
+                username.maxLength = 20;
+                username.pattern = '[A-Za-z0-9._\\-]{3,20}';
+                username.required = true;
+                const password = document.createElement('input');
+                Object.assign(password.style, inputStyle);
+                password.name = 'password';
+                password.type = 'password';
+                const mode = this.accountMode;
+                password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+                password.minLength = 10;
+                password.maxLength = 128;
+                password.required = true;
+                form.append(
+                    makeLabel('帳號（3–20 個英數字，可用 . _ -）', username),
+                    makeLabel('密碼（至少 10 個字元）', password)
+                );
+                const submit = this.btn(this.accountBusy ? '請稍候…' : (mode === 'register' ? '建立並同步' : '登入並同步'), {
+                    marginTop:'3px', padding:'13px', borderRadius:'12px', border:'2px solid #25543e', background:'#2f6b4f', color:'white',
+                    fontSize:'16px', fontWeight:'900', fontFamily:'inherit'
+                }, null, this.accountBusy);
+                submit.type = 'submit';
+                form.appendChild(submit);
+                form.onsubmit = event => {
+                    event.preventDefault();
+                    if (this.accountBusy || !this.onAccountSubmit) return;
+                    const credentials = { mode, username: username.value.trim(), password: password.value };
+                    password.value = '';
+                    this.onAccountSubmit(credentials);
+                };
+                card.appendChild(form);
+            }
+
+            if (state.error) {
+                const error = this.el('div', { ...noteStyle, background:'#fff0f0', border:'1px solid #e89a9a', color:'#8b2f2f' }, state.error);
+                error.setAttribute('role', 'alert');
+                card.appendChild(error);
+            }
+            card.appendChild(this.el('div', { marginTop:'14px', color:'#7c6a5b', fontSize:'11px', lineHeight:'1.5' }, '密碼不會保存在瀏覽器；登入憑證只保留在目前分頁，關閉分頁後需重新登入。'));
+            overlay.appendChild(card);
+            return overlay;
         }
 
         // ----- Phase B：世界详情（该学校的关卡节点） -----
@@ -5350,6 +5822,8 @@
             if (this.phase === 'menu') {
                 const menu = this.renderMenu();
                 if (menu) this.root.appendChild(menu);
+                const accountPanel = this.renderAccountPanel();
+                if (accountPanel) this.root.appendChild(accountPanel);
                 return;
             }
 
@@ -5442,6 +5916,36 @@
     canvas.setAttribute('role', 'application');
     canvas.setAttribute('aria-label', '學霸校園塔防戰場。大招瞄準時可用方向鍵移動，Enter 或空白鍵確認，Escape 取消。');
     const ui = new UIManager();
+
+    function applyCloudProgress(save) {
+        if (!save || typeof save !== 'object') return false;
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(migrateSave(save)));
+            window.location.reload();
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function handleAccountResult(result) {
+        if (result && result.action === 'apply-cloud') applyCloudProgress(result.save);
+    }
+
+    accountService = new AccountService({
+        onState: accountState => ui.update({ accountState })
+    });
+
+    async function initializeAccountService() {
+        let config = null;
+        try {
+            const response = await fetch('account-service.json', { cache: 'no-store' });
+            if (response.ok) config = await response.json();
+        } catch (error) {}
+        if (!accountService.configure(config)) return;
+        const result = await accountService.restoreSession(loadGameSave());
+        handleAccountResult(result);
+    }
 
     let selectedTower = null;
     let stats = { mp: 0, hp: 0, wave: 0, levelName: '', cooldowns: {} };
@@ -5589,6 +6093,40 @@
     }
 
     // Wire UI events
+    ui.onOpenAccount = () => ui.update({ accountPanelOpen: true });
+    ui.onCloseAccount = () => ui.update({ accountPanelOpen: false, accountBusy: false });
+    ui.onAccountSubmit = async credentials => {
+        ui.update({ accountBusy: true });
+        try {
+            const result = credentials.mode === 'register'
+                ? await accountService.register(credentials.username, credentials.password, loadGameSave())
+                : await accountService.login(credentials.username, credentials.password, loadGameSave());
+            handleAccountResult(result);
+        } catch (error) {
+            // AccountService publishes a safe user-facing error through accountState.
+        } finally {
+            ui.update({ accountBusy: false });
+        }
+    };
+    ui.onAccountSync = async () => {
+        ui.update({ accountBusy: true });
+        try { await accountService.syncNow(loadGameSave()); }
+        finally { ui.update({ accountBusy: false }); }
+    };
+    ui.onAccountKeepLocal = async () => {
+        ui.update({ accountBusy: true });
+        try { await accountService.keepLocal(loadGameSave()); }
+        finally { ui.update({ accountBusy: false }); }
+    };
+    ui.onAccountUseCloud = () => {
+        const save = accountService.acceptCloud();
+        if (save) applyCloudProgress(save);
+    };
+    ui.onAccountLogout = async () => {
+        ui.update({ accountBusy: true });
+        try { await accountService.logout(); }
+        finally { ui.update({ accountBusy: false }); }
+    };
     ui.onSelectTower = (t) => {
         selectedTower = t;
         engine.setSelectedTower(t);
@@ -5717,6 +6255,7 @@
 
     // 启动时把存档进度（解锁关卡 + 星级 + 收集）推到选单，确保返回玩家正确显示
     ui.update({ unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades, advancedMode, soundOn: SOUND.enabled, voiceOn: VOICE.enabled });
+    initializeAccountService();
 
     // Input handling
     function handleInput(type, x, y) {
