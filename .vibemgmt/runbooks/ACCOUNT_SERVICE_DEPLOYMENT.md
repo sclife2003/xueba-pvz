@@ -50,7 +50,7 @@
 | Worker secrets | `GITHUB_TOKEN`、`PASSWORD_PEPPER` |
 | 公開程式 repository | `https://github.com/sclife2003/xueba-pvz` |
 | 私有資料 repository | `https://github.com/sclife2003/xueba-pvz-data` |
-| 正式 Pages commit | `33f0e09596be7595cf307bdf9e88306f3046d072`（GitHub Pages API 於 2026-07-15 查得 `built`） |
+| 正式 Pages commit | 以 §9.3 的 GitHub Pages API 查詢結果為準；發布完成時 `commit` 應等於欲發布的 `HEAD`，且 `status` 應為 `built` |
 
 健康檢查：
 
