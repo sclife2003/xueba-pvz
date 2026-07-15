@@ -1,0 +1,7 @@
+# Cloudflare skill documentation placeholders and explicit hardcoding anti-patterns.
+.agents/skills/cloudflare/references/argo-smart-routing/README.md:curl-auth-header:13
+.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:27
+.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:84
+.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:82
+.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:182
+.agents/skills/workers-best-practices/references/rules.md:generic-api-key:82
