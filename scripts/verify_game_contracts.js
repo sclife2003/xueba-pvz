@@ -46,6 +46,39 @@ function topLevelKeys(body) {
   return Array.from(body.matchAll(/^\s*([A-Za-z0-9_]+):\s*\{/gm)).map(m => m[1]);
 }
 
+function readConstObject(name) {
+  const body = extractConstObject(name);
+  if (!body) return null;
+  try {
+    return new Function(`return ({${body}});`)();
+  } catch (error) {
+    fail(`${name} is a readable data-only contract: ${error.message}`);
+    return null;
+  }
+}
+
+function assetExists(relativePath) {
+  return typeof relativePath === 'string'
+    && !relativePath.includes('.svg')
+    && fs.existsSync(path.join(root, relativePath));
+}
+
+function loadTopLevelFunction(name) {
+  const marker = `function ${name}(`;
+  const start = html.indexOf(marker);
+  if (start < 0) return null;
+  const bodyStart = html.indexOf('{', start);
+  let depth = 0;
+  for (let i = bodyStart; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    else if (html[i] === '}' && --depth === 0) {
+      const source = html.slice(start, i + 1);
+      return new Function(`${source}; return ${name};`)();
+    }
+  }
+  return null;
+}
+
 if (!scriptMatch) {
   fail('index.html has one extractable inline script');
   process.exit(1);
@@ -134,6 +167,95 @@ assert(script.includes('handleMinigameInput(type, x, y)'), 'chapter interval min
 assert(script.includes('finishChapterMinigame()'), 'chapter interval minigame has a reward finish path');
 assert(script.includes('pendingSunBonus'), 'chapter interval minigame carries sunlight into the next level');
 assert(script.includes("subject: '科技'"), 'question bank includes technology questions for grades 4-5');
+
+const vfxManifest = readConstObject('VFX_MANIFEST');
+const requiredVfxFamilies = ['corrosion', 'impact', 'paper', 'doodle', 'soundwave', 'sunshine', 'crystal'];
+assert(vfxManifest && Object.keys(vfxManifest).length === enemyKeys.length, 'VFX_MANIFEST covers all 18 non-elf enemies');
+assert(vfxManifest && enemyKeys.every(id => vfxManifest[id]), 'every non-elf enemy has a VFX profile');
+assert(vfxManifest && Object.values(vfxManifest).every(profile => ['telegraph', 'cast', 'travel', 'impact'].every(phase => profile.phases && profile.phases.includes(phase))), 'every VFX profile declares telegraph/cast/travel/impact phases');
+assert(vfxManifest && requiredVfxFamilies.every(family => Object.values(vfxManifest).some(profile => profile.family === family)), 'VFX manifest includes the seven required visual families');
+assert(vfxManifest && Object.values(vfxManifest).every(profile => assetExists(profile.runtime) && assetExists(profile.fallback)), 'VFX runtime WebP and PNG fallback assets exist without SVG paths');
+assert(script.includes('spawnVfxPhase('), 'runtime has a phase-aware VFX spawn helper');
+
+const sceneManifest = readConstObject('SCENE_MANIFEST');
+const levelIds = Array.from(script.matchAll(/id:\s*'([^']+)'\s*,\s*chapterId:/g)).map(match => match[1]);
+assert(sceneManifest && Object.keys(sceneManifest).length === 14, 'SCENE_MANIFEST contains 14 level scene profiles');
+assert(sceneManifest && levelIds.every(id => sceneManifest[id]), 'each playable level has a scene profile');
+assert(sceneManifest && Object.entries(sceneManifest).every(([id, profile]) => profile.orientation === 'landscape' && profile.runtime === `assets/scenes/scene_${id.replace(/[^a-z0-9]+/gi, '_')}.webp` && assetExists(profile.runtime) && assetExists(profile.fallback)), 'tower-defense scene profiles load landscape WebP plus PNG fallback');
+assert(script.includes('level.sceneProfile = SCENE_MANIFEST[level.id]'), 'level data is wired to its scene profile');
+
+const minigameScenes = readConstObject('MINIGAME_SCENE_MANIFEST');
+assert(minigameScenes && Object.keys(minigameScenes).length === 4, 'four chapter minigames have scene variants');
+assert(minigameScenes && Object.values(minigameScenes).every(profile => assetExists(profile.landscape.runtime) && assetExists(profile.landscape.fallback) && assetExists(profile.portrait.runtime) && assetExists(profile.portrait.fallback)), 'each minigame has independent landscape and portrait raster assets');
+const orientationMatrix = readConstObject('ORIENTATION_MATRIX');
+assert(orientationMatrix && orientationMatrix.td.landscape === 'landscape', 'orientation matrix: td + landscape = landscape');
+assert(orientationMatrix && orientationMatrix.td.portrait === 'gate', 'orientation matrix: td + portrait = gate');
+assert(orientationMatrix && orientationMatrix.minigame.landscape === 'landscape', 'orientation matrix: minigame + landscape = landscape');
+assert(orientationMatrix && orientationMatrix.minigame.portrait === 'portrait', 'orientation matrix: minigame + portrait = portrait');
+assert(script.includes('function resolveSceneVariant(mode, viewportOrientation, levelId, minigameId)'), 'scene resolver is game-mode and viewport aware');
+
+const ultimates = readConstObject('TOOL_ULTIMATES');
+const ultimateIds = ['textbook', 'pencil', 'watering', 'glue', 'ruler', 'eraser', 'teacher'];
+assert(ultimates && ultimateIds.every(id => ultimates[id] && ultimates[id].targeted && ultimates[id].shape), 'seven tool ultimates are targeted AoE profiles with distinct shapes');
+assert(ultimates && ultimateIds.every(id => Array.isArray(ultimates[id].levelScaling) && ultimates[id].levelScaling.length === 5), 'every ultimate exposes five readable level-scaling entries');
+assert(ultimates && ultimateIds.every(id => {
+  const scaling = ultimates[id].levelScaling;
+  return Array.isArray(scaling) && scaling.length === 5
+    && Object.keys(scaling[0]).filter(key => typeof scaling[0][key] === 'number' && scaling[4][key] > scaling[0][key]).length >= 2;
+}), 'every ultimate grows at least two combat parameters from Lv1 to Lv5');
+assert(script.includes('armStampUltimate(toolId)') && script.includes('confirmStampUltimate(cell)') && script.includes('cancelStampUltimate()'), 'ultimate input has aim, confirm, and cancel paths');
+const confirmUltimateStart = script.indexOf('confirmStampUltimate(cell) {');
+const confirmUltimateEnd = script.indexOf('releaseStampUltimate(toolId)', confirmUltimateStart);
+const confirmUltimateBody = script.slice(confirmUltimateStart, confirmUltimateEnd);
+const noTargetGuardIndex = confirmUltimateBody.indexOf('if (!targets.length) {');
+const stampSpendIndex = confirmUltimateBody.indexOf('this.stamps--;');
+const cancelUltimateStart = script.indexOf('cancelStampUltimate() {');
+const cancelUltimateEnd = script.indexOf('movePendingUltimate(', cancelUltimateStart);
+const cancelUltimateBody = script.slice(cancelUltimateStart, cancelUltimateEnd);
+assert(
+  noTargetGuardIndex >= 0
+    && confirmUltimateBody.indexOf('return false;', noTargetGuardIndex) >= 0
+    && stampSpendIndex > noTargetGuardIndex
+    && confirmUltimateBody.includes('沒有目標，印章未消耗')
+    && cancelUltimateStart >= 0
+    && !cancelUltimateBody.includes('this.stamps--'),
+  'cancelled or targetless ultimates do not consume a stamp'
+);
+assert(script.includes('ultimateAreaCells(meta, cell)') && script.includes('drawUltimateTargetPreview(ctx)'), 'targeted ultimates expose a readable area preview');
+assert(['scaling.pulses', 'scaling.sun', 'scaling.volleys', 'scaling.pierce', 'scaling.duration', 'scaling.crossBonus', 'scaling.rebounds', 'scaling.push', 'scaling.freeze'].every(token => script.includes(token)), 'all level-scaling parameters affect runtime combat');
+assert(script.includes('enemyGridColumn(enemy)') && script.includes('const enemyColumn = this.enemyGridColumn(enemy);'), 'AoE targeting derives live columns from moving enemy positions');
+
+const bossMechanics = readConstObject('BOSS_MECHANICS');
+const phaseBosses = ['sunshine', 'deadline', 'boss', 'super_boss'];
+const hasBossPhaseTables = bossMechanics && phaseBosses.every(id => Array.isArray(bossMechanics[id] && bossMechanics[id].phases) && bossMechanics[id].phases.length >= 3);
+assert(hasBossPhaseTables, 'sunshine/deadline/boss/super_boss expose phase tables');
+assert(hasBossPhaseTables && phaseBosses.every(id => bossMechanics[id].phases.every(phase => phase.telegraph >= 48 && phase.telegraph <= 90)), 'boss phase actions have readable 0.8-1.5 second telegraphs');
+assert(hasBossPhaseTables && ['sunshine', 'boss', 'super_boss'].every(id => bossMechanics[id].phases.some(phase => phase.ranged)), 'major bosses include ranged attacks');
+assert(hasBossPhaseTables && phaseBosses.every(id => bossMechanics[id].phases.some(phase => phase.summon || phase.hazard || phase.charge)), 'boss phases include summon, arena, or charge pressure');
+assert(hasBossPhaseTables && phaseBosses.every(id => bossMechanics[id].phases.some(phase => phase.vulnerability)), 'bosses expose a counterattack vulnerability window');
+assert(bossMechanics && Array.isArray(bossMechanics.super_boss && bossMechanics.super_boss.phaseAssets) && bossMechanics.super_boss.phaseAssets.every(asset => assetExists(asset.runtime) && assetExists(asset.fallback)), 'super boss has three painted WebP/PNG phase assets');
+assert(script.includes('transitionBossPhase(') && script.includes('spawnBossRangedVolley(') && script.includes('spawnBossHazard(') && script.includes('startBossVulnerability('), 'runtime supports boss phase transitions, ranged volleys, hazards, and openings');
+assert(script.includes("type: 'bossAction'") && script.includes('executeBossPhaseAction(action)'), 'boss phase attacks execute after their telegraph window');
+
+const pendingBossProbe = loadTopLevelFunction('hasPendingBossTelegraph');
+const probeBoss = { id: 'boss' };
+assert(pendingBossProbe && pendingBossProbe([{ type: 'bossAction', enemy: probeBoss, delay: 30 }], probeBoss), 'executable probe detects a pending boss telegraph');
+assert(pendingBossProbe && !pendingBossProbe([{ type: 'bossAction', enemy: probeBoss, delay: 0 }], probeBoss), 'executable probe releases the boss when telegraph countdown ends');
+const enemyUpdateStart = script.indexOf("else if (o.type === 'enemy')");
+const enemyUpdateEnd = script.indexOf("else if (o.type === 'bullet')", enemyUpdateStart);
+const enemyUpdateBody = script.slice(enemyUpdateStart, enemyUpdateEnd);
+const bossLockIndex = enemyUpdateBody.indexOf('if (hasPendingBossTelegraph(this.objs, o))');
+const firstBossSideEffect = Math.min(...['sunSteal', 'titanOverdrive', 'specialCd', 'const eating =', 'if(move) o.x -= spd'].map(token => enemyUpdateBody.indexOf(token)).filter(index => index >= 0));
+assert(bossLockIndex >= 0 && bossLockIndex < firstBossSideEffect && /if \(hasPendingBossTelegraph\(this\.objs, o\)\) \{[\s\S]*?continue;[\s\S]*?\}/.test(enemyUpdateBody), 'pending boss telegraph exits before movement, bite, special, slam, charge, and resource effects');
+
+assert(script.includes('canvas.tabIndex = 0') && script.includes("canvas.setAttribute('role', 'application')"), 'canvas is keyboard focusable with an application role');
+assert(script.includes("canvas.addEventListener('keydown'") && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].every(key => script.includes(`'${key}'`)) && script.includes("key === ' '"), 'canvas keyboard handler supports arrow aim, Enter/Space confirm, and Escape cancel');
+assert(script.includes('movePendingUltimate(dx, dy)') && script.includes('confirmPendingUltimate()'), 'engine exposes keyboard-equivalent ultimate aim and confirm operations');
+assert(script.includes('pendingUltimate: this.pendingUltimate ?') && script.includes('ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress, pendingUltimate })'), 'pending ultimate state is pushed into the UI');
+assert(script.includes('renderUltimateControls()') && script.includes("'X 取消'") && script.includes('this.onCancelUltimate'), 'aim mode renders a fixed clickable cancel control');
+assert(script.includes("setAttribute('aria-live', 'assertive')") && script.includes('renderLiveRegion()'), 'critical aim and boss states use an assertive aria-live region');
+assert(['大招瞄準', '沒有目標，印章未消耗', '已取消大招，印章未消耗', 'BOSS 預警', 'BOSS 破綻'].every(message => script.includes(message)), 'aria-live messages cover aim, no-target, cancel, boss telegraph, and vulnerability');
+assert(script.includes('const bossTextX = Math.max(') && script.includes("ctx.fillText('BOSS 預警 '"), 'boss warning text uses a safe horizontal position');
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Game contracts verified.');

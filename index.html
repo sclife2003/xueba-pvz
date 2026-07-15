@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#202020" />
+    <link rel="icon" href="data:," />
     <title>学霸异世界：PvZ特别版 (Beta)</title>
     
     <style>
@@ -351,10 +352,22 @@
     };
 
     const BOSS_MECHANICS = {
-      sunshine: { scene: 'playground', label: '阳光抢夺', stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 },
-      deadline: { scene: 'exam', label: '截止铃暴走', rageRush: { hpRatio: 0.45, duration: 150, statBoost: 1.3 } },
-      super_boss: { scene: 'exam', label: '紫晶魔铠', titanShield: { hpRatio: 0.72, damageScale: 0.6 }, titanSlam: { interval: 210, damage: 850 }, rageRush: { hpRatio: 0.38, duration: 180, statBoost: 1.35 } },
-      boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 } }
+      sunshine: { scene: 'playground', label: '阳光抢夺', stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5, phases: [
+        { at: 1, telegraph: 54, ranged: 'sun_orb', vulnerability: 75 }, { at: 0.70, telegraph: 60, summon: 'jump_rope', vulnerability: 90 }, { at: 0.35, telegraph: 72, charge: 'track_dash', vulnerability: 180 }
+      ] },
+      deadline: { scene: 'exam', label: '截止铃暴走', rageRush: { hpRatio: 0.45, duration: 150, statBoost: 1.3 }, phases: [
+        { at: 1, telegraph: 54, hazard: 'soundwave', vulnerability: 60 }, { at: 0.62, telegraph: 60, summon: 'paperstorm', vulnerability: 72 }, { at: 0.30, telegraph: 72, charge: 'bell_rush', vulnerability: 90 }
+      ] },
+      super_boss: { scene: 'exam', label: '紫晶魔铠', titanShield: { hpRatio: 0.72, damageScale: 0.6 }, titanSlam: { interval: 210, damage: 850 }, rageRush: { hpRatio: 0.38, duration: 180, statBoost: 1.35 }, phaseAssets: [
+        { runtime: 'assets/sprites/enemy_super_boss_phase1_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase1_painted.png' },
+        { runtime: 'assets/sprites/enemy_super_boss_phase2_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase2_painted.png' },
+        { runtime: 'assets/sprites/enemy_super_boss_phase3_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase3_painted.png' }
+      ], phases: [
+        { at: 1, telegraph: 60, ranged: 'crystal_volley', vulnerability: 72 }, { at: 0.72, telegraph: 72, summon: 'crystal_guard', hazard: 'crystal_lane', vulnerability: 120 }, { at: 0.38, telegraph: 84, charge: 'cross_lane', ranged: 'crystal_volley', vulnerability: 180 }
+      ] },
+      boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 }, phases: [
+        { at: 1, telegraph: 54, ranged: 'red_pen', vulnerability: 60 }, { at: 0.65, telegraph: 66, summon: 'paperstorm', hazard: 'exam_sheet', vulnerability: 90 }, { at: 0.30, telegraph: 72, charge: 'proctor_rush', vulnerability: 150 }
+      ] }
     };
 
     const SPECIAL_ATTACKS = {
@@ -417,15 +430,59 @@
       exam: { id: 'exam_defense', title: '考场防线', reward: 180, prompt: '正面视角挡住试卷风暴，给最终关补资源' }
     };
 
+    const VFX_MANIFEST = {
+      slime: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      bat: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      tank: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      note: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      doodle: { family: 'doodle', runtime: 'assets/vfx/vfx_doodle.webp', fallback: 'assets/vfx/vfx_doodle.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      erasercrumb: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      hallpass: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      quizpaper: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      whistle: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      jump_rope: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      sunshine: { family: 'sunshine', runtime: 'assets/vfx/vfx_sunshine.webp', fallback: 'assets/vfx/vfx_sunshine.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      quiet: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      bookstack: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      bookmark: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      paperstorm: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      deadline: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      super_boss: { family: 'crystal', runtime: 'assets/vfx/vfx_crystal.webp', fallback: 'assets/vfx/vfx_crystal.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
+      boss: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] }
+    };
+
+    const SCENE_MANIFEST = {
+      '1-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_1.webp', fallback: 'assets/scenes/scene_1_1.png' }, '1-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_2.webp', fallback: 'assets/scenes/scene_1_2.png' }, '1-3': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_3.webp', fallback: 'assets/scenes/scene_1_3.png' },
+      '2-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_2_1.webp', fallback: 'assets/scenes/scene_2_1.png' }, '2-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_2_2.webp', fallback: 'assets/scenes/scene_2_2.png' }, '2-3': { orientation: 'landscape', runtime: 'assets/scenes/scene_2_3.webp', fallback: 'assets/scenes/scene_2_3.png' },
+      '3-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_3_1.webp', fallback: 'assets/scenes/scene_3_1.png' }, '3-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_3_2.webp', fallback: 'assets/scenes/scene_3_2.png' }, '3-3': { orientation: 'landscape', runtime: 'assets/scenes/scene_3_3.webp', fallback: 'assets/scenes/scene_3_3.png' },
+      '4-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_4_1.webp', fallback: 'assets/scenes/scene_4_1.png' }, '4-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_4_2.webp', fallback: 'assets/scenes/scene_4_2.png' }, 'challenge-speed': { orientation: 'landscape', runtime: 'assets/scenes/scene_challenge_speed.webp', fallback: 'assets/scenes/scene_challenge_speed.png' },
+      'r-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_r_1.webp', fallback: 'assets/scenes/scene_r_1.png' }, 'r-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_r_2.webp', fallback: 'assets/scenes/scene_r_2.png' }
+    };
+
+    const MINIGAME_SCENE_MANIFEST = {
+      chalk_shooter: { landscape: { runtime: 'assets/scenes/minigame_chalk_shooter_landscape.webp', fallback: 'assets/scenes/minigame_chalk_shooter_landscape.png' }, portrait: { runtime: 'assets/scenes/minigame_chalk_shooter_portrait.webp', fallback: 'assets/scenes/minigame_chalk_shooter_portrait.png' } },
+      relay_target: { landscape: { runtime: 'assets/scenes/minigame_relay_target_landscape.webp', fallback: 'assets/scenes/minigame_relay_target_landscape.png' }, portrait: { runtime: 'assets/scenes/minigame_relay_target_portrait.webp', fallback: 'assets/scenes/minigame_relay_target_portrait.png' } },
+      quiet_snipe: { landscape: { runtime: 'assets/scenes/minigame_quiet_snipe_landscape.webp', fallback: 'assets/scenes/minigame_quiet_snipe_landscape.png' }, portrait: { runtime: 'assets/scenes/minigame_quiet_snipe_portrait.webp', fallback: 'assets/scenes/minigame_quiet_snipe_portrait.png' } },
+      exam_defense: { landscape: { runtime: 'assets/scenes/minigame_exam_defense_landscape.webp', fallback: 'assets/scenes/minigame_exam_defense_landscape.png' }, portrait: { runtime: 'assets/scenes/minigame_exam_defense_portrait.webp', fallback: 'assets/scenes/minigame_exam_defense_portrait.png' } }
+    };
+
+    const ORIENTATION_MATRIX = { td: { landscape: 'landscape', portrait: 'gate' }, maze: { landscape: 'landscape', portrait: 'gate' }, minigame: { landscape: 'landscape', portrait: 'portrait' } };
+    function resolveSceneVariant(mode, viewportOrientation, levelId, minigameId) {
+      const outcome = (ORIENTATION_MATRIX[mode] || ORIENTATION_MATRIX.td)[viewportOrientation] || 'gate';
+      if (outcome === 'gate') return { variant: 'gate', asset: null };
+      const source = mode === 'minigame' ? MINIGAME_SCENE_MANIFEST[minigameId] : SCENE_MANIFEST[levelId];
+      return { variant: outcome, asset: source && source[outcome] ? source[outcome] : source };
+    }
+
     const STAMP_KILLS_REQUIRED = 10;
     const TOOL_ULTIMATES = {
-      textbook: { label: '知识暴雨', desc: '立刻掉落大量阳光，并让课本短时间产能加速' },
-      pencil: { label: '铅笔连射', desc: '全场铅笔短时间双倍射速' },
-      watering: { label: '喷壶暴雨', desc: '对全场敌人造成多段伤害' },
-      glue: { label: '全场胶水', desc: '所有敌人强力减速' },
-      ruler: { label: '直尺横扫', desc: '每一行发出穿透打击' },
-      eraser: { label: '橡皮堡垒', desc: '所有橡皮盾回血并临时加厚' },
-      teacher: { label: '刘老师总复习', desc: '全场定身并重击 Boss' }
+      textbook: { label: '知识暴雨', desc: '指定 3x3 区域连续落页', targeted: true, shape: 'square_3x3', levelScaling: [{ damage: 90, pulses: 3, sun: 15 }, { damage: 110, pulses: 4, sun: 18 }, { damage: 130, pulses: 5, sun: 21 }, { damage: 155, pulses: 6, sun: 24 }, { damage: 180, pulses: 7, sun: 28 }] },
+      pencil: { label: '万笔齐发', desc: '指定三条相邻路穿透扫射', targeted: true, shape: 'lanes_3', levelScaling: [{ damage: 95, volleys: 2, pierce: 2 }, { damage: 115, volleys: 3, pierce: 3 }, { damage: 135, volleys: 4, pierce: 4 }, { damage: 160, volleys: 5, pierce: 5 }, { damage: 190, volleys: 6, pierce: 6 }] },
+      watering: { label: '暴雨水幕', desc: '指定 2x3 区域持续水幕', targeted: true, shape: 'rect_2x3', levelScaling: [{ damage: 80, duration: 120, slow: 90 }, { damage: 95, duration: 145, slow: 105 }, { damage: 110, duration: 170, slow: 120 }, { damage: 130, duration: 200, slow: 140 }, { damage: 150, duration: 235, slow: 165 }] },
+      glue: { label: '胶海封锁', desc: '指定 2x3 区域黏着地带', targeted: true, shape: 'rect_2x3', levelScaling: [{ damage: 55, duration: 130, slow: 120 }, { damage: 70, duration: 155, slow: 145 }, { damage: 85, duration: 180, slow: 170 }, { damage: 105, duration: 210, slow: 200 }, { damage: 125, duration: 245, slow: 235 }] },
+      ruler: { label: '十字裁线', desc: '指定格贯穿整行与整列', targeted: true, shape: 'cross', levelScaling: [{ damage: 120, crossBonus: 45, rebounds: 0 }, { damage: 145, crossBonus: 60, rebounds: 1 }, { damage: 170, crossBonus: 75, rebounds: 1 }, { damage: 200, crossBonus: 95, rebounds: 2 }, { damage: 235, crossBonus: 120, rebounds: 2 }] },
+      eraser: { label: '橡皮震波', desc: '指定格释放 3x3 震波', targeted: true, shape: 'burst_3x3', levelScaling: [{ damage: 75, push: 12, shield: 140 }, { damage: 90, push: 16, shield: 180 }, { damage: 110, push: 20, shield: 220 }, { damage: 130, push: 25, shield: 270 }, { damage: 155, push: 30, shield: 330 }] },
+      teacher: { label: '黑板总复习', desc: '指定高威胁区爆破并创造破绽', targeted: true, shape: 'marked_burst', levelScaling: [{ damage: 160, freeze: 45, vulnerability: 75 }, { damage: 190, freeze: 55, vulnerability: 90 }, { damage: 220, freeze: 65, vulnerability: 105 }, { damage: 260, freeze: 75, vulnerability: 125 }, { damage: 300, freeze: 90, vulnerability: 150 }] }
     };
 
     const MONSTER_ATTACK_PLAN = {
@@ -913,12 +970,13 @@
       '4-2': '毕业答辩总复习，所有学过的招式都用上！',
       'challenge-speed': '速度课堂：节奏更快，挑战你的反应！'
     };
-    LEVELS.forEach(l => {
-      if (typeof l.threatTier !== 'number') l.threatTier = getLevelThreatTier(l);
-      l.recommendedTools = RECOMMENDED_TOOLS[l.id] || Object.keys(TOWERS);
-      l.mainlineLoadout = MAINLINE_LOADOUTS[l.id] || Object.keys(TOWERS);
-      l.lessonBeat = LESSON_BEATS[l.id] || null;
-      l.goal = LEVEL_GOALS[l.id] || (l.tip || '守住校门就过关！');
+    LEVELS.forEach(level => {
+      if (typeof level.threatTier !== 'number') level.threatTier = getLevelThreatTier(level);
+      level.recommendedTools = RECOMMENDED_TOOLS[level.id] || Object.keys(TOWERS);
+      level.mainlineLoadout = MAINLINE_LOADOUTS[level.id] || Object.keys(TOWERS);
+      level.lessonBeat = LESSON_BEATS[level.id] || null;
+      level.goal = LEVEL_GOALS[level.id] || (level.tip || '守住校门就过关！');
+      level.sceneProfile = SCENE_MANIFEST[level.id];
     });
 
     // ==================== SCHOOL-STAGE WORLD MAP (Phase B) ====================
@@ -1541,12 +1599,21 @@
       ctx.fillText(label || '?', 0, 0);
       ctx.restore();
     }
+    function rasterAssetEntries() {
+      const entries = Object.entries(SCENE_MANIFEST).map(([id, profile]) => ['scene_' + id.replace(/[^a-z0-9]+/gi, '_'), profile.runtime]);
+      Object.entries(MINIGAME_SCENE_MANIFEST).forEach(([id, variants]) => {
+        entries.push(['minigame_' + id + '_landscape', variants.landscape.runtime], ['minigame_' + id + '_portrait', variants.portrait.runtime]);
+      });
+      Object.values(VFX_MANIFEST).forEach(profile => entries.push(['vfx_' + profile.family, profile.runtime]));
+      BOSS_MECHANICS.super_boss.phaseAssets.forEach((asset, index) => entries.push(['enemy_super_boss_phase' + (index + 1), asset.runtime]));
+      return Array.from(new Map(entries));
+    }
     const ASSETS = {
       images: {},
       failed: {},
       ready: false,
       load() {
-        const entries = Object.entries(SPRITE_MANIFEST);
+        const entries = [...Object.entries(SPRITE_MANIFEST), ...rasterAssetEntries()];
         if (entries.length === 0) { this.ready = true; return Promise.resolve(); }
         return Promise.all(entries.map(([id, url]) => new Promise(res => {
           const img = new Image();
@@ -1629,6 +1696,12 @@
     };
     (function initAV(){ const s = loadSettings(); SOUND.enabled = s.sound; VOICE.enabled = s.voice; })();
 
+    function hasPendingBossTelegraph(objects, enemy) {
+        return Array.isArray(objects) && !!enemy && objects.some(action =>
+            action && action.type === 'bossAction' && action.enemy === enemy && action.delay > 0
+        );
+    }
+
     // ==================== GAME ENGINE ====================
     class GameEngine {
         constructor(callbacks) {
@@ -1648,6 +1721,7 @@
             this.starTimer = 600; // 知识星掉落计时
             this.minigame = null;
             this.pendingSunBonus = 0;
+            this.pendingUltimate = null;
             // ----- Phase 2.5 策略深度状态 -----
             this.activeLoadout = Object.keys(TOWERS); // 本关可用文具（loadout），默认全配
             this.teacherCharge = 0; this.teacherMax = 100; this.teacherReady = false; // 班主任技能槽
@@ -1836,6 +1910,7 @@
                 else this.handleClick(x, y);
             } else if (type === 'move') {
                 if (this.phase === 'maze' && this.touchStart) { this.currentTouch = { x, y }; this.mazePath = null; }
+                else if (this.pendingUltimate) this.pendingUltimate.previewCell = this.screenToGridCell(x, y);
             } else if (type === 'end') {
                 this.touchStart = null; this.currentTouch = null;
             }
@@ -2011,6 +2086,14 @@
             return null;
         }
 
+        screenToGridCell(x, y) {
+            const rect = this.canvas.getBoundingClientRect();
+            const cx = (x - rect.left) * (this.w / rect.width);
+            const cy = (y - rect.top) * (this.h / rect.height);
+            const cell = { c: Math.floor((cx - this.OX) / this.G), r: Math.floor((cy - this.OY) / this.G) };
+            return cell.c >= 0 && cell.c < this.C && cell.r >= 0 && cell.r < this.R ? cell : null;
+        }
+
         handleClick(x, y) {
             if (this.phase !== 'td' || this.combatPaused) return false;
             const rect = this.canvas.getBoundingClientRect();
@@ -2018,6 +2101,12 @@
             const scaleY = this.h / rect.height;
             const cx = (x - rect.left) * scaleX;
             const cy = (y - rect.top) * scaleY;
+            if (this.pendingUltimate) {
+                const cell = this.screenToGridCell(x, y);
+                if (!cell) return this.cancelStampUltimate();
+                this.pendingUltimate.previewCell = cell;
+                return this.confirmStampUltimate(cell);
+            }
             for (let i = this.objs.length - 1; i >= 0; i--) {
                 const o = this.objs[i];
                 if (o.type === 'star') {
@@ -2253,7 +2342,7 @@
 
         damageEnemy(enemy, dmg, sourceColor) {
             if (!enemy || enemy.type !== 'enemy') return;
-            let finalDmg = dmg;
+            let finalDmg = enemy.vulnerabilityTimer > 0 ? Math.round(dmg * 1.35) : dmg;
             if (enemy.data && enemy.data.ability === 'paperShield' && enemy.hp > enemy.maxHp * 0.55) {
                 finalDmg = Math.max(1, Math.round(dmg * 0.55));
                 enemy.shieldFlash = 12;
@@ -2282,43 +2371,190 @@
             this.pushCombatState();
         }
 
-        releaseStampUltimate(toolId) {
+        announce(message) {
+            if (message && this.callbacks.onAnnouncement) this.callbacks.onAnnouncement(message);
+        }
+
+        armStampUltimate(toolId) {
             if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0) return false;
-            const id = toolId || this.selectedTower || (this.activeLoadout && this.activeLoadout[0]) || 'pencil';
-            const meta = TOOL_ULTIMATES[id] || TOOL_ULTIMATES.pencil;
-            this.stamps = Math.max(0, (this.stamps || 0) - 1);
-            if (id === 'textbook') {
-                for (let i = 0; i < 5; i++) this.spawnOrb(this.OX + this.G * (1 + Math.random() * Math.max(1, this.C - 2)), this.OY + this.G * (0.6 + Math.random() * Math.max(1, this.R - 1)), 45);
-                this.objs.forEach(o => { if (o.type === 'tower' && o.id === 'textbook') o.cd = Math.max(0, (o.cd || 0) - 160); });
-            } else if (id === 'pencil') {
-                this.objs.forEach(o => { if (o.type === 'tower' && o.id === 'pencil') o.ultimateTimer = Math.max(o.ultimateTimer || 0, 420); });
-            } else if (id === 'watering') {
-                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, 520, '#38bdf8'); });
-            } else if (id === 'glue') {
-                this.objs.forEach(o => { if (o.type === 'enemy') o.slowTimer = Math.max(o.slowTimer || 0, 520); });
-            } else if (id === 'ruler') {
-                for (let r = 0; r < this.R; r++) {
-                    this.objs.forEach(o => { if (o.type === 'enemy' && o.r === r) this.damageEnemy(o, 620, '#f97316'); });
-                    this.objs.push({ type: 'bullet', x: this.OX, y: this.OY + r * this.G + this.G / 2, dmg: 0, color: '#f97316', vx: 22, vy: 0, pierceVisual: true, life: 30 });
-                }
-            } else if (id === 'eraser') {
-                this.objs.forEach(o => {
-                    if (o.type === 'tower' && o.id === 'eraser') {
-                        const add = Math.round(o.maxHp * 0.35);
-                        o.maxHp += add; o.hp = Math.min(o.maxHp, o.hp + add + 900);
-                        o.hitFlash = Math.max(o.hitFlash || 0, 16);
-                    }
-                });
-            } else if (id === 'teacher') {
-                this.freezeTimer = Math.max(this.freezeTimer || 0, 240);
-                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, o.data && o.data.role === 'boss' ? 1600 : 760, '#F56565'); });
-            } else {
-                this.objs.forEach(o => { if (o.type === 'enemy') this.damageEnemy(o, 500, '#F6D365'); });
-            }
-            this.floatText('印章大招：' + meta.label, this.w / 2, this.h / 2, '#F6D365', 92, 30);
-            this.spawnParticles(this.w / 2, this.h / 2, '#F6D365', 34);
+            const id = toolId || this.selectedTower || 'pencil';
+            if (!TOOL_ULTIMATES[id]) return false;
+            if (this.pendingUltimate && this.pendingUltimate.toolId === id) return this.cancelStampUltimate();
+            this.pendingUltimate = { toolId: id, previewCell: { c: Math.floor(this.C / 2), r: Math.floor(this.R / 2) } };
+            this.floatText('选择目标格：' + TOOL_ULTIMATES[id].label, this.w / 2, this.OY - 18, '#F6D365', 75, 24);
+            this.announce('大招瞄準：' + TOOL_ULTIMATES[id].label + '。方向鍵移動，Enter 或空白鍵確認，Escape 取消。');
             this.pushCombatState();
             return true;
+        }
+
+        cancelStampUltimate() {
+            if (!this.pendingUltimate) return false;
+            this.pendingUltimate = null;
+            this.announce('已取消大招，印章未消耗。');
+            this.pushCombatState();
+            return true;
+        }
+
+        movePendingUltimate(dx, dy) {
+            if (!this.pendingUltimate || !this.pendingUltimate.previewCell) return false;
+            const cell = this.pendingUltimate.previewCell;
+            cell.c = Math.max(0, Math.min(this.C - 1, cell.c + dx));
+            cell.r = Math.max(0, Math.min(this.R - 1, cell.r + dy));
+            this.announce('大招瞄準：第 ' + (cell.r + 1) + ' 路，第 ' + (cell.c + 1) + ' 格。');
+            this.pushCombatState();
+            return true;
+        }
+
+        confirmPendingUltimate() {
+            if (!this.pendingUltimate) return false;
+            return this.confirmStampUltimate(this.pendingUltimate.previewCell);
+        }
+
+        handleUltimateKey(key) {
+            if (!this.pendingUltimate) return false;
+            if (key === 'ArrowLeft') return this.movePendingUltimate(-1, 0);
+            if (key === 'ArrowRight') return this.movePendingUltimate(1, 0);
+            if (key === 'ArrowUp') return this.movePendingUltimate(0, -1);
+            if (key === 'ArrowDown') return this.movePendingUltimate(0, 1);
+            if (key === 'Escape') return this.cancelStampUltimate();
+            if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+                this.confirmPendingUltimate();
+                return true;
+            }
+            return false;
+        }
+
+        enemyGridColumn(enemy) {
+            if (!enemy) return -1;
+            return Math.max(0, Math.min(this.C - 1, Math.floor(((enemy.x || 0) - this.OX + this.G / 2) / this.G)));
+        }
+
+        ultimateTargets(meta, cell) {
+            return this.objs.filter(enemy => {
+                if (enemy.type !== 'enemy' || enemy.hp <= 0) return false;
+                const enemyColumn = this.enemyGridColumn(enemy);
+                return meta.shape === 'lanes_3' ? Math.abs(enemy.r - cell.r) <= 1 :
+                    meta.shape === 'cross' ? enemy.r === cell.r || enemyColumn === cell.c :
+                    meta.shape === 'rect_2x3' ? enemyColumn >= cell.c && enemyColumn <= cell.c + 1 && enemy.r >= cell.r - 1 && enemy.r <= cell.r + 1 :
+                    Math.abs(enemy.r - cell.r) <= 1 && Math.abs(enemyColumn - cell.c) <= 1;
+            });
+        }
+
+        ultimateAreaCells(meta, cell) {
+            if (!meta || !cell) return [];
+            const cells = [];
+            const add = (c, r) => {
+                if (c >= 0 && c < this.C && r >= 0 && r < this.R && !cells.some(item => item.c === c && item.r === r)) cells.push({ c, r });
+            };
+            if (meta.shape === 'lanes_3') {
+                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = 0; c < this.C; c++) add(c, r);
+            } else if (meta.shape === 'cross') {
+                for (let c = 0; c < this.C; c++) add(c, cell.r);
+                for (let r = 0; r < this.R; r++) add(cell.c, r);
+            } else if (meta.shape === 'rect_2x3') {
+                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = cell.c; c <= cell.c + 1; c++) add(c, r);
+            } else {
+                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = cell.c - 1; c <= cell.c + 1; c++) add(c, r);
+            }
+            return cells;
+        }
+
+        confirmStampUltimate(cell) {
+            if (!this.pendingUltimate || !cell) return false;
+            const id = this.pendingUltimate.toolId;
+            const meta = TOOL_ULTIMATES[id];
+            const targets = this.ultimateTargets(meta, cell);
+            if (!targets.length) {
+                this.announce('沒有目標，印章未消耗。請移動瞄準位置或取消。');
+                return false;
+            }
+            const levels = (this.save.toolLevels || defaultToolLevels());
+            const scaling = meta.levelScaling[Math.max(0, Math.min(4, (levels[id] || 1) - 1))];
+            this.stamps--;
+            targets.forEach(enemy => {
+                const bossScale = enemy.data && enemy.data.role === 'boss' ? 0.45 : 1;
+                let damage = scaling.damage;
+                if (id === 'textbook') damage += scaling.pulses * 12;
+                if (id === 'pencil') damage += scaling.volleys * 18 + scaling.pierce * 8;
+                if (id === 'ruler') damage += scaling.crossBonus;
+                this.damageEnemy(enemy, Math.round(damage * bossScale), '#F6D365');
+                if (scaling.slow) enemy.slowTimer = Math.max(enemy.slowTimer || 0, scaling.slow);
+                if (scaling.duration) {
+                    enemy.ultimateDotTimer = Math.max(enemy.ultimateDotTimer || 0, scaling.duration);
+                    enemy.ultimateDotDamage = Math.max(enemy.ultimateDotDamage || 0, Math.max(2, Math.round(scaling.damage / 8)));
+                    enemy.ultimateDotColor = id === 'glue' ? '#ec4899' : '#38bdf8';
+                }
+                if (scaling.push) enemy.x = Math.min(this.OX + this.C * this.G, enemy.x + scaling.push);
+                if (scaling.freeze) enemy.ultimateFreezeTimer = Math.max(enemy.ultimateFreezeTimer || 0, scaling.freeze);
+                if (id === 'teacher' && enemy.data && enemy.data.role === 'boss') this.startBossVulnerability(enemy, scaling.vulnerability);
+            });
+            if (id === 'textbook') this.mp += scaling.sun;
+            if (id === 'ruler' && scaling.rebounds > 0) {
+                const targetSet = new Set(targets);
+                this.objs.filter(enemy => enemy.type === 'enemy' && enemy.hp > 0 && !targetSet.has(enemy))
+                    .sort((a, b) => Math.hypot(this.enemyGridColumn(a) - cell.c, a.r - cell.r) - Math.hypot(this.enemyGridColumn(b) - cell.c, b.r - cell.r))
+                    .slice(0, scaling.rebounds)
+                    .forEach(enemy => this.damageEnemy(enemy, Math.round((scaling.damage + scaling.crossBonus) * 0.45), '#fbbf24'));
+            }
+            if (id === 'eraser') this.objs.filter(o => o.type === 'tower' && o.id === 'eraser').forEach(o => { o.hp = Math.min(o.maxHp, o.hp + scaling.shield); });
+            const vfxFamily = { textbook: 'paper', pencil: 'impact', watering: 'soundwave', glue: 'doodle', ruler: 'impact', eraser: 'impact', teacher: 'paper' }[id];
+            const visualPulses = Math.min(7, scaling.pulses || scaling.volleys || 1);
+            for (let pulse = 0; pulse < visualPulses; pulse++) {
+                this.spawnVfxPhase({ id, x: this.OX + cell.c * this.G, y: this.OY + cell.r * this.G }, 'impact', { label: meta.label, family: vfxFamily, delay: pulse * 6 });
+            }
+            this.pendingUltimate = null;
+            this.announce('大招已施放：' + meta.label + '。');
+            this.updateStats();
+            this.pushCombatState();
+            return true;
+        }
+
+        releaseStampUltimate(toolId) { return this.armStampUltimate(toolId); }
+
+        transitionBossPhase(enemy, cfg) {
+            if (!enemy || !cfg || !Array.isArray(cfg.phases)) return false;
+            const ratio = enemy.hp / Math.max(1, enemy.maxHp);
+            let next = 0;
+            cfg.phases.forEach((phase, index) => { if (ratio <= phase.at) next = index; });
+            if (enemy.bossPhase === next) return false;
+            enemy.bossPhase = next;
+            const phase = cfg.phases[next];
+            if (cfg.phaseAssets && cfg.phaseAssets[next]) enemy.spriteAssetId = 'enemy_super_boss_phase' + (next + 1);
+            if (enemy.id === 'super_boss') enemy.titanAnnounced = true;
+            this.floatText('阶段 ' + (next + 1) + '：预警！', enemy.x, enemy.y - 24, '#f8fafc', phase.telegraph, 24);
+            this.spawnVfxPhase(enemy, 'telegraph', { label: 'Boss 预警' });
+            this.objs.push({ type: 'bossAction', enemy, phase, delay: phase.telegraph, maxDelay: phase.telegraph });
+            this.announce('BOSS 預警：' + cfg.label + '，' + Math.ceil(phase.telegraph / 60) + ' 秒後施放。');
+            return true;
+        }
+
+        executeBossPhaseAction(action) {
+            const enemy = action && action.enemy;
+            const phase = action && action.phase;
+            if (!enemy || enemy.hp <= 0 || !phase) return false;
+            if (phase.ranged) this.spawnBossRangedVolley(enemy, phase);
+            if (phase.summon) this.summonSupportEnemies(enemy, { summon: phase.summon, summonCount: 2, summonRows: 'adjacent', summonHpScale: 0.7 });
+            if (phase.hazard) this.spawnBossHazard(enemy, phase);
+            if (phase.charge) enemy.bossChargeTimer = Math.max(enemy.bossChargeTimer || 0, 90);
+            this.spawnVfxPhase(enemy, 'cast', { label: 'Boss 技能' });
+            this.startBossVulnerability(enemy, phase.vulnerability);
+            this.floatText('破绽!', enemy.x, enemy.y - 18, '#fef08a', phase.vulnerability, 22);
+            this.announce('BOSS 破綻：反擊窗口已開啟。');
+            return true;
+        }
+
+        spawnBossRangedVolley(enemy, phase) {
+            const targets = this.objs.filter(o => o.type === 'tower' && !o.destroyed).sort((a, b) => a.x - b.x).slice(0, 3);
+            targets.forEach((target, index) => this.spawnEnemyProjectile(enemy, target, { label: phase.ranged, projectileSpeed: 7 + index, damageScale: 1.1, telegraph: phase.telegraph }));
+        }
+
+        spawnBossHazard(enemy, phase) {
+            this.objs.push({ type: 'dirtyZone', x: enemy.x - this.G, y: enemy.y, c: Math.max(0, this.enemyGridColumn(enemy) - 1), r: enemy.r, w: this.G * 2, h: this.G, hp: 120, maxHp: 120, life: phase.telegraph + 120, maxLife: phase.telegraph + 120, color: '#a855f7', silenceFrames: 24, tick: 30 });
+        }
+
+        startBossVulnerability(enemy, frames) {
+            if (!enemy || !frames) return;
+            enemy.vulnerabilityTimer = Math.max(enemy.vulnerabilityTimer || 0, frames);
         }
 
         damageTower(tower, amount, sourceColor, label, size = 20) {
@@ -2365,6 +2601,7 @@
         spawnSpecialFx(enemy, target, cfg) {
             if (!enemy || !target || !cfg) return;
             const color = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
+            ['telegraph', 'cast', 'travel', 'impact'].forEach((phase, index) => this.spawnVfxPhase(enemy, phase, { target, delay: index * 6, label: cfg.label }));
             this.objs.push({
                 type: 'skillFx',
                 x1: enemy.x + this.G / 2, y1: enemy.y + this.G / 2,
@@ -2372,6 +2609,18 @@
                 color, label: cfg.label || '特殊攻击',
                 life: 28, maxLife: 28
             });
+        }
+
+        spawnVfxPhase(enemy, phase, options = {}) {
+            const profile = VFX_MANIFEST[enemy && enemy.id] || VFX_MANIFEST.slime;
+            if (!profile || !profile.phases.includes(phase)) return false;
+            const target = options.target || enemy;
+            this.objs.push({
+                type: 'rasterFx', assetId: 'vfx_' + (options.family || profile.family), phase, label: options.label || phase,
+                x: target.x + this.G / 2, y: target.y + this.G / 2, delay: options.delay || 0,
+                life: 30, maxLife: 30, size: Math.max(this.G, 54)
+            });
+            return true;
         }
 
         spawnDirtyZone(enemy, target, cfg) {
@@ -2805,7 +3054,11 @@
                 waitWave: this.waitNextWave !== null && this.waitNextWave > 0,
                 stamps: this.stamps || 0,
                 stampKills: this.stampKills || 0,
-                stampProgress: (this.stampKills || 0) / STAMP_KILLS_REQUIRED
+                stampProgress: (this.stampKills || 0) / STAMP_KILLS_REQUIRED,
+                pendingUltimate: this.pendingUltimate ? {
+                    toolId: this.pendingUltimate.toolId,
+                    previewCell: { ...this.pendingUltimate.previewCell }
+                } : null
             });
         }
 
@@ -2934,7 +3187,12 @@
                 for (let i = this.objs.length - 1; i >= 0; i--) {
                     const o = this.objs[i];
                     if (o.type === 'orb' || o.type === 'star') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
-                    else if (o.type === 'skillFx') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'skillFx' || o.type === 'rasterFx') { if (o.delay > 0) o.delay--; else o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'bossAction') {
+                        if (!o.enemy || o.enemy.hp <= 0) { this.objs.splice(i, 1); continue; }
+                        o.delay--;
+                        if (o.delay <= 0) { this.executeBossPhaseAction(o); this.objs.splice(i, 1); }
+                    }
                     else if (o.type === 'enemyProjectile') { this.updateEnemyProjectile(o); if(o.life<=0) this.objs.splice(i,1); }
                     else if (o.type === 'dirtyZone') { this.updateDirtyZone(o); if(o.life<=0 || o.hp<=0) this.objs.splice(i,1); }
                     else if (o.type === 'tower') {
@@ -2977,11 +3235,24 @@
                         if(o.hitFlash>0) o.hitFlash--;
                         if(o.specialFlash>0) o.specialFlash--;
                         if(o.shieldFlash>0) o.shieldFlash--;
-                        const frozen = this.freezeTimer > 0;
+                        const frozen = this.freezeTimer > 0 || (o.ultimateFreezeTimer || 0) > 0;
+                        if (o.ultimateFreezeTimer > 0) o.ultimateFreezeTimer--;
+                        if (o.ultimateDotTimer > 0) {
+                            o.ultimateDotTimer--;
+                            if (o.ultimateDotTimer % 30 === 0) this.damageEnemy(o, o.ultimateDotDamage || 2, o.ultimateDotColor || '#38bdf8');
+                        }
                         let spd = Math.abs(o.vx);
                         if (!o.baseDmg) o.baseDmg = o.dmg || 0;
-                        if(o.hurryTimer > 0) o.hurryTimer--;
                         const bossCfg = BOSS_MECHANICS[o.id] || null;
+                        if (bossCfg) this.transitionBossPhase(o, bossCfg);
+                        if (hasPendingBossTelegraph(this.objs, o)) {
+                            o.isEating = false;
+                            o.eatCd = 0;
+                            o.dmg = o.baseDmg;
+                            continue;
+                        }
+                        if(o.hurryTimer > 0) o.hurryTimer--;
+                        if (o.vulnerabilityTimer > 0) o.vulnerabilityTimer--;
                         if(o.data && o.data.ability === 'sunSteal') {
                             const cfg = bossCfg || { stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 };
                             o.sunCooldown = Math.max(0, (o.sunCooldown || 0) - 1);
@@ -3090,6 +3361,7 @@
                         const powerBoost = 1 + ((o.powerStacks || 0) * ((bossCfg && bossCfg.stackBoost) || 0.2));
                         let dmgBoost = powerBoost;
                         if(o.rageTimer > 0) { spd *= (rageCfg && rageCfg.statBoost) || 1.3; dmgBoost *= (rageCfg && rageCfg.statBoost) || 1.3; o.rageTimer--; }
+                        if(o.bossChargeTimer > 0) { spd *= 1.35; dmgBoost *= 1.35; o.bossChargeTimer--; }
                         if(o.hurryTimer > 0) spd *= 1.25;
                         if(o.powerStacks > 0) spd *= powerBoost;
                         o.dmg = o.baseDmg * dmgBoost;
@@ -3441,27 +3713,68 @@
             }
         }
 
+        drawRasterScene(ctx, assetId, label) {
+            const image = ASSETS.images[assetId];
+            if (!image) { drawMissingPaintedAsset(ctx, this.w / 2, this.h / 2, Math.min(this.w, this.h) * 0.45, label, '#f8fafc'); return false; }
+            const containScale = Math.min(this.w / image.width, this.h / image.height);
+            const coverScale = Math.max(this.w / image.width, this.h / image.height);
+            const coverW = image.width * coverScale, coverH = image.height * coverScale;
+            ctx.save();
+            ctx.globalAlpha = 0.62;
+            ctx.filter = 'blur(14px) saturate(0.9)';
+            ctx.drawImage(image, (this.w - coverW) / 2, (this.h - coverH) / 2, coverW, coverH);
+            ctx.restore();
+            const w = image.width * containScale, h = image.height * containScale;
+            ctx.drawImage(image, (this.w - w) / 2, (this.h - h) / 2, w, h);
+            return true;
+        }
+
+        drawBattleGrid(ctx) {
+            ctx.save();
+            for (let r = 0; r < this.R; r++) {
+                ctx.fillStyle = r % 2 === 0 ? 'rgba(255, 255, 255, 0.035)' : 'rgba(15, 23, 42, 0.035)';
+                ctx.fillRect(this.OX, this.OY + r * this.G, this.C * this.G, this.G);
+            }
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let c = 0; c <= this.C; c++) {
+                const x = this.OX + c * this.G;
+                ctx.moveTo(x, this.OY); ctx.lineTo(x, this.OY + this.R * this.G);
+            }
+            for (let r = 0; r <= this.R; r++) {
+                const y = this.OY + r * this.G;
+                ctx.moveTo(this.OX, y); ctx.lineTo(this.OX + this.C * this.G, y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        drawUltimateTargetPreview(ctx) {
+            if (!this.pendingUltimate || !this.pendingUltimate.previewCell) return;
+            const meta = TOOL_ULTIMATES[this.pendingUltimate.toolId];
+            const cells = this.ultimateAreaCells(meta, this.pendingUltimate.previewCell);
+            ctx.save();
+            cells.forEach(cell => {
+                const x = this.OX + cell.c * this.G;
+                const y = this.OY + cell.r * this.G;
+                ctx.fillStyle = 'rgba(246, 211, 101, 0.28)';
+                ctx.fillRect(x + 2, y + 2, this.G - 4, this.G - 4);
+                ctx.strokeStyle = 'rgba(255, 247, 237, 0.92)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 3, y + 3, this.G - 6, this.G - 6);
+            });
+            ctx.restore();
+        }
+
         drawChapterMinigame(ctx) {
             const mg = this.minigame, w = this.w, h = this.h;
-            const bg = ctx.createLinearGradient(0, 0, 0, h);
-            bg.addColorStop(0, '#38bdf8'); bg.addColorStop(0.45, '#bfdbfe'); bg.addColorStop(0.46, '#84cc16'); bg.addColorStop(1, '#15803d');
-            ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = 'rgba(255,255,255,0.82)';
-            for (let i = 0; i < 5; i++) {
-                const cx = (i * 220 + this.frame * 0.18) % (w + 180) - 90, cy = 50 + (i % 3) * 34;
-                ctx.beginPath(); ctx.ellipse(cx, cy, 54, 18, 0, 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(21,128,61,0.24)';
-            for (let i = 0; i < 8; i++) {
-                const x = i * w / 7;
-                ctx.beginPath(); ctx.moveTo(w / 2, h * 0.42); ctx.lineTo(x, h); ctx.lineTo(x + w / 12, h); ctx.closePath(); ctx.fill();
-            }
+            const viewportOrientation = w > h ? 'landscape' : 'portrait';
+            const variant = resolveSceneVariant('minigame', viewportOrientation, null, mg.id);
+            this.drawRasterScene(ctx, 'minigame_' + mg.id + '_' + variant.variant, mg.title);
             ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center';
             ctx.font = 'bold ' + Math.max(20, Math.floor(w * 0.028)) + 'px Arial';
             ctx.fillText((mg && mg.title) || '阳光小游戏', w / 2, 44);
-            ctx.font = 'bold ' + Math.max(15, Math.floor(w * 0.018)) + 'px Arial';
-            ctx.fillStyle = '#fff7ed';
-            ctx.fillText('点击飞来的怪物，命中越多，下一关开局阳光越多', w / 2, 74);
             (mg && mg.targets || []).forEach(t => {
                 const pulse = 1 + Math.sin(this.frame * 0.16 + t.x) * 0.04;
                 ctx.save(); ctx.translate(t.x, t.y); ctx.scale(pulse, pulse);
@@ -3497,15 +3810,12 @@
             ctx.imageSmoothingQuality = 'high';
             ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, this.w, this.h);
             if (this.phase === 'td') {
-                const chapterId = (LEVELS[this.levelIdx] && LEVELS[this.levelIdx].chapterId) || '';
-                if (chapterId === 'classroom' || chapterId === 'playground' || chapterId === 'library' || chapterId === 'exam') {
-                    this.drawChapterStage(ctx, G, chapterId);
-                } else {
-                    for (let r = 0; r < this.R; r++) for (let c = 0; c < this.C; c++) {
-                        ctx.fillStyle = (r + c) % 2 === 0 ? '#38A169' : '#2F855A';
-                        ctx.fillRect(this.OX + c * this.G, this.OY + r * this.G, this.G, this.G);
-                    }
-                }
+                const level = LEVELS[this.levelIdx] || {};
+                const viewportOrientation = this.w > this.h ? 'landscape' : 'portrait';
+                const variant = resolveSceneVariant('td', viewportOrientation, level.id, null);
+                if (variant.variant === 'landscape') this.drawRasterScene(ctx, 'scene_' + String(level.id || '').replace(/[^a-z0-9]+/gi, '_'), level.name || '场景加载中');
+                this.drawBattleGrid(ctx);
+                this.drawUltimateTargetPreview(ctx);
                 // 路线预警：敌人即将出现的那一路，右侧闪红 + ⚠️
                 this.laneWarnings.forEach(w => {
                     const blink = 0.3 + 0.4 * Math.abs(Math.sin(this.frame * 0.3));
@@ -3540,14 +3850,40 @@
                     ctx.textAlign = 'left';
                 });
                 this.objs.forEach(o => {
-                    if(o.type!=='orb' && o.type!=='bullet' && o.type!=='skillFx' && o.type!=='dirtyZone' && o.type!=='enemyProjectile') {
+                    if(o.type!=='orb' && o.type!=='bullet' && o.type!=='skillFx' && o.type!=='rasterFx' && o.type!=='bossAction' && o.type!=='dirtyZone' && o.type!=='enemyProjectile') {
                         const shadowScale = o.type === 'enemy' ? ((o.data && o.data.spriteScale) || 1) : 1;
                         ctx.fillStyle='rgba(0,0,0,0.3)';
                         ctx.beginPath();
                         ctx.ellipse(o.x+G/2, o.y+G-5, G/3*shadowScale, G/6*Math.min(1.35, shadowScale), 0, 0, Math.PI*2);
                         ctx.fill();
                     }
-                    if(o.type==='dirtyZone') {
+                    if(o.type==='bossAction') {
+                        if (!o.enemy) return;
+                        const ratio = Math.max(0, o.delay / Math.max(1, o.maxDelay));
+                        const cx = o.enemy.x + G / 2, cy = o.enemy.y + G / 2;
+                        const bossTextX = Math.max(this.OX + G, Math.min(this.w - readSafeAreaInset('right') - G * 1.45, cx));
+                        ctx.save();
+                        ctx.strokeStyle = ratio < 0.35 ? '#ef4444' : '#fbbf24';
+                        ctx.fillStyle = 'rgba(127, 29, 29, 0.14)';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath(); ctx.arc(cx, cy, G * (0.55 + ratio * 0.42), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = '#fff7ed';
+                        ctx.font = 'bold ' + Math.max(13, Math.floor(G * 0.22)) + 'px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('BOSS 預警 ' + Math.max(1, Math.ceil(o.delay / 60)), bossTextX, cy - G * 0.62);
+                        ctx.restore();
+                    } else if(o.type==='rasterFx') {
+                        if (o.delay > 0) return;
+                        const image = ASSETS.images[o.assetId];
+                        const size = o.size * (1 + (1 - o.life / o.maxLife) * 0.2);
+                        if (image) {
+                            ctx.save();
+                            ctx.globalAlpha = Math.min(1, Math.max(0, o.life / 8));
+                            ctx.drawImage(image, o.x - size / 2, o.y - size / 2, size, size);
+                            ctx.restore();
+                        }
+                        else drawMissingPaintedAsset(ctx, o.x, o.y, size, o.label, '#f8fafc');
+                    } else if(o.type==='dirtyZone') {
                         const pulse = 0.38 + 0.18 * Math.abs(Math.sin(this.frame * 0.18));
                         ctx.save();
                         ctx.globalAlpha = Math.min(0.72, pulse + 0.18);
@@ -3762,6 +4098,8 @@
             this.stamps = 0;
             this.stampKills = 0;
             this.stampProgress = 0;
+            this.pendingUltimate = null;
+            this.liveMessage = '';
             this.waitWave = false;      // 是否显示「提前上课」按钮
             this.fieldSel = null;       // 选中的场上单位（升级面板）
             this.results = {};          // Phase 4：关卡星级最佳成绩
@@ -3785,6 +4123,7 @@
             this.onEarlyCall = null;    // 提前上课
             this.onTeacherSkill = null; // 释放班主任技能
             this.onStampUltimate = null; // 释放印章大招
+            this.onCancelUltimate = null;
             this.onUpgrade = null;      // 关卡内升级
             this.onStartMinigame = null; // 章间阳光小游戏
             this.onRetry = null;        // 重玩本关
@@ -4328,6 +4667,36 @@
             return wrap;
         }
 
+        renderLiveRegion() {
+            const live = this.el('div', {
+                position:'absolute', width:'1px', height:'1px', padding:'0', margin:'-1px',
+                overflow:'hidden', clip:'rect(0, 0, 0, 0)', whiteSpace:'nowrap', border:'0'
+            }, this.liveMessage || '');
+            live.setAttribute('role', 'status');
+            live.setAttribute('aria-live', 'assertive');
+            live.setAttribute('aria-atomic', 'true');
+            return live;
+        }
+
+        renderUltimateControls() {
+            if (this.phase !== 'td' || !this.pendingUltimate) return null;
+            const meta = TOOL_ULTIMATES[this.pendingUltimate.toolId] || TOOL_ULTIMATES.pencil;
+            const wrap = this.el('div', {
+                position:'fixed', top:'calc(52px + env(safe-area-inset-top))', right:'calc(12px + env(safe-area-inset-right))',
+                zIndex:'90', pointerEvents:'auto', display:'flex', alignItems:'center', gap:'8px',
+                maxWidth:'calc(100vw - 24px)', padding:'7px 9px', borderRadius:'12px',
+                background:'rgba(15,23,42,0.92)', border:'2px solid #F6D365', color:'#fff7ed', boxShadow:'0 8px 24px rgba(0,0,0,0.38)'
+            });
+            wrap.append(
+                this.el('span', { fontSize:'12px', fontWeight:'900' }, meta.label + '：方向鍵移動，Enter 確認'),
+                this.btn('X 取消', {
+                    padding:'7px 10px', borderRadius:'9px', border:'2px solid #fca5a5', background:'#7f1d1d',
+                    color:'white', fontWeight:'900', fontFamily:'inherit', cursor:'pointer', whiteSpace:'nowrap'
+                }, (event) => { event.stopPropagation(); this.onCancelUltimate && this.onCancelUltimate(); })
+            );
+            return wrap;
+        }
+
         renderTowerBar() {
             if (this.phase !== 'td') return null;
             const isL = this.isLandscape;
@@ -4767,8 +5136,7 @@
                 cell('命中', (mg.hits || 0) + '/' + Math.ceil((mg.reward || 120) / 30), '#bae6fd'),
                 cell('阳光', '+' + (mg.rewardEarned || 0), '#fde68a')
             );
-            const tip = this.el('div', { margin:'8px auto 0', maxWidth:'620px', textAlign:'center', color:'#f8fafc', fontSize:'13px', fontWeight:'900', textShadow:'0 2px 4px rgba(0,0,0,0.45)' }, (mg.prompt || '点击飞来的怪物赚阳光'));
-            wrap.append(bar, tip);
+            wrap.append(bar);
             return wrap;
         }
 
@@ -4977,6 +5345,7 @@
         render() {
             this.root.innerHTML = '';
             this.root.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:10;';
+            this.root.appendChild(this.renderLiveRegion());
 
             if (this.phase === 'menu') {
                 const menu = this.renderMenu();
@@ -5026,6 +5395,9 @@
             const towerBar = this.renderTowerBar();
             if (towerBar) this.root.appendChild(towerBar);
 
+            const ultimateControls = this.renderUltimateControls();
+            if (ultimateControls) this.root.appendChild(ultimateControls);
+
             const towerInfo = this.renderTowerInfo();
             if (towerInfo) this.root.appendChild(towerInfo);
 
@@ -5066,6 +5438,9 @@
 
     // ==================== MAIN APP ====================
     const canvas = document.getElementById('gameCanvas');
+    canvas.tabIndex = 0;
+    canvas.setAttribute('role', 'application');
+    canvas.setAttribute('aria-label', '學霸校園塔防戰場。大招瞄準時可用方向鍵移動，Enter 或空白鍵確認，Escape 取消。');
     const ui = new UIManager();
 
     let selectedTower = null;
@@ -5096,7 +5471,7 @@
     let prepData = null;
     let prepLevelIdx = 0;
     let teacherCharge = 0, teacherReady = false, waitWave = false;
-    let stamps = 0, stampKills = 0, stampProgress = 0;
+    let stamps = 0, stampKills = 0, stampProgress = 0, pendingUltimate = null;
     let fieldSel = null;
     // ----- Phase 4 状态 -----
     let results = loadGameSave().results || {};
@@ -5165,8 +5540,10 @@
         onCombatState: (s) => {
             teacherCharge = s.teacherCharge; teacherReady = s.teacherReady; waitWave = s.waitWave;
             stamps = s.stamps || 0; stampKills = s.stampKills || 0; stampProgress = s.stampProgress || 0;
-            ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress });
+            pendingUltimate = s.pendingUltimate || null;
+            ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress, pendingUltimate });
         },
+        onAnnouncement: (message) => ui.update({ liveMessage: message || '' }),
         onFieldSelect: (info) => {
             fieldSel = info;
             ui.update({ fieldSel });
@@ -5189,6 +5566,12 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
+    canvas.addEventListener('keydown', event => {
+        if (engine.handleUltimateKey(event.key)) {
+            event.preventDefault();
+            SOUND.arm();
+        }
+    });
     isLoading = true;
     ui.update({ isLoading });
     const assetLoadPromise = ASSETS.load().then(() => { isLoading = false; ui.update({ isLoading }); });
@@ -5291,6 +5674,7 @@
     ui.onEarlyCall = () => engine.callNextWaveEarly();
     ui.onTeacherSkill = () => engine.releaseTeacherSkill();
     ui.onStampUltimate = (toolId) => engine.releaseStampUltimate(toolId);
+    ui.onCancelUltimate = () => engine.cancelStampUltimate();
     ui.onUpgrade = () => engine.upgradeSelectedField();
     ui.onStartMinigame = (levelIdx, nextLevelIdx) => engine.startChapterMinigame(levelIdx, nextLevelIdx);
     ui.onRestart = () => {
@@ -5347,6 +5731,7 @@
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             if (e.isPrimary === false) return;
             e.preventDefault();
+            canvas.focus({ preventScroll: true });
             if (canvas.setPointerCapture) {
                 try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
             }
