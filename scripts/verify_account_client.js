@@ -12,13 +12,56 @@ assert.ok(match, 'account service core block must exist in index.html');
 const writeGameSaveMatch = html.match(/function writeGameSave\([^)]*\) \{[\s\S]*?\n    \}/);
 assert.ok(writeGameSaveMatch, 'writeGameSave must exist in index.html');
 
-const factory = new Function(`${match[1]}\nreturn { AccountApiError, AccountService, isDefaultSave, stableSaveJson };`);
-const { AccountService, isDefaultSave, stableSaveJson } = factory();
+const factory = new Function(`${match[1]}\nreturn {
+    AccountApiError,
+    AccountService,
+    isDefaultSave,
+    stableSaveJson,
+    syncCompletedLevelSave: typeof syncCompletedLevelSave === 'function' ? syncCompletedLevelSave : undefined
+};`);
+const { AccountService, isDefaultSave, stableSaveJson, syncCompletedLevelSave } = factory();
 const createWriteGameSave = (localStorage, accountService) => new Function(
     'localStorage',
     'accountService',
     `const SAVE_KEY = 'test-save';\n${writeGameSaveMatch[0]}\nreturn writeGameSave;`
 )(localStorage, accountService);
+
+const nextLevelStart = html.indexOf('        nextLevel() {');
+const nextLevelEnd = html.indexOf('\n\n        startLoop()', nextLevelStart);
+assert.ok(nextLevelStart >= 0 && nextLevelEnd > nextLevelStart, 'GameEngine.nextLevel must exist in index.html');
+const nextLevelMethod = html.slice(nextLevelStart, nextLevelEnd);
+
+function runLevelCompletion(level, levelIdx) {
+    const levels = [];
+    levels[levelIdx] = level;
+    const syncCalls = [];
+    const TestEngine = new Function(
+        'LEVELS',
+        'CAMPAIGN_COUNT',
+        'chapterMinigameForCompletedLevel',
+        'syncCompletedLevelSave',
+        'SOUND',
+        `return class TestEngine {\n${nextLevelMethod}\n}`
+    )(
+        levels,
+        11,
+        () => null,
+        syncCompletedLevelSave,
+        { play() {} }
+    );
+    const engine = new TestEngine();
+    engine.waveIdx = level.waves.length - 1;
+    engine.levelIdx = levelIdx;
+    engine.w = 800;
+    engine.h = 450;
+    engine.computeAndSaveStars = () => ({});
+    engine.syncSave = (...args) => syncCalls.push(args);
+    engine.callbacks = { onLevelComplete() {}, onPhaseChange() {} };
+    engine.floatText = () => {};
+    engine.startTD = () => { throw new Error('completed level must not start another wave'); };
+    engine.nextLevel();
+    return syncCalls;
+}
 
 class MemoryStorage {
     constructor() { this.values = new Map(); }
@@ -106,15 +149,26 @@ async function run() {
         assert.equal(localWrites.length, 2);
         assert.equal(cloudWrites.length, 1, 'explicit completion sync must queue one cloud save');
         assert.match(html, /syncSave\(extra, options = \{\}\)[\s\S]{0,400}writeGameSave\(this\.save, options\)/);
-        assert.match(html, /if \(!lvl\.isChallenge[\s\S]{0,300}cloudSync: true/);
-        assert.match(html, /ui\.onAccountSync[\s\S]{0,200}accountService\.syncNow\(loadGameSave\(\)\)/);
-        console.log('[OK] ordinary progress stays local while completion and manual sync reach the cloud');
+        console.log('[OK] ordinary progress stays local unless cloud sync is explicitly requested');
+    }
+
+    {
+        assert.equal(typeof syncCompletedLevelSave, 'function', 'completion sync must use an executable shared helper');
+        const intermediate = runLevelCompletion({ waves: [{}], isChallenge: false }, 4);
+        const finalCampaign = runLevelCompletion({ waves: [{}], isChallenge: false }, 10);
+        const challenge = runLevelCompletion({ waves: [{}], isChallenge: true }, 11);
+
+        assert.deepEqual(intermediate, [[{ unlockedLevel: 5 }, { cloudSync: true }]]);
+        assert.deepEqual(finalCampaign, [[null, { cloudSync: true }]]);
+        assert.deepEqual(challenge, [[null, { cloudSync: true }]]);
+        console.log('[OK] intermediate, final campaign, and challenge completions each request exactly one cloud sync');
     }
     assert.ok(html.includes('renderAccountPanel()'));
     assert.ok(html.includes("this.onOpenAccount"));
     assert.ok(html.includes("this.onAccountSubmit"));
     assert.ok(html.includes("this.onAccountKeepLocal"));
     assert.ok(html.includes("this.onAccountUseCloud"));
+    assert.match(html, /ui\.onAccountSync = async \(\) => \{[\s\S]{0,220}accountService\.syncNow\(loadGameSave\(\)\)/);
     assert.ok(html.includes("password.type = 'password'"));
     assert.ok(html.includes("password.autocomplete = mode === 'register' ? 'new-password' : 'current-password'"));
     assert.ok(html.includes("fetch('account-service.json', { cache: 'no-store' })"));
@@ -215,24 +269,74 @@ async function run() {
 
     {
         const puts = [];
+        let activePuts = 0;
+        let maxActivePuts = 0;
+        const putResolvers = [];
         const { service, clock } = createService(async (url, options) => {
             if (url.endsWith('/v1/login')) return jsonResponse(200, { user: { username: 'student_01' }, token: 'd'.repeat(43), sync: { revision: 2, hasCloudSave: true } });
             if (options.method === 'GET') return jsonResponse(200, { revision: 2, checksum: 'same', updatedAt: '2026-07-15T12:00:00.000Z', save: gameSave(2) });
             puts.push(JSON.parse(options.body));
-            return jsonResponse(200, { revision: 3, checksum: 'next', updatedAt: '2026-07-15T12:00:01.000Z' });
+            activePuts++;
+            maxActivePuts = Math.max(maxActivePuts, activePuts);
+            return new Promise(resolve => putResolvers.push(response => {
+                activePuts--;
+                resolve(response);
+            }));
         });
         service.configure({ enabled: true, apiBaseUrl: 'https://account.example.workers.dev' });
         await service.login('student_01', 'learn-safe-2026', gameSave(2));
-        service.queueSave(gameSave(3));
-        service.queueSave(gameSave(4));
-        assert.equal(puts.length, 0);
-        await clock.runAll();
+        const completionSave = gameSave(3);
+        service.queueSave(completionSave);
+        const manualSync = service.syncNow(completionSave);
 
-        assert.equal(puts.length, 1);
+        assert.equal(clock.tasks.size, 0, 'completion sync must start immediately without a debounce timer');
+        assert.equal(puts.length, 1, 'completion and immediate manual sync of the same snapshot must share one PUT');
         assert.equal(puts[0].expectedRevision, 2);
-        assert.equal(puts[0].payload.unlockedLevel, 4);
+        assert.equal(puts[0].payload.unlockedLevel, 3);
+        assert.equal(maxActivePuts, 1);
+        putResolvers.shift()(jsonResponse(200, { revision: 3, checksum: 'next', updatedAt: '2026-07-15T12:00:01.000Z' }));
+        assert.equal((await manualSync).action, 'synced');
         assert.equal(service.state.revision, 3);
-        console.log('[OK] local-first writes debounce to one latest cloud save');
+        console.log('[OK] completion and immediate manual sync share one immediate PUT');
+    }
+
+    {
+        const puts = [];
+        let activePuts = 0;
+        let maxActivePuts = 0;
+        const putResolvers = [];
+        const { service } = createService(async (url, options) => {
+            if (url.endsWith('/v1/login')) return jsonResponse(200, { user: { username: 'student_01' }, token: 'h'.repeat(43), sync: { revision: 1, hasCloudSave: true } });
+            if (options.method === 'GET') return jsonResponse(200, { revision: 1, checksum: 'same', updatedAt: '2026-07-15T12:00:00.000Z', save: gameSave(1) });
+            puts.push(JSON.parse(options.body));
+            activePuts++;
+            maxActivePuts = Math.max(maxActivePuts, activePuts);
+            return new Promise(resolve => putResolvers.push(response => {
+                activePuts--;
+                resolve(response);
+            }));
+        });
+        service.configure({ enabled: true, apiBaseUrl: 'https://account.example.workers.dev' });
+        await service.login('student_01', 'learn-safe-2026', gameSave(1));
+
+        service.queueSave(gameSave(2));
+        service.queueSave(gameSave(3));
+        const latestSync = service.syncNow(gameSave(4));
+        assert.equal(puts.length, 1, 'newer snapshot must wait while the first PUT is in flight');
+        assert.equal(maxActivePuts, 1);
+
+        putResolvers.shift()(jsonResponse(200, { revision: 2, checksum: 'second', updatedAt: '2026-07-15T12:00:01.000Z' }));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(puts.length, 2, 'latest snapshot must run after the first PUT completes');
+        assert.equal(puts[1].expectedRevision, 2, 'serialized latest PUT must use the revision returned by the first PUT');
+        assert.equal(puts[1].payload.unlockedLevel, 4);
+        assert.equal(maxActivePuts, 1, 'cloud PUTs must never overlap');
+
+        putResolvers.shift()(jsonResponse(200, { revision: 3, checksum: 'latest', updatedAt: '2026-07-15T12:00:02.000Z' }));
+        assert.equal((await latestSync).action, 'synced');
+        assert.equal(service.state.revision, 3);
+        assert.equal(puts.at(-1).payload.unlockedLevel, 4, 'older snapshot must not be the final cloud write');
+        console.log('[OK] newer snapshots serialize behind in-flight sync and finish last with the latest revision');
     }
 
     {
@@ -245,7 +349,7 @@ async function run() {
         service.configure({ enabled: true, apiBaseUrl: 'https://account.example.workers.dev' });
         await service.login('student_01', 'learn-safe-2026', gameSave(1));
         service.queueSave(gameSave(2));
-        await clock.runAll();
+        await service.syncNow(gameSave(2));
 
         assert.equal(service.state.status, 'conflict');
         assert.equal(service.state.conflict.revision, 2);
@@ -258,7 +362,7 @@ async function run() {
         let resolveFirstPut;
         let putCount = 0;
         const firstPut = new Promise(resolve => { resolveFirstPut = resolve; });
-        const { service, clock } = createService(async (url, options) => {
+        const { service } = createService(async (url, options) => {
             if (url.endsWith('/v1/login')) return jsonResponse(200, { user: { username: 'student_01' }, token: 'g'.repeat(43), sync: { revision: 1, hasCloudSave: true } });
             if (options.method === 'GET') return jsonResponse(200, { revision: 1, checksum: 'same', updatedAt: '2026-07-15T12:00:00.000Z', save: gameSave(1) });
             putCount++;
@@ -275,7 +379,6 @@ async function run() {
             conflict: { revision: 2, checksum: 'cloud', updatedAt: '2026-07-15T12:00:01.000Z', save: cloud }
         }));
         assert.equal((await inFlight).action, 'conflict');
-        await clock.runAll();
 
         assert.equal(putCount, 1);
         assert.equal(service.state.status, 'conflict');

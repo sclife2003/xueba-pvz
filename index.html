@@ -1244,16 +1244,23 @@
         return JSON.stringify(normalize(value));
     }
 
+    function syncCompletedLevelSave(level, levelIdx, campaignCount, syncSave) {
+        if (!level || typeof syncSave !== 'function') return;
+        const unlock = !level.isChallenge && levelIdx + 1 < campaignCount
+            ? { unlockedLevel: levelIdx + 1 }
+            : null;
+        syncSave(unlock, { cloudSync: true });
+    }
+
     class AccountService {
         constructor(options = {}) {
             this.fetchImpl = options.fetchImpl || window.fetch.bind(window);
             this.sessionStorage = options.sessionStorage || window.sessionStorage;
-            this.setTimer = options.setTimer || window.setTimeout.bind(window);
-            this.clearTimer = options.clearTimer || window.clearTimeout.bind(window);
             this.onState = options.onState || (() => {});
             this.baseUrl = '';
             this.token = '';
-            this.pendingTimer = null;
+            this.syncInFlight = null;
+            this.pendingSync = null;
             this.state = {
                 configured: false,
                 authenticated: false,
@@ -1299,9 +1306,11 @@
             } catch (error) {}
         }
 
-        cancelPendingSave() {
-            if (this.pendingTimer) this.clearTimer(this.pendingTimer);
-            this.pendingTimer = null;
+        cancelPendingSave(result = { action: 'local-only' }) {
+            if (!this.pendingSync) return;
+            const pending = this.pendingSync;
+            this.pendingSync = null;
+            pending.waiters.forEach(resolve => resolve(result));
         }
 
         clearSession() {
@@ -1427,24 +1436,90 @@
             return { action: 'conflict', conflict };
         }
 
-        async syncNow(save, expectedRevision = this.state.revision, options = {}) {
-            if (!this.state.configured || !this.state.authenticated || !this.token) return { action: 'local-only' };
+        syncNow(save, expectedRevision, options = {}) {
+            if (!this.state.configured || !this.state.authenticated || !this.token) {
+                return Promise.resolve({ action: 'local-only' });
+            }
             if (this.state.status === 'conflict' && options.allowConflict !== true) {
+                return Promise.resolve({ action: 'conflict', conflict: this.state.conflict });
+            }
+            let snapshot;
+            try { snapshot = JSON.parse(JSON.stringify(save)); }
+            catch { return Promise.resolve({ action: 'local-only' }); }
+            const key = stableSaveJson(snapshot)
+                + '|' + (Number.isInteger(expectedRevision) ? expectedRevision : 'current')
+                + '|' + (options.allowConflict === true ? 'allow-conflict' : 'normal');
+            let resolveRequest;
+            const requestPromise = new Promise(resolve => { resolveRequest = resolve; });
+
+            if (this.syncInFlight && this.syncInFlight.key === key) {
+                this.syncInFlight.waiters.push(resolveRequest);
+                return requestPromise;
+            }
+            if (this.pendingSync && this.pendingSync.key === key) {
+                this.pendingSync.waiters.push(resolveRequest);
+                return requestPromise;
+            }
+
+            const carriedWaiters = this.pendingSync ? this.pendingSync.waiters : [];
+            this.pendingSync = {
+                key,
+                snapshot,
+                expectedRevision: Number.isInteger(expectedRevision) ? expectedRevision : null,
+                options: { ...options },
+                waiters: [...carriedWaiters, resolveRequest]
+            };
+            this.startNextSync();
+            return requestPromise;
+        }
+
+        startNextSync() {
+            if (this.syncInFlight || !this.pendingSync) return;
+            const item = this.pendingSync;
+            this.pendingSync = null;
+            this.syncInFlight = item;
+            const runner = this.performSync(item)
+                .catch(error => {
+                    this.emit({ status: 'offline', error: error.message || '目前離線，進度保留在本機。' });
+                    return { action: 'local-only', error };
+                })
+                .then(result => {
+                    if (this.syncInFlight === item) this.syncInFlight = null;
+                    item.waiters.forEach(resolve => resolve(result));
+                    if (result.action === 'synced') this.startNextSync();
+                    else this.cancelPendingSave(result);
+                    return result;
+                });
+            runner.catch(error => {
+                if (this.syncInFlight === item) this.syncInFlight = null;
+                const result = { action: 'local-only', error };
+                item.waiters.forEach(resolve => resolve(result));
+                this.cancelPendingSave(result);
+            });
+        }
+
+        async performSync(item) {
+            if (!this.state.configured || !this.state.authenticated || !this.token) return { action: 'local-only' };
+            if (this.state.status === 'conflict' && item.options.allowConflict !== true) {
                 return { action: 'conflict', conflict: this.state.conflict };
             }
             this.emit({ status: 'syncing', error: '' });
             try {
                 const result = await this.request('/v1/save', {
                     method: 'PUT',
-                    body: { expectedRevision, payload: save }
+                    body: {
+                        expectedRevision: item.expectedRevision == null ? this.state.revision : item.expectedRevision,
+                        payload: item.snapshot
+                    }
                 });
                 this.emit({ status: 'synced', revision: result.revision, conflict: null, error: '' });
                 return { action: 'synced', revision: result.revision };
             } catch (error) {
                 if (error.status === 409 && error.conflict) {
-                    this.cancelPendingSave();
                     this.emit({ status: 'conflict', revision: error.conflict.revision, conflict: error.conflict, error: '雲端已有較新的進度，請選擇要保留哪一份。' });
-                    return { action: 'conflict', conflict: error.conflict };
+                    const conflict = { action: 'conflict', conflict: error.conflict };
+                    this.cancelPendingSave(conflict);
+                    return conflict;
                 }
                 if (error.status === 401) this.clearSession();
                 else this.emit({ status: 'offline', error: error.message || '目前離線，進度保留在本機。' });
@@ -1456,11 +1531,7 @@
             if (!this.state.configured || !this.state.authenticated || this.state.status === 'conflict') return;
             let snapshot;
             try { snapshot = JSON.parse(JSON.stringify(save)); } catch { return; }
-            if (this.pendingTimer) this.clearTimer(this.pendingTimer);
-            this.pendingTimer = this.setTimer(async () => {
-                this.pendingTimer = null;
-                await this.syncNow(snapshot);
-            }, 1500);
+            this.syncNow(snapshot).catch(() => {});
         }
 
         async keepLocal(localSave) {
@@ -3169,11 +3240,7 @@
                 const result = this.computeAndSaveStars();
                 const isLastCampaign = !lvl.isChallenge && this.levelIdx >= CAMPAIGN_COUNT - 1;
                 const minigame = chapterMinigameForCompletedLevel(this.levelIdx);
-                if (!lvl.isChallenge && this.levelIdx + 1 < CAMPAIGN_COUNT) {
-                    this.syncSave({ unlockedLevel: this.levelIdx + 1 }, { cloudSync: true });
-                } else {
-                    this.syncSave(null, { cloudSync: true });
-                }
+                syncCompletedLevelSave(lvl, this.levelIdx, CAMPAIGN_COUNT, this.syncSave.bind(this));
                 this.callbacks.onLevelComplete(this.levelIdx, Object.assign({ isLastCampaign, minigame }, result));
                 this.phase = 'level_complete'; this.callbacks.onPhaseChange('level_complete'); SOUND.play('clear');
                 this.floatText("章节完成!", this.w/2, this.h/2, '#F6E05E', 150, 40);

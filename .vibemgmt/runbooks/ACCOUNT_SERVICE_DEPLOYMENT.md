@@ -38,7 +38,7 @@
 
 | 項目 | 目前值 |
 |---|---|
-| Cloudflare 帳號 | `sclife2003@gmail.com` |
+| Cloudflare 帳號 | `<Cloudflare account email>`（公開文件不記錄登入信箱，以 Account ID 核對） |
 | Cloudflare Account ID | `f77ac7c3edf4d91acde0391ffd57f825` |
 | Worker 名稱 | `xueba-pvz-account` |
 | Worker 正式網址 | `https://xueba-pvz-account.sclife2003.workers.dev` |
@@ -50,7 +50,7 @@
 | Worker secrets | `GITHUB_TOKEN`、`PASSWORD_PEPPER` |
 | 公開程式 repository | `https://github.com/sclife2003/xueba-pvz` |
 | 私有資料 repository | `https://github.com/sclife2003/xueba-pvz-data` |
-| 正式 Pages commit | `e5c942a6cc4c68234ef77f837a83935ae578f583` |
+| 正式 Pages commit | `33f0e09596be7595cf307bdf9e88306f3046d072`（GitHub Pages API 於 2026-07-15 查得 `built`） |
 
 健康檢查：
 
@@ -69,9 +69,9 @@ Invoke-RestMethod `
 }
 ```
 
-## 3. 目前待發布的同步策略修改
+## 3. 目前正式同步策略
 
-本機目前已修改、但尚未 commit／push：
+正式 GitHub Pages 已採用以下同步策略：
 
 - 答題、失血、首次貼紙、升級等一般進度變更：只寫入本機 `localStorage`。
 - 完成每個小關卡，例如 `1-1`、`1-2`：自動同步一次雲端。
@@ -80,14 +80,14 @@ Invoke-RestMethod `
 - 每一波敵人結束不算通關，不會同步。
 - 整個小學部／章節全部完成也不是唯一同步點；每個小關卡完成就會同步。
 
-待發布檔案：
+日後若調整同步觸發時機，主要檢查：
 
 ```text
 index.html
 scripts/verify_account_client.js
 ```
 
-這是純前端修改，因此正式發布只需 commit 並 push GitHub Pages；不需要重新部署 Worker。
+這類同步觸發時機屬於前端修改，因此完成測試後只需 commit 並 push GitHub Pages；未修改 `worker/**` 或 `worker/wrangler.jsonc` 時，不需要重新部署 Worker。
 
 ## 4. 新電腦接手既有服務
 
@@ -118,7 +118,7 @@ npx wrangler whoami
 `whoami` 必須顯示：
 
 ```text
-Email: sclife2003@gmail.com
+Email: <Cloudflare account email>
 Account ID: f77ac7c3edf4d91acde0391ffd57f825
 ```
 
@@ -394,19 +394,19 @@ git diff --check
 git status --short --branch
 ```
 
-### 9.2 發布「通關或手動同步」修改
+### 9.2 只提交本次發布檔案
 
-目前工作區另有 tickets／handoff 的未提交內容，所以必須只 stage 本次兩個檔案：
+工作區若有其他未提交變更，必須使用明確路徑，只 stage 本次發布涉及的檔案。以下範例同時涵蓋前端、驗證腳本與本 runbook 都有修改的情況；沒有修改的路徑不會產生 staged diff：
 
 ```powershell
-git add -- index.html scripts\verify_account_client.js
+git add -- index.html scripts\verify_account_client.js .vibemgmt\runbooks\ACCOUNT_SERVICE_DEPLOYMENT.md
 git diff --cached --stat
 git diff --cached
 git commit -m "perf(account): sync only on level completion"
 git push origin main
 ```
 
-禁止使用 `git add .`，避免把 tickets 001–004、handoff 或其他 BOSS 工作一起提交。
+禁止使用 `git add .`；先以 `git status --short` 核對工作區，再用 `git diff --cached` 確認 staged scope，避免把任何不屬於本次發布的變更一起提交。
 
 ### 9.3 確認 Pages 發布完成
 
@@ -496,7 +496,7 @@ npx wrangler login
 npx wrangler whoami
 ```
 
-確認登入 `sclife2003@gmail.com` 與正確 Account ID。
+確認登入持有正確 Account ID 的 Cloudflare 帳號；公開 runbook 不記錄登入信箱。
 
 ### 11.5 密碼雜湊錯誤
 
