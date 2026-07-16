@@ -39,11 +39,12 @@
 - [x] 印章大招与章间小游戏首轮：每击败 10 只怪获得 1 枚印章，文具可触发专属大招；`MONSTER_SKILL_DESIGN` 规划跑/远程/盾牌/毒气/抢阳光/BOSS 暴走，橡皮盾 CD 减半，章末接入正面射怪小游戏赚下一关开局阳光，题库新增小学 4-5 年级科技题
 - [x] 怪物招式可视化与美术降级修正：怪物专有招式会生成 `skillFx` 光束/爆点，涂鸦怪会生成 2x2 `dirtyZone` 污染区；WebP 失败会回退 PNG，战斗开局等待 painted assets ready，避免退回旧 SVG/程序画风或透明占位
 - [x] PvZ 招式模式落地：`PVZ_ZOMBIE_PATTERN_STUDY` 记录远程投射、跳跃越防线、召唤支援、破盾暴走、重击拆设施等设计参考；远程怪会生成 `enemyProjectile` 延迟命中后排，冲刺怪可 `tryVaultTower()` 跳过第一座设施，支援怪可 `summonSupportEnemies()` 增援同路/邻路压力
-- [x] 怪物招式高质感点阵特效：18/18 非 elf 怪物接入四阶段 VFX profile；7 组 WebP runtime + PNG fallback，不使用正式 SVG 特效
-- [x] 14 个可玩关卡独立主题化点阵场景：按 level id 切换横式场景；4 个章间小游戏各有独立横/直式 raster 构图，直式 TD 只显示方向 gate
-- [x] 我方 7 种文具大招范围攻击重设计：采用「指定范围攻击」方案，具备独立 AoE、Lv1-Lv5 成长、预览/确认/取消与键盘等价操作
-- [x] 阳光怪/截止铃怪/监考官/紫晶魔铠王多阶段、远程攻击与破绽窗口强化；蓄力期间锁住其他攻击，延迟结束后才执行重招
-- [ ] `TICKET-20260715-005` 素材版本化 + 真正的跨装置云端存档：解耦图片 cache 与游戏进度，规划 local-first repository、Supabase Auth/RLS、revision conflict、离线 queue 与存档历史；Phase 2 前需拍板登入方式
+- [ ] `TICKET-20260715-001` 怪物招式點陣特效（接手重開）：補 phase-aware raster runtime、招式 coverage、safe area 與真機／效能證據
+- [ ] `TICKET-20260715-002` 關卡點陣場景（接手重開）：改為 per-level preload、補章間小遊戲尺寸與完整視覺矩陣
+- [x] `TICKET-20260715-003` 文具指定範圍大招（Option B）：完成按住拖曳、放手鎖定、再點 icon 施放；修跨關 pending、負印章、DOM pointer capture 與 Boss threshold concurrency，Pixel 7 Chromium / iPhone 13 WebKit browser device emulation PASS
+- [x] `FIX-20260716-002` 行動方向與 pointer capture：鍵盤縮放跨越長寬比不再誤判旋轉，補上 `lostpointercapture` 冪等清理；Pixel 7 Chromium / iPhone 13 WebKit 4/4 browser device smoke 與 QA reviewer final PASS
+- [ ] `TICKET-20260715-004` Boss 多階段／遠程壓迫（接手重開）：統一 action scheduler、逐階 transition 與攻後破綻窗口
+- [ ] `TICKET-20260715-005` 素材版本化 + 真正的跨裝置雲端存檔：帳號部分已正式部署，採 Cloudflare Worker + private GitHub data repo + KV session；自訂帳密、local-first、revision CAS、衝突選擇與雙裝置 E2E 已通過。素材 cache versioning 仍未做
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -72,6 +73,7 @@
 - **装备工坊 / 文具等级**: schema v3 使用 `toolLevels{id:1..5}` 作为正本；旧 `toolUpgrades:true` 自动迁移为 Lv2。`TOOL_LEVELS` 定义每件文具 5 级实战加成（伤害、攻速、产能、血量、穿透数、冷却等），包含新文具「直尺穿线」（直线穿透输出）。碎片 `shards` 逐级购买；`toolUpgrades` 仅保留为 legacy display compatibility。
 - **收藏馆**: 关卡贴纸 / 敌人贴纸(遇到即收集,排除 elf) / 成就徽章 / 世界徽章。`renderCollection()` 使用 `collection-card--owned/locked`、`collection-art--sticker/badge`、`levelStickerAsset()` 与 `asset: 'enemy_' + id` 复用现有高质感 WebP；徽章使用专属金属圆框 + 缎带，未解锁显示灰阶剪影与锁定遮罩。
 - **音效/语音**: `SOUND`(WebAudio 振荡器) + `VOICE`(speechSynthesis)，全 feature-detect + try/catch；首手势解锁 AudioContext；开关存 `xueba_pvz_settings`（独立 localStorage，不动存档 schema）。
+- **雲端帳號／跨裝置同步（正式啟用）**: GitHub Pages 載入公開 `account-service.json` 並連到 `xueba-pvz-account.sclife2003.workers.dev`；`AccountService` 將本機存檔先寫 `localStorage`，登入後 debounce 到 Cloudflare Worker。Worker 以 HMAC pepper prehash + PBKDF2-HMAC-SHA512 100,000 次（Cloudflare runtime 上限）保存 verifier；PBKDF2 隔離到內部 SQLite-backed Durable Object，缺 binding 時 fail-closed。KV 保存 24 小時 opaque session digest，GitHub Contents API 保存 private repo `accounts/<username-hash>.json` 與 `saves/<account-id>.json`。雲端更新使用 revision + blob SHA CAS，衝突時必須由玩家選本機或雲端。正式 GitHub token/pepper 只放 Worker secrets，不進 Pages 或 repo。
 - **场景美术 / 方向契约**: `SCENE_MANIFEST` 为 14 个关卡提供独立横式 WebP/PNG；`MINIGAME_SCENE_MANIFEST` 为 4 个章间小游戏各提供独立 landscape/portrait 构图。`ORIENTATION_MATRIX` 固定 `td/maze + portrait -> gate`，只有 `minigame + portrait -> portrait`；`drawRasterScene()` 以清晰 contain 主图配低对比边缘延伸，中央操作区维持低杂讯。
 - **高清渲染**: `GameEngine.resize()` 使用 `window.devicePixelRatio`（上限 3）设置 canvas backing store，`draw()` 每帧重设 DPR transform；`renderStageCache()` 也用 DPR 离屏缓存并以 CSS 尺寸贴回主画布。输入换算一律用 `this.w/this.h`，避免高 DPI 下鼠标/触屏偏移。
 

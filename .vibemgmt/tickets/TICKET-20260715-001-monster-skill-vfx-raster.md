@@ -1,12 +1,16 @@
 ---
 type: ticket
-status: done
-owner: dev-agent
+status: open
+owner: Codex QA
 created: 2026-07-15
 priority: high
+reopened: 2026-07-15
+takeover_plan: HANDOFF-20260715-001
 ---
 
 # Ticket: 怪物招式高質感點陣特效
+
+> 2026-07-15 接手稽核：重開。結構 verifier 通過，但 phase-aware raster runtime、部分招式的 raster coverage、雙方向 safe area、連續施放與真機效能證據仍未滿足；詳見 `HANDOFF-20260715-001`。
 
 ## Context
 

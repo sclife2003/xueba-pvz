@@ -55,6 +55,7 @@ function runLevelCompletion(level, levelIdx) {
     engine.w = 800;
     engine.h = 450;
     engine.computeAndSaveStars = () => ({});
+    engine.clearPendingUltimate = () => false;
     engine.syncSave = (...args) => syncCalls.push(args);
     engine.callbacks = { onLevelComplete() {}, onPhaseChange() {} };
     engine.floatText = () => {};

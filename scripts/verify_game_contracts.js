@@ -208,7 +208,7 @@ const confirmUltimateStart = script.indexOf('confirmStampUltimate(cell) {');
 const confirmUltimateEnd = script.indexOf('releaseStampUltimate(toolId)', confirmUltimateStart);
 const confirmUltimateBody = script.slice(confirmUltimateStart, confirmUltimateEnd);
 const noTargetGuardIndex = confirmUltimateBody.indexOf('if (!targets.length) {');
-const stampSpendIndex = confirmUltimateBody.indexOf('this.stamps--;');
+const stampSpendIndex = confirmUltimateBody.indexOf('this.stamps = Math.max(0, this.stamps - 1);');
 const cancelUltimateStart = script.indexOf('cancelStampUltimate() {');
 const cancelUltimateEnd = script.indexOf('movePendingUltimate(', cancelUltimateStart);
 const cancelUltimateBody = script.slice(cancelUltimateStart, cancelUltimateEnd);
@@ -259,4 +259,3 @@ assert(script.includes('const bossTextX = Math.max(') && script.includes("ctx.fi
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Game contracts verified.');
-

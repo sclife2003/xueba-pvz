@@ -1,12 +1,16 @@
 ---
 type: ticket
-status: done
-owner: dev-agent
+status: open
+owner: Codex QA
 created: 2026-07-15
 priority: high
+reopened: 2026-07-15
+takeover_plan: HANDOFF-20260715-001
 ---
 
 # Ticket: BOSS 多階段與遠程壓迫強化
+
+> 2026-07-15 接手稽核：重開。Boss vulnerability 目前與攻擊同時開啟、`titanSlam` 沒有獨立預警／恢復期，跨 threshold 可跳階，且多條攻擊路徑缺少統一 scheduler；詳見 `HANDOFF-20260715-001`。
 
 ## Context
 

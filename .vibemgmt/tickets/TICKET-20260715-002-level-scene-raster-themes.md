@@ -1,12 +1,16 @@
 ---
 type: ticket
-status: done
-owner: dev-agent
+status: open
+owner: Codex QA
 created: 2026-07-15
 priority: high
+reopened: 2026-07-15
+takeover_plan: HANDOFF-20260715-001
 ---
 
 # Ticket: 各關卡主題化點陣場景
+
+> 2026-07-15 接手稽核：重開。場景 manifest 與方向 gate 已成立，但首戰仍等待全量 raster assets、章間小遊戲尺寸未達票面規格，且完整切關／DPR／真機視覺矩陣尚無證據；詳見 `HANDOFF-20260715-001`。
 
 ## Context
 

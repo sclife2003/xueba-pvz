@@ -5,9 +5,14 @@ owner: dev-agent
 created: 2026-07-15
 priority: high
 decision: approved-option-b
+reopened: 2026-07-15
+completed: 2026-07-16
+takeover_plan: HANDOFF-20260715-001
 ---
 
 # Ticket: 我方文具大招範圍攻擊重設計
+
+> 2026-07-15 接手稽核：重開，並保留已核准的 Option B。跨關殘留 `pendingUltimate` 可在印章歸零後確認並扣成負數；高傷 AoE 亦會暴露 Boss 跳階問題。詳見 `HANDOFF-20260715-001`。
 
 ## Context
 
@@ -91,3 +96,24 @@ decision: approved-option-b
 - 合約與 runtime probe 已逐一覆蓋 7 種大招、5 級 scaling、範圍格、傷害/控制/資源效果、Boss 衰減與取消路徑。
 - Chrome 鍵盤 smoke：方向鍵可移動瞄準，Escape 取消後印章保持 1；固定 `X 取消` 按鈕與 ARIA live 訊息可見。
 - 最終複審報告：`.vibemgmt/reviews/QA_2026-07-15_four-tickets-final.md`、`.vibemgmt/reviews/UX_2026-07-15_four-tickets-final.md`。
+
+## BOSS Gesture Decision (2026-07-16)
+
+沿用已核准的 Option B，並將觸控操作固定為：
+
+1. 手指按住大招 icon 後拖入戰場，範圍框跟隨手指並即時顯示有效／無效目標。
+2. 放手只鎖定範圍，不立即施放；玩家可再次拖曳調整。
+3. 再點同一個大招 icon 才正式發動並扣除一枚印章。
+4. 拖回 icon、點取消、離開戰鬥、死亡、切關或技能失效皆取消，且不得扣印章。
+5. 滑鼠採相同「按住拖曳 -> 再點 icon」流程；鍵盤保留方向鍵／WASD、Enter／同快捷鍵確認、Escape 取消。
+6. 高傷 AoE 命中 Boss 時必須逐一處理 phase threshold，不得跨階跳過 transition。
+
+驗收時必須覆蓋 Android 與 iPhone 裝置模擬、多點觸控誤觸、pointer cancel、跨關 pending 清理、印章單次扣除與 Boss threshold concurrency。
+
+## Gesture Implementation and QA (2026-07-16)
+
+- 已實作 `Idle -> dragging -> locked -> cast`：按住 icon 拖曳，放手只鎖定，再點同 icon 才施放。
+- 拖曳期間暫緩全量 UI render，避免 captured icon 被替換；pointerup 會先釋放 UI pointer state 再執行 lock callback。
+- Pixel 7 / Chromium landscape 與 iPhone 13 / WebKit landscape 的 browser device emulation 均 PASS：preview 跟手、鎖定不扣章、確認只扣一章且只結算一次。
+- `pointercancel`、拖回 icon、切關／迷宮／小遊戲／死亡均清除 pending 且不扣章；Boss threshold 依序排隊，不會被高傷 AoE 跳階。
+- 三支 verifier 與 `git diff --check` 全數通過；OS-level 真機手感仍留待 BOSS 後續驗證。
