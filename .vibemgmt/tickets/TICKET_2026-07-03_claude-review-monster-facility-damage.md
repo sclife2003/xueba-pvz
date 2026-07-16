@@ -1,6 +1,7 @@
 ---
 type: ticket
 status: done
+resolution: fixed
 owner: Claude Review
 created: 2026-07-03
 reviewed: 2026-07-03

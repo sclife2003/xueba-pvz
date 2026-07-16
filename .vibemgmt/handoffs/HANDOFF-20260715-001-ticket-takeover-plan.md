@@ -1,6 +1,7 @@
 ---
 type: handoff
-status: ready
+status: open
+legacy_status: ready
 owner: Codex QA
 created: 2026-07-15
 baseline_commit: 2b2b6e8

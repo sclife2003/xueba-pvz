@@ -1,6 +1,7 @@
 ---
 type: fix
 status: done
+resolution: fixed
 owner: qa-agent
 created: 2026-07-16
 completed: 2026-07-16

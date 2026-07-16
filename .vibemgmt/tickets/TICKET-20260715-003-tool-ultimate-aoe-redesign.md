@@ -1,6 +1,7 @@
 ---
 type: ticket
 status: done
+resolution: fixed
 owner: dev-agent
 created: 2026-07-15
 priority: high

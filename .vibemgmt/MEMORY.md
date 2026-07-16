@@ -1,6 +1,6 @@
 # Vibe Project Memory: xueba-pvz（学霸校园大冒险）
 
-**Last Updated**: 2026-07-15
+**Last Updated**: 2026-07-16
 
 ---
 
@@ -49,6 +49,17 @@
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
 - [ ] cosmetic 教室装饰系统 — 待 BOSS 定（换什么/用什么货币/在哪展示）
+
+---
+
+## Active Work Item Index
+
+| Work item | Status | Owner | Next action |
+|---|---|---|---|
+| `TICKET-20260715-001` | open | DEV | 補 phase-aware raster runtime、coverage、safe area 與效能證據 |
+| `TICKET-20260715-002` | open | DEV | 完成 per-level preload、章間尺寸與視覺矩陣 |
+| `TICKET-20260715-004` | open | DEV | 統一 Boss scheduler、transition 與 vulnerability window |
+| `TICKET-20260715-005` | open | DEV | 完成素材 cache versioning |
 
 ---
 
