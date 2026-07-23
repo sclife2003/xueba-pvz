@@ -1,17 +1,25 @@
 ---
 type: ticket
-status: open
-owner: Codex QA
+status: done
+resolution: superseded
+owner: ROOT
 created: 2026-07-15
+completed: 2026-07-23
 priority: high
 decision: github-worker-private-repo
 takeover_plan: HANDOFF-20260715-001
 architecture_decision: DECISION-20260715-001
+superseded_by: TICKET-20260723-002
 ---
 
 # Ticket: 素材版本化與真正的跨裝置雲端存檔
 
-> 2026-07-15 BOSS 指定「簡單帳號密碼、跨裝置同步、資料存在 GitHub」。已改採 **Cloudflare Worker + PasswordHasher Durable Object + 私有 GitHub data repo + KV session**；本票下方舊 Supabase 規劃保留作歷史背景，但已由 `DECISION-20260715-001` 取代。帳號 UI、local-first、revision conflict、private data repo、KV、secrets、Worker 部署與正式雙裝置 E2E 均已完成；本票仍 open 的剩餘範圍是素材 cache versioning。
+> 2026-07-15 BOSS 指定「簡單帳號密碼、跨裝置同步、資料存在 GitHub」。已改採 **Cloudflare Worker + PasswordHasher Durable Object + 私有 GitHub data repo + KV session**；本票下方舊 Supabase 規劃保留作歷史背景，但已由 `DECISION-20260715-001` 取代。帳號 UI、local-first、revision conflict、private data repo、KV、secrets、Worker 部署與正式雙裝置 E2E 均已完成；本票先前保持 open 的唯一剩餘範圍是素材 cache versioning。
+
+> **Closeout（2026-07-23）**：帳號／雲端部分已由
+> `DECISION-20260715-001` 完成並驗收；唯一剩餘的素材 cache versioning
+> 已拆至 `TICKET-20260723-002`。本票因此以 `superseded` 結案，不代表素材
+> 版本化已完成。
 
 ## Context / Root Cause
 

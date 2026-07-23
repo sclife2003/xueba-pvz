@@ -1,0 +1,93 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build immutable public artifact
+        env:
+          RELEASE_BUILD_ID: ${{ github.sha }}
+          RELEASE_OUTPUT_DIR: ${{ runner.temp }}/xueba-pages
+          RELEASE_SOURCE_DIR: ${{ github.workspace }}
+        run: |
+          node <<'NODE'
+          // RELEASE_ARTIFACT_BUILD_START
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const buildId = process.env.RELEASE_BUILD_ID;
+          const outputDir = process.env.RELEASE_OUTPUT_DIR;
+          const sourceDir = process.env.RELEASE_SOURCE_DIR;
+          if (!/^[0-9a-f]{40}$/i.test(buildId || '')) {
+            throw new Error('RELEASE_BUILD_ID must be the immutable github.sha');
+          }
+          if (!outputDir || !sourceDir) {
+            throw new Error('Release source and output directories are required');
+          }
+
+          fs.rmSync(outputDir, { recursive: true, force: true });
+          fs.mkdirSync(outputDir, { recursive: true });
+          for (const publicPath of ['index.html', 'assets', 'account-service.json']) {
+            fs.cpSync(
+              path.join(sourceDir, publicPath),
+              path.join(outputDir, publicPath),
+              { recursive: true }
+            );
+          }
+
+          const outputIndexPath = path.join(outputDir, 'index.html');
+          const sourceIndex = fs.readFileSync(outputIndexPath, 'utf8');
+          const buildToken = '__XUEBA_BUILD_ID__';
+          if (!sourceIndex.includes(buildToken)) {
+            throw new Error('index.html release build token is missing');
+          }
+          fs.writeFileSync(
+            outputIndexPath,
+            sourceIndex.replace(buildToken, buildId),
+            'utf8'
+          );
+          fs.writeFileSync(
+            path.join(outputDir, 'version.json'),
+            `${JSON.stringify({ buildId })}\n`,
+            'utf8'
+          );
+          // RELEASE_ARTIFACT_BUILD_END
+          NODE
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/xueba-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

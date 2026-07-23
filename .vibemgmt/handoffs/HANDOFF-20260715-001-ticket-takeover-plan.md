@@ -1,9 +1,10 @@
 ---
 type: handoff
-status: open
-legacy_status: ready
-owner: Codex QA
+status: done
+resolution: superseded
+owner: ROOT
 created: 2026-07-15
+completed: 2026-07-23
 baseline_commit: 2b2b6e8
 related_tickets:
   - TICKET-20260715-001
@@ -11,11 +12,22 @@ related_tickets:
   - TICKET-20260715-003
   - TICKET-20260715-004
   - TICKET-20260715-005
+  - TICKET-20260723-002
 ---
 
 # Handoff: 2026-07-15 全部 tickets 接手與執行規劃
 
 > **Ticket 005 更新（2026-07-15）**：BOSS 已指定簡單帳號密碼且資料存於 GitHub。本文所有 Ticket 005 的 Supabase、Magic Link、Wave 5–7 與外部決策閘門內容已由 `DECISION-20260715-001` 取代；Ticket 001–004 規劃不受影響。帳號 Worker、前端 UI、local-first/CAS 與自動測試已在 worktree 實作，正式啟用與雙裝置 E2E 仍未完成。
+
+> **Closeout audit（2026-07-23）**：此接手計畫的雲端架構與 immediate-next-action
+> 已過期，因此以 `superseded` 結案。`001`、`002`、`004` 經 current-HEAD
+> 複審仍有實作或必要證據缺口，維持 open；`005` 的雲端部分已完成，剩餘素材
+> 發行版本化已拆至 `TICKET-20260723-002`。本 handoff 結案不關閉任何未完成需求。
+>
+> **Regression closeout（2026-07-23）**：`TICKET-20260715-001` 與
+> `TICKET-20260715-002` 已通過 ticket-specific QA/UX 並以 `completed` 結案。
+> `TICKET-20260715-004` 仍受 `FIX-20260723-004` 阻擋；素材發行票仍受
+> `FIX-20260723-005` 的 modal keyboard finding 阻擋。
 
 ## Outcome
 

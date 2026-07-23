@@ -274,6 +274,107 @@
 
     <script>
     // ==================== CONSTANTS ====================
+    // RELEASE_MONITOR_CORE_START
+    const RELEASE_BUILD_ID = '__XUEBA_BUILD_ID__';
+    const BUILD_ID = /^[0-9a-f]{40}$/i.test(RELEASE_BUILD_ID)
+      ? RELEASE_BUILD_ID.toLowerCase()
+      : 'development';
+    const RELEASE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+    const SAFE_UPDATE_PHASES = new Set(['menu', 'world', 'prep', 'collection', 'workshop']);
+
+    function isSafeUpdatePhase(phase) {
+      return SAFE_UPDATE_PHASES.has(phase);
+    }
+
+    function isDifferentBuildId(currentBuildId, nextBuildId) {
+      const current = typeof currentBuildId === 'string' ? currentBuildId.trim().toLowerCase() : '';
+      const next = typeof nextBuildId === 'string' ? nextBuildId.trim().toLowerCase() : '';
+      return !!next && next !== current;
+    }
+
+    function assetUrlForBuild(url, buildId = BUILD_ID) {
+      if (typeof url !== 'string' || !/\.(?:webp|png)(?:[?#]|$)/i.test(url)) return url;
+      const hashIndex = url.indexOf('#');
+      const hash = hashIndex >= 0 ? url.slice(hashIndex) : '';
+      const source = hashIndex >= 0 ? url.slice(0, hashIndex) : url;
+      const encodedBuildId = encodeURIComponent(buildId || 'development');
+      const versioned = /([?&])build=[^&#]*/i.test(source)
+        ? source.replace(/([?&])build=[^&#]*/i, `$1build=${encodedBuildId}`)
+        : `${source}${source.includes('?') ? '&' : '?'}build=${encodedBuildId}`;
+      return versioned + hash;
+    }
+
+    async function fetchVersionManifest(fetchImpl, versionUrl = 'version.json') {
+      const response = await fetchImpl(versionUrl, { cache: 'no-store' });
+      if (!response || !response.ok) throw new Error('Version manifest unavailable');
+      return response.json();
+    }
+
+    function createReleaseMonitor(options) {
+      const config = options || {};
+      let pendingBuildId = '';
+      let promptedBuildId = '';
+      let snoozeUntil = 0;
+      let reloadRequested = false;
+      const now = () => typeof config.now === 'function' ? config.now() : Date.now();
+
+      const maybePrompt = phase => {
+        if (
+          !pendingBuildId
+          || pendingBuildId === promptedBuildId
+          || now() < snoozeUntil
+          || !isSafeUpdatePhase(phase)
+        ) return false;
+        promptedBuildId = pendingBuildId;
+        if (typeof config.onUpdateAvailable === 'function') {
+          config.onUpdateAvailable(pendingBuildId);
+        }
+        return true;
+      };
+
+      return {
+        async check() {
+          try {
+            const manifest = await config.fetchVersion();
+            const nextBuildId = manifest && manifest.buildId;
+            if (!isDifferentBuildId(config.currentBuildId, nextBuildId)) {
+              return { status: 'current' };
+            }
+            const normalizedBuildId = nextBuildId.trim().toLowerCase();
+            if (normalizedBuildId !== pendingBuildId) {
+              pendingBuildId = normalizedBuildId;
+              promptedBuildId = '';
+              snoozeUntil = 0;
+            }
+            const phase = typeof config.getPhase === 'function' ? config.getPhase() : '';
+            return {
+              status: maybePrompt(phase) ? 'prompted' : 'deferred',
+              buildId: pendingBuildId
+            };
+          } catch (error) {
+            return { status: 'failed' };
+          }
+        },
+        handlePhaseChange(phase) {
+          return maybePrompt(phase);
+        },
+        dismissUpdate() {
+          if (!pendingBuildId) return false;
+          promptedBuildId = '';
+          snoozeUntil = now() + RELEASE_CHECK_INTERVAL_MS;
+          return true;
+        },
+        confirmUpdate() {
+          const phase = typeof config.getPhase === 'function' ? config.getPhase() : '';
+          if (!pendingBuildId || reloadRequested || !isSafeUpdatePhase(phase)) return false;
+          reloadRequested = true;
+          if (typeof config.reload === 'function') config.reload();
+          return true;
+        }
+      };
+    }
+    // RELEASE_MONITOR_CORE_END
+
     const SIDEBAR_WIDTH_LANDSCAPE = 110;
     const SIDEBAR_GAME_GAP_LANDSCAPE = 22;
     const CLASSROOM_PALETTE = {
@@ -374,20 +475,20 @@
 
     const BOSS_MECHANICS = {
       sunshine: { scene: 'playground', label: '阳光抢夺', stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5, phases: [
-        { at: 1, telegraph: 54, ranged: 'sun_orb', vulnerability: 75 }, { at: 0.70, telegraph: 60, summon: 'jump_rope', vulnerability: 90 }, { at: 0.35, telegraph: 72, charge: 'track_dash', vulnerability: 180 }
+        { at: 1, telegraph: 54, ranged: 'sun_orb', recovery: 30, vulnerability: 75 }, { at: 0.70, telegraph: 60, summon: 'jump_rope', recovery: 36, vulnerability: 90 }, { at: 0.35, telegraph: 72, charge: 'track_dash', actionFrames: 90, recovery: 45, vulnerability: 180 }
       ] },
       deadline: { scene: 'exam', label: '截止铃暴走', rageRush: { hpRatio: 0.45, duration: 150, statBoost: 1.3 }, phases: [
-        { at: 1, telegraph: 54, hazard: 'soundwave', vulnerability: 60 }, { at: 0.62, telegraph: 60, summon: 'paperstorm', vulnerability: 72 }, { at: 0.30, telegraph: 72, charge: 'bell_rush', vulnerability: 90 }
+        { at: 1, telegraph: 54, hazard: 'soundwave', recovery: 30, vulnerability: 60 }, { at: 0.62, telegraph: 60, summon: 'paperstorm', recovery: 36, vulnerability: 72 }, { at: 0.30, telegraph: 72, charge: 'bell_rush', actionFrames: 90, recovery: 42, vulnerability: 90 }
       ] },
-      super_boss: { scene: 'exam', label: '紫晶魔铠', titanShield: { hpRatio: 0.72, damageScale: 0.6 }, titanSlam: { interval: 210, damage: 850 }, rageRush: { hpRatio: 0.38, duration: 180, statBoost: 1.35 }, phaseAssets: [
+      super_boss: { scene: 'exam', label: '紫晶魔铠', titanShield: { hpRatio: 0.72, damageScale: 0.6 }, titanSlam: { interval: 210, damage: 850, telegraph: 60, recovery: 45, vulnerability: 90 }, rageRush: { hpRatio: 0.38, duration: 180, statBoost: 1.35 }, phaseAssets: [
         { runtime: 'assets/sprites/enemy_super_boss_phase1_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase1_painted.png' },
         { runtime: 'assets/sprites/enemy_super_boss_phase2_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase2_painted.png' },
         { runtime: 'assets/sprites/enemy_super_boss_phase3_painted.webp', fallback: 'assets/sprites/enemy_super_boss_phase3_painted.png' }
       ], phases: [
-        { at: 1, telegraph: 60, ranged: 'crystal_volley', vulnerability: 72 }, { at: 0.72, telegraph: 72, summon: 'crystal_guard', hazard: 'crystal_lane', vulnerability: 120 }, { at: 0.38, telegraph: 84, charge: 'cross_lane', ranged: 'crystal_volley', vulnerability: 180 }
+        { at: 1, telegraph: 60, ranged: 'crystal_volley', recovery: 36, vulnerability: 72 }, { at: 0.72, telegraph: 72, summon: 'crystal_guard', hazard: 'crystal_lane', recovery: 42, vulnerability: 120 }, { at: 0.38, telegraph: 84, charge: 'cross_lane', ranged: 'crystal_volley', actionFrames: 90, recovery: 48, vulnerability: 180 }
       ] },
-      boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 }, phases: [
-        { at: 1, telegraph: 54, ranged: 'red_pen', vulnerability: 60 }, { at: 0.65, telegraph: 66, summon: 'paperstorm', hazard: 'exam_sheet', vulnerability: 90 }, { at: 0.30, telegraph: 72, charge: 'proctor_rush', vulnerability: 150 }
+      boss: { scene: 'exam', label: '监考点名 + 暴走', focusDrain: true, focusStrike: { interval: 420, damage: 2000, telegraph: 95, recovery: 45, vulnerability: 90 }, rageRush: { hpRatio: 0.48, duration: 150, statBoost: 1.3 }, phases: [
+        { at: 1, telegraph: 54, ranged: 'red_pen', recovery: 30, vulnerability: 60 }, { at: 0.65, telegraph: 66, summon: 'paperstorm', hazard: 'exam_sheet', recovery: 36, vulnerability: 90 }, { at: 0.30, telegraph: 72, charge: 'proctor_rush', actionFrames: 90, recovery: 45, vulnerability: 150 }
       ] }
     };
 
@@ -452,25 +553,32 @@
     };
 
     const VFX_MANIFEST = {
-      slime: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      bat: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      tank: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      note: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      doodle: { family: 'doodle', runtime: 'assets/vfx/vfx_doodle.webp', fallback: 'assets/vfx/vfx_doodle.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      erasercrumb: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      hallpass: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      quizpaper: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      whistle: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      jump_rope: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      sunshine: { family: 'sunshine', runtime: 'assets/vfx/vfx_sunshine.webp', fallback: 'assets/vfx/vfx_sunshine.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      quiet: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      bookstack: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      bookmark: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      paperstorm: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      deadline: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      super_boss: { family: 'crystal', runtime: 'assets/vfx/vfx_crystal.webp', fallback: 'assets/vfx/vfx_crystal.png', phases: ['telegraph', 'cast', 'travel', 'impact'] },
-      boss: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'] }
+      slime: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      bat: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      tank: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      note: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      doodle: { family: 'doodle', runtime: 'assets/vfx/vfx_doodle.webp', fallback: 'assets/vfx/vfx_doodle.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      erasercrumb: { family: 'corrosion', runtime: 'assets/vfx/vfx_corrosion.webp', fallback: 'assets/vfx/vfx_corrosion.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      hallpass: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      quizpaper: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      whistle: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      jump_rope: { family: 'impact', runtime: 'assets/vfx/vfx_impact.webp', fallback: 'assets/vfx/vfx_impact.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      sunshine: { family: 'sunshine', runtime: 'assets/vfx/vfx_sunshine.webp', fallback: 'assets/vfx/vfx_sunshine.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      quiet: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      bookstack: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      bookmark: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      paperstorm: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      deadline: { family: 'soundwave', runtime: 'assets/vfx/vfx_soundwave.webp', fallback: 'assets/vfx/vfx_soundwave.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      super_boss: { family: 'crystal', runtime: 'assets/vfx/vfx_crystal.webp', fallback: 'assets/vfx/vfx_crystal.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } },
+      boss: { family: 'paper', runtime: 'assets/vfx/vfx_paper.webp', fallback: 'assets/vfx/vfx_paper.png', phases: ['telegraph', 'cast', 'travel', 'impact'], landscapeSafeArea: { x: 0.08, y: 0.14, w: 0.84, h: 0.72, axis: 'horizontal' }, portraitSafeArea: { x: 0.14, y: 0.08, w: 0.72, h: 0.84, axis: 'vertical' } }
     };
+    const VFX_PHASE_RENDER = {
+      telegraph: { composition: 'contained-pulse', scaleX: 1.18, scaleY: 0.72, alphaMin: 0.22, alphaMax: 0.56, pulseRate: 0.09, life: 42 },
+      cast: { composition: 'split-burst', scaleX: 0.94, scaleY: 0.94, alphaMin: 0.58, alphaMax: 0.98, pulseRate: 0.26, life: 24 },
+      travel: { composition: 'directional-streak', scaleX: 1.48, scaleY: 0.54, alphaMin: 0.46, alphaMax: 0.84, pulseRate: 0.17, life: 32 },
+      impact: { composition: 'expanding-impact', scaleX: 1.30, scaleY: 1.30, alphaMin: 0.34, alphaMax: 0.92, pulseRate: 0.31, life: 30 }
+    };
+    const MAX_ACTIVE_RASTER_FX = 160;
 
     const SCENE_MANIFEST = {
       '1-1': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_1.webp', fallback: 'assets/scenes/scene_1_1.png' }, '1-2': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_2.webp', fallback: 'assets/scenes/scene_1_2.png' }, '1-3': { orientation: 'landscape', runtime: 'assets/scenes/scene_1_3.webp', fallback: 'assets/scenes/scene_1_3.png' },
@@ -1654,8 +1762,29 @@
     }
     function b64encodeUtf8(str) { return btoa(unescape(encodeURIComponent(str))); }
     function b64decodeUtf8(b64) { return decodeURIComponent(escape(atob(b64))); }
+    function downloadSaveFile(save) {
+        const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const payload = {
+            format: 'xueba-pvz-save',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            save
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2) + '\n'], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'xueba-pvz-save-' + stamp + '.json';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
     function exportSave() {
-        const code = 'XBPVZ1:' + b64encodeUtf8(JSON.stringify(loadGameSave()));
+        const save = loadGameSave();
+        const code = 'XBPVZ1:' + b64encodeUtf8(JSON.stringify(save));
+        downloadSaveFile(save);
         window.prompt('复制下面这段存档码，在别的装置/浏览器点「导入存档」贴上即可恢复进度：', code);
     }
     // 收集欄位白名單清洗：只收 boolean/number/短字串/物件存在標記，限量防爆，避免惡意存檔碼
@@ -1973,39 +2102,208 @@
       ctx.fillText(label || '?', 0, 0);
       ctx.restore();
     }
-    function rasterAssetEntries() {
-      const entries = Object.entries(SCENE_MANIFEST).map(([id, profile]) => ['scene_' + id.replace(/[^a-z0-9]+/gi, '_'), profile.runtime]);
-      Object.entries(MINIGAME_SCENE_MANIFEST).forEach(([id, variants]) => {
-        entries.push(['minigame_' + id + '_landscape', variants.landscape.runtime], ['minigame_' + id + '_portrait', variants.portrait.runtime]);
-      });
-      Object.values(VFX_MANIFEST).forEach(profile => entries.push(['vfx_' + profile.family, profile.runtime]));
-      BOSS_MECHANICS.super_boss.phaseAssets.forEach((asset, index) => entries.push(['enemy_super_boss_phase' + (index + 1), asset.runtime]));
-      return Array.from(new Map(entries));
+    function createAssetLoader(createImage, sourceConfig) {
+      const config = sourceConfig || {};
+      const buildId = config.buildId
+        || (typeof BUILD_ID !== 'undefined' ? BUILD_ID : 'development');
+      const versionAssetUrl = config.assetUrlForBuild
+        || (typeof assetUrlForBuild === 'function' ? assetUrlForBuild : (url => url));
+      const spriteManifest = config.spriteManifest || {};
+      const sceneManifest = config.sceneManifest || {};
+      const minigameSceneManifest = config.minigameSceneManifest || {};
+      const vfxManifest = config.vfxManifest || {};
+      const bossMechanics = config.bossMechanics || {};
+      const levels = config.levels || [];
+      const towers = config.towers || {};
+      const minigameVfxEnemies = config.minigameVfxEnemies || {
+        chalk_shooter: 'slime',
+        relay_target: 'hallpass',
+        quiet_snipe: 'quiet',
+        exam_defense: 'paperstorm'
+      };
+      const fallbackFor = config.fallbackFor || (url => (
+        typeof url === 'string' && /\.webp$/i.test(url)
+          ? url.replace(/\.webp$/i, '.png')
+          : ''
+      ));
+      const pending = new Map();
+
+      function uniqueEntries(entries) {
+        const unique = new Map();
+        entries.forEach(entry => {
+          if (entry && entry[0] && entry[1] && !unique.has(entry[0])) unique.set(entry[0], entry);
+        });
+        return Array.from(unique.values());
+      }
+
+      function spriteEntry(id) {
+        const runtime = spriteManifest[id];
+        return runtime ? [id, runtime, fallbackFor(runtime)] : null;
+      }
+
+      function vfxEntry(enemyId) {
+        const profile = vfxManifest[enemyId];
+        return profile ? ['vfx_' + profile.family, profile.runtime, profile.fallback] : null;
+      }
+
+      function baseEntries() {
+        return Object.keys(spriteManifest)
+          .filter(id => id.startsWith('badge_') || /^tower_[a-z0-9]+$/i.test(id))
+          .map(spriteEntry)
+          .filter(Boolean);
+      }
+
+      function catalogEntries() {
+        return Object.keys(spriteManifest).map(spriteEntry).filter(Boolean);
+      }
+
+      function levelEntries(levelIdx, loadout, toolLevels) {
+        const level = levels[levelIdx];
+        if (!level) return [];
+        const entries = [];
+        const scene = sceneManifest[level.id];
+        if (scene) entries.push([
+          'scene_' + String(level.id).replace(/[^a-z0-9]+/gi, '_'),
+          scene.runtime,
+          scene.fallback
+        ]);
+
+        const enemyIds = new Set();
+        (level.waves || []).forEach(wave => {
+          (wave.groups || []).forEach(group => {
+            if (group && group.e) enemyIds.add(group.e);
+          });
+        });
+        enemyIds.forEach(enemyId => {
+          entries.push(spriteEntry('enemy_' + enemyId), vfxEntry(enemyId));
+          if (enemyId === 'super_boss') {
+            const phaseAssets = bossMechanics.super_boss && bossMechanics.super_boss.phaseAssets;
+            (phaseAssets || []).forEach((asset, index) => entries.push([
+              'enemy_super_boss_phase' + (index + 1),
+              asset.runtime,
+              asset.fallback
+            ]));
+          }
+        });
+
+        const selectedTowers = (loadout && loadout.length)
+          ? loadout
+          : ((level.mainlineLoadout && level.mainlineLoadout.length)
+            ? level.mainlineLoadout
+            : Object.keys(towers));
+        selectedTowers.forEach(towerId => {
+          const requestedLevel = Math.max(1, Math.min(5, Number(toolLevels && toolLevels[towerId]) || 1));
+          const leveledId = 'tower_' + towerId + '_lv' + requestedLevel;
+          entries.push(spriteEntry(spriteManifest[leveledId] ? leveledId : 'tower_' + towerId));
+        });
+        return uniqueEntries(entries);
+      }
+
+      function minigameEntries(minigameId, orientation) {
+        const variants = minigameSceneManifest[minigameId];
+        const variant = variants && variants[orientation];
+        const entries = variant ? [[
+          'minigame_' + minigameId + '_' + orientation,
+          variant.runtime,
+          variant.fallback
+        ]] : [];
+        entries.push(vfxEntry(minigameVfxEnemies[minigameId] || 'slime'));
+        return uniqueEntries(entries);
+      }
+
+      const loader = {
+        images: {},
+        failed: {},
+        loading: {},
+        ready: false,
+        loadEntry(entry) {
+          if (!entry || !entry[0] || !entry[1]) return Promise.resolve(false);
+          const [id, runtime, configuredFallback] = entry;
+          if (this.images[id]) return Promise.resolve(true);
+          if (this.failed[id]) return Promise.resolve(false);
+          if (pending.has(id)) return pending.get(id);
+
+          this.loading[id] = true;
+          const promise = Promise.resolve()
+            .then(() => new Promise(resolve => {
+              const finish = (image, failed) => {
+                if (image) {
+                  this.images[id] = image;
+                  delete this.failed[id];
+                } else if (failed) {
+                  this.failed[id] = true;
+                }
+                resolve(!!image);
+              };
+              const attempt = (url, isFallback) => {
+                let image = null;
+                try { image = createImage(); } catch (error) {}
+                if (!image) { finish(null, true); return; }
+                image.onload = () => finish(image, false);
+                image.onerror = () => {
+                  const fallback = configuredFallback || fallbackFor(runtime);
+                  if (!isFallback && fallback && fallback !== url) attempt(fallback, true);
+                  else finish(null, true);
+                };
+                try { image.src = versionAssetUrl(url, buildId); } catch (error) { image.onerror(); }
+              };
+              attempt(runtime, false);
+            }))
+            .catch(() => {
+              this.failed[id] = true;
+              return false;
+            })
+            .then(result => {
+              delete this.loading[id];
+              pending.delete(id);
+              return result;
+            });
+          pending.set(id, promise);
+          return promise;
+        },
+        loadEntries(entries) {
+          const requested = uniqueEntries(entries || []);
+          return Promise.all(requested.map(entry => this.loadEntry(entry))).then(results => ({
+            requested: requested.map(entry => entry[0]),
+            loaded: requested.filter((entry, index) => results[index]).map(entry => entry[0]),
+            failed: requested.filter((entry, index) => !results[index]).map(entry => entry[0])
+          }));
+        },
+        loadBase() {
+          return this.loadEntries(baseEntries()).then(result => {
+            this.ready = true;
+            return result;
+          });
+        },
+        loadCatalog() { return this.loadEntries(catalogEntries()); },
+        loadLevel(levelIdx, loadout, toolLevels) {
+          return this.loadEntries(levelEntries(levelIdx, loadout, toolLevels));
+        },
+        loadMinigame(minigameId, orientation) {
+          return this.loadEntries(minigameEntries(minigameId, orientation));
+        },
+        dependenciesForLevel(levelIdx, loadout, toolLevels) {
+          return levelEntries(levelIdx, loadout, toolLevels).map(entry => entry[0]);
+        },
+        dependenciesForMinigame(minigameId, orientation) {
+          return minigameEntries(minigameId, orientation).map(entry => entry[0]);
+        },
+        load() { return this.loadBase(); },
+        get(id) { return this.images[id]; }
+      };
+      return loader;
     }
-    const ASSETS = {
-      images: {},
-      failed: {},
-      ready: false,
-      load() {
-        const entries = [...Object.entries(SPRITE_MANIFEST), ...rasterAssetEntries()];
-        if (entries.length === 0) { this.ready = true; return Promise.resolve(); }
-        return Promise.all(entries.map(([id, url]) => new Promise(res => {
-          const img = new Image();
-          img.onload = () => { this.images[id] = img; res(); };
-          img.onerror = () => {
-            const fallback = fallbackUrlForAsset(url);
-            if (fallback && fallback !== url) {
-              const png = new Image();
-              png.onload = () => { this.images[id] = png; res(); };
-              png.onerror = () => { this.failed[id] = true; res(); };
-              png.src = fallback;
-            } else { this.failed[id] = true; res(); }
-          };
-          img.src = url;
-        }))).then(() => { this.ready = true; });
-      },
-      get(id) { return this.images[id]; }
-    };
+    const ASSETS = createAssetLoader(() => new Image(), {
+      buildId: BUILD_ID,
+      assetUrlForBuild,
+      spriteManifest: SPRITE_MANIFEST,
+      sceneManifest: SCENE_MANIFEST,
+      minigameSceneManifest: MINIGAME_SCENE_MANIFEST,
+      vfxManifest: VFX_MANIFEST,
+      bossMechanics: BOSS_MECHANICS,
+      levels: LEVELS,
+      towers: TOWERS
+    });
     function getTowerAssetId(id, level) {
       const lv = clampToolLevel(level);
       const leveledId = 'tower_' + id + '_lv' + lv;
@@ -2072,7 +2370,23 @@
 
     function hasPendingBossTelegraph(objects, enemy) {
         return Array.isArray(objects) && !!enemy && objects.some(action =>
-            action && action.type === 'bossAction' && action.enemy === enemy && action.delay > 0
+            action
+            && action.type === 'bossAction'
+            && action.enemy === enemy
+            && (action.state
+                ? action.state === 'telegraph' || action.state === 'execute' || action.state === 'recovery'
+                : action.delay > 0)
+        );
+    }
+
+    function bossActionLocksEnemy(objects, enemy) {
+        return Array.isArray(objects) && !!enemy && objects.some(action =>
+            action
+            && action.type === 'bossAction'
+            && action.enemy === enemy
+            && (action.state
+                ? action.state === 'telegraph' || action.state === 'execute' || action.state === 'recovery'
+                : action.delay > 0)
         );
     }
 
@@ -2103,7 +2417,7 @@
             this.selectedField = null; // 当前选中的场上单位（用于关卡内升级，仅进阶模式）
             // ----- Phase 4 战役 / 星级 / Boss 状态 -----
             this.wrongAnswers = 0;     // 本关答错次数（星级评定用）
-            this.bossTimer = 0; this.bossMarks = []; // 监考魔王「红笔点名」预警与触发
+            this.bossTimer = 0; // 监考魔王「红笔点名」共享 Boss action scheduler 的冷却
             this.challengeRule = null; // 挑战关规则（如 'speed'）
             this.touchStart = null;
             this.mazeMoveTimer = 0;
@@ -2220,6 +2534,7 @@
         startLevel(idx, loadout) {
             const isContinuation = (this.phase === 'level_complete' && idx === this.levelIdx + 1);
             this.levelIdx = idx; this.waveIdx = 0;
+            this.stageCache = null;
             // 主线由关卡自动给文具，不出现配装选择；研究所未来可继续传入 loadout。
             this.activeLoadout = (loadout && loadout.length) ? loadout.slice() : ((LEVELS[idx] && LEVELS[idx].mainlineLoadout) || Object.keys(TOWERS)).slice();
             const sunBonus = this.pendingSunBonus || 0;
@@ -2238,7 +2553,7 @@
             this.teacherCharge = 0; this.teacherReady = false; this.freezeTimer = 0; this.clearField();
             this.stamps = 0; this.stampKills = 0;
             // Phase 4：重置星级计数与 Boss/挑战状态
-            this.wrongAnswers = 0; this.bossTimer = 480; this.bossMarks = [];
+            this.wrongAnswers = 0; this.bossTimer = 480;
             // Phase C：本关学科统计 + 本关错题（错题仅本关、不存档）
             this.subjectsLearned = {}; this.wrongList = []; this.enemiesSeen = {};
             this.shardsEarnedThisLevel = 0; // 本关获得的知识碎片（结算展示用）
@@ -2291,6 +2606,7 @@
         startChapterMinigame(levelIdx, nextLevelIdx) {
             const cfg = chapterMinigameForCompletedLevel(levelIdx);
             if (!cfg) return false;
+            this.stageCache = null;
             this.objs = []; this.particles = []; this.floatTexts = [];
             this.minigame = {
                 ...cfg,
@@ -2328,15 +2644,28 @@
             const kind = Math.random() < 0.22 ? 'fast' : (Math.random() < 0.38 ? 'shield' : 'normal');
             const radius = kind === 'shield' ? 34 : 27;
             const hp = kind === 'shield' ? 2 : 1;
-            this.minigame.targets.push({
+            const vfxEnemyId = {
+                chalk_shooter: 'slime',
+                relay_target: 'hallpass',
+                quiet_snipe: 'quiet',
+                exam_defense: 'paperstorm'
+            }[this.minigame.id] || 'slime';
+            const orientation = this.w > this.h ? 'landscape' : 'portrait';
+            const target = {
                 x, y, radius, hp, maxHp: hp,
                 vx: (Math.random() - 0.5) * (kind === 'fast' ? 3.6 : 1.8),
                 vy: kind === 'fast' ? 2.7 : 1.7,
                 life: 210,
                 maxLife: 210,
                 color: kind === 'shield' ? '#94a3b8' : (kind === 'fast' ? '#f97316' : '#a855f7'),
-                kind
-            });
+                kind, vfxEnemyId
+            };
+            this.minigame.targets.push(target);
+            this.spawnVfxPhase(
+                { id: vfxEnemyId, x: target.x - this.G / 2, y: target.y - this.G / 2 },
+                'telegraph',
+                { target: { x: target.x - this.G / 2, y: target.y - this.G / 2 }, orientation, label: '目标预警' }
+            );
         }
 
         handleMinigameInput(type, x, y) {
@@ -2355,6 +2684,12 @@
             });
             if (hitIndex >= 0) {
                 const t = this.minigame.targets[hitIndex];
+                const source = { id: t.vfxEnemyId || 'slime', x: p.x - this.G / 2, y: p.y - this.G / 2 };
+                const target = { x: t.x - this.G / 2, y: t.y - this.G / 2 };
+                const orientation = this.w > this.h ? 'landscape' : 'portrait';
+                this.spawnVfxPhase(source, 'cast', { target, orientation, label: '命中施放' });
+                this.spawnVfxPhase(source, 'travel', { target, orientation, label: '命中轨迹' });
+                this.spawnVfxPhase(source, 'impact', { target, orientation, label: '命中效果' });
                 t.hp--;
                 this.spawnParticles(t.x, t.y, '#F6D365', 9);
                 if (t.hp <= 0) {
@@ -2386,6 +2721,7 @@
                 if (t.x < t.radius || t.x > this.w - t.radius) t.vx *= -1;
                 if (t.life <= 0 || t.y > this.h + t.radius) this.minigame.targets.splice(i, 1);
             }
+            this.updateRasterFxObjects();
             for(let i=this.floatTexts.length-1; i>=0; i--) { this.floatTexts[i].y--; this.floatTexts[i].life--; if(this.floatTexts[i].life<=0) this.floatTexts.splice(i,1); }
             for(let i=this.particles.length-1; i>=0; i--) { const p=this.particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life--; if(p.life<=0) this.particles.splice(i,1); }
             if (this.frame % 10 === 0) this.callbacks.onMinigameState && this.callbacks.onMinigameState(this.minigame);
@@ -2868,6 +3204,7 @@
         }
 
         transitionBossPhase(enemy, cfg) {
+            if (!enemy || enemy.hp <= 0 || !cfg) return false;
             const queue = this.queueBossPhaseThresholds(enemy, cfg);
             if (!queue || enemy.bossPhaseTransitioning || hasPendingBossTelegraph(this.objs, enemy)) return false;
             const next = queue.shift();
@@ -2879,7 +3216,7 @@
             if (enemy.id === 'super_boss') enemy.titanAnnounced = true;
             this.floatText('阶段 ' + (next + 1) + '：预警！', enemy.x, enemy.y - 24, '#f8fafc', phase.telegraph, 24);
             this.spawnVfxPhase(enemy, 'telegraph', { label: 'Boss 预警' });
-            this.objs.push({ type: 'bossAction', enemy, phase, cfg, delay: phase.telegraph, maxDelay: phase.telegraph });
+            this.objs.push({ type: 'bossAction', enemy, phase, cfg, actionKind: 'phase', state: 'telegraph', delay: phase.telegraph, maxDelay: phase.telegraph });
             this.announce('BOSS 預警：' + cfg.label + '，' + Math.ceil(phase.telegraph / 60) + ' 秒後施放。');
             return true;
         }
@@ -2891,13 +3228,106 @@
             if (phase.ranged) this.spawnBossRangedVolley(enemy, phase);
             if (phase.summon) this.summonSupportEnemies(enemy, { summon: phase.summon, summonCount: 2, summonRows: 'adjacent', summonHpScale: 0.7 });
             if (phase.hazard) this.spawnBossHazard(enemy, phase);
-            if (phase.charge) enemy.bossChargeTimer = Math.max(enemy.bossChargeTimer || 0, 90);
+            if (phase.titanSlam) this.executeTitanSlam(enemy, phase);
+            if (phase.focusStrike) this.executeBossFocusStrike(enemy, phase);
+            if (phase.charge) enemy.bossChargeTimer = Math.max(enemy.bossChargeTimer || 0, phase.actionFrames || 90);
             this.spawnVfxPhase(enemy, 'cast', { label: 'Boss 技能' });
+            return true;
+        }
+
+        executeTitanSlam(enemy, phase) {
+            const targetTower = this.objs
+                .filter(t => t.type === 'tower' && t.hp > 0 && !t.destroyed && t.r === enemy.r)
+                .sort((a, b) => b.x - a.x)[0];
+            if (!targetTower) return false;
+            return this.damageTower(targetTower, phase.titanSlam || 850, '#a855f7', '巨剑重击!', 26);
+        }
+
+        executeBossFocusStrike(enemy, phase) {
+            if (this.freezeTimer > 0) {
+                this.floatText('红笔点名被化解！', this.OX + this.G, this.OY + phase.targetRow * this.G + this.G / 2, '#4A90E2', 60, 24);
+                return false;
+            }
+            const targetTower = this.objs
+                .filter(t => t.type === 'tower' && t.hp > 0 && !t.destroyed && t.r === phase.targetRow)
+                .sort((a, b) => b.x - a.x)[0];
+            if (!targetTower) return false;
+            return this.damageTower(targetTower, phase.focusStrike || 2000, '#E85D5D', '红笔点名！', 26);
+        }
+
+        beginBossActionRecovery(action) {
+            if (!action || !action.enemy || action.enemy.hp <= 0 || !action.phase) return false;
+            action.state = 'recovery';
+            action.delay = Math.max(1, action.phase.recovery || 30);
+            action.maxDelay = action.delay;
+            this.floatText('恢复中', action.enemy.x, action.enemy.y - 18, '#cbd5e1', action.delay, 18);
+            return true;
+        }
+
+        completeBossAction(action) {
+            const enemy = action && action.enemy;
+            const phase = action && action.phase;
+            if (!enemy || enemy.hp <= 0 || !phase) return false;
+            action.state = 'complete';
             this.startBossVulnerability(enemy, phase.vulnerability);
             this.floatText('破绽!', enemy.x, enemy.y - 18, '#fef08a', phase.vulnerability, 22);
             this.announce('BOSS 破綻：反擊窗口已開啟。');
-            enemy.bossPhaseTransitioning = false;
-            this.transitionBossPhase(enemy, action.cfg || BOSS_MECHANICS[enemy.id]);
+            if (action.actionKind === 'phase') {
+                enemy.bossPhaseTransitioning = false;
+                this.transitionBossPhase(enemy, action.cfg || BOSS_MECHANICS[enemy.id]);
+            }
+            return true;
+        }
+
+        advanceBossAction(action) {
+            const enemy = action && action.enemy;
+            if (!enemy || enemy.hp <= 0 || !action.phase) return false;
+            action.delay = Math.max(0, (action.delay || 0) - 1);
+            if (action.delay > 0) return true;
+            if (!action.state || action.state === 'telegraph') {
+                if (!this.executeBossPhaseAction(action)) return false;
+                const actionFrames = action.phase.charge ? Math.max(1, action.phase.actionFrames || 90) : 0;
+                if (actionFrames > 0) {
+                    action.state = 'execute';
+                    action.delay = actionFrames;
+                    action.maxDelay = actionFrames;
+                    return true;
+                }
+                return this.beginBossActionRecovery(action);
+            }
+            if (action.state === 'execute') return this.beginBossActionRecovery(action);
+            if (action.state === 'recovery') {
+                this.completeBossAction(action);
+                return false;
+            }
+            return false;
+        }
+
+        scheduleTitanSlam(enemy, cfg) {
+            const slam = cfg && cfg.titanSlam;
+            if (!enemy || enemy.hp <= 0 || !slam || hasPendingBossTelegraph(this.objs, enemy)) return false;
+            const hasTarget = this.objs.some(t => t.type === 'tower' && t.hp > 0 && !t.destroyed && t.r === enemy.r);
+            if (!hasTarget) return false;
+            const phase = { label: '巨剑重击', titanSlam: slam.damage || 850, telegraph: slam.telegraph || 60, recovery: slam.recovery || 45, vulnerability: slam.vulnerability || 90 };
+            this.floatText('巨剑重击：预警！', enemy.x, enemy.y - 24, '#f8fafc', phase.telegraph, 24);
+            this.spawnVfxPhase(enemy, 'telegraph', { label: phase.label });
+            this.objs.push({ type: 'bossAction', enemy, phase, cfg, actionKind: 'titanSlam', state: 'telegraph', delay: phase.telegraph, maxDelay: phase.telegraph });
+            this.announce('BOSS 預警：巨劍重擊，' + Math.ceil(phase.telegraph / 60) + ' 秒後施放。');
+            return true;
+        }
+
+        scheduleBossFocusStrike(enemy, cfg) {
+            const strike = cfg && cfg.focusStrike;
+            if (!enemy || enemy.hp <= 0 || !strike || hasPendingBossTelegraph(this.objs, enemy)) return false;
+            const rows = [];
+            this.objs.forEach(o => { if (o.type === 'tower' && o.hp > 0 && !o.destroyed && rows.indexOf(o.r) < 0) rows.push(o.r); });
+            if (!rows.length) return false;
+            const targetRow = rows[Math.floor(Math.random() * rows.length)];
+            const phase = { label: '红笔点名', focusStrike: strike.damage || 2000, targetRow, telegraph: strike.telegraph || 95, recovery: strike.recovery || 45, vulnerability: strike.vulnerability || 90 };
+            this.floatText('红笔点名：预警！', this.OX + this.G, this.OY + targetRow * this.G + this.G / 2, '#f8fafc', phase.telegraph, 24);
+            this.spawnVfxPhase(enemy, 'telegraph', { label: phase.label });
+            this.objs.push({ type: 'bossAction', enemy, phase, cfg, actionKind: 'focusStrike', state: 'telegraph', delay: phase.telegraph, maxDelay: phase.telegraph });
+            this.announce('BOSS 預警：紅筆點名，' + Math.ceil(phase.telegraph / 60) + ' 秒後施放。');
             return true;
         }
 
@@ -2963,26 +3393,101 @@
 
         spawnSpecialFx(enemy, target, cfg) {
             if (!enemy || !target || !cfg) return;
-            const color = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
             ['telegraph', 'cast', 'travel', 'impact'].forEach((phase, index) => this.spawnVfxPhase(enemy, phase, { target, delay: index * 6, label: cfg.label }));
-            this.objs.push({
-                type: 'skillFx',
-                x1: enemy.x + this.G / 2, y1: enemy.y + this.G / 2,
-                x2: target.x + this.G / 2, y2: target.y + this.G / 2,
-                color, label: cfg.label || '特殊攻击',
-                life: 28, maxLife: 28
-            });
         }
 
-        spawnVfxPhase(enemy, phase, options = {}) {
+        spawnVfxPhase(enemy, phase, options) {
+            options = options || {};
             const profile = VFX_MANIFEST[enemy && enemy.id] || VFX_MANIFEST.slime;
             if (!profile || !profile.phases.includes(phase)) return false;
             const target = options.target || enemy;
-            this.objs.push({
+            const sourceX = enemy.x + this.G / 2;
+            const sourceY = enemy.y + this.G / 2;
+            const targetX = target.x + this.G / 2;
+            const targetY = target.y + this.G / 2;
+            const orientation = options.orientation || (this.w <= this.h ? 'portrait' : 'landscape');
+            const render = VFX_PHASE_RENDER[phase];
+            let x = targetX, y = targetY;
+            if (phase === 'cast') { x = sourceX; y = sourceY; }
+            else if (phase === 'travel') { x = (sourceX + targetX) / 2; y = (sourceY + targetY) / 2; }
+            while (this.objs.filter(obj => obj.type === 'rasterFx').length >= MAX_ACTIVE_RASTER_FX) {
+                const oldest = this.objs.findIndex(obj => obj.type === 'rasterFx');
+                if (oldest < 0) break;
+                this.objs.splice(oldest, 1);
+            }
+            const effect = {
                 type: 'rasterFx', assetId: 'vfx_' + (options.family || profile.family), phase, label: options.label || phase,
-                x: target.x + this.G / 2, y: target.y + this.G / 2, delay: options.delay || 0,
-                life: 30, maxLife: 30, size: Math.max(this.G, 54)
-            });
+                x, y, sourceX, sourceY, targetX, targetY, orientation,
+                landscapeSafeArea: profile.landscapeSafeArea,
+                portraitSafeArea: profile.portraitSafeArea,
+                delay: options.delay || 0,
+                life: render.life, maxLife: render.life, size: Math.max(this.G, 54)
+            };
+            this.objs.push(effect);
+            return effect;
+        }
+
+        updateRasterFxObjects() {
+            for (let i = this.objs.length - 1; i >= 0; i--) {
+                const effect = this.objs[i];
+                if (effect.type !== 'rasterFx') continue;
+                if (effect.delay > 0) effect.delay--;
+                else effect.life--;
+                if (effect.life <= 0) this.objs.splice(i, 1);
+            }
+        }
+
+        drawRasterFx(ctx, effect, orientation = effect.orientation || (this.w > this.h ? 'landscape' : 'portrait')) {
+            if (effect.delay > 0) return false;
+            const image = ASSETS.images[effect.assetId];
+            const render = VFX_PHASE_RENDER[effect.phase] || VFX_PHASE_RENDER.impact;
+            const safeArea = orientation === 'portrait' ? effect.portraitSafeArea : effect.landscapeSafeArea;
+            const area = safeArea || (orientation === 'portrait'
+                ? { x: 0.14, y: 0.08, w: 0.72, h: 0.84 }
+                : { x: 0.08, y: 0.14, w: 0.84, h: 0.72 });
+            const progress = 1 - Math.max(0, effect.life) / Math.max(1, effect.maxLife);
+            const pulse = 0.5 + 0.5 * Math.sin((this.frame || 0) * render.pulseRate + progress * Math.PI);
+            const baseSize = effect.size * (1 + progress * (effect.phase === 'impact' ? 0.34 : 0.12));
+            let width = baseSize * render.scaleX;
+            let height = baseSize * render.scaleY;
+            if (orientation === 'portrait' && effect.phase === 'travel') {
+                width = baseSize * render.scaleY;
+                height = baseSize * render.scaleX;
+            }
+            const halfW = width / 2, halfH = height / 2;
+            const minX = this.w * area.x + halfW;
+            const maxX = this.w * (area.x + area.w) - halfW;
+            const minY = this.h * area.y + halfH;
+            const maxY = this.h * (area.y + area.h) - halfH;
+            const x = Math.max(Math.min(minX, maxX), Math.min(Math.max(minX, maxX), effect.x));
+            const y = Math.max(Math.min(minY, maxY), Math.min(Math.max(minY, maxY), effect.y));
+            if (!image) {
+                drawMissingPaintedAsset(ctx, x, y, Math.max(width, height), effect.label, '#f8fafc');
+                return false;
+            }
+            const alpha = render.alphaMin + (render.alphaMax - render.alphaMin) * pulse;
+            const drawLayer = (layerX, layerY, layerW, layerH, layerAlpha) => {
+                ctx.globalAlpha = Math.max(0, Math.min(1, layerAlpha));
+                ctx.drawImage(image, layerX - layerW / 2, layerY - layerH / 2, layerW, layerH);
+            };
+            ctx.save();
+            if (render.composition === 'contained-pulse') {
+                drawLayer(x, y, width, height, alpha);
+                drawLayer(x, y, width * 0.62, height * 0.62, alpha * 0.48);
+            } else if (render.composition === 'split-burst') {
+                const offset = baseSize * 0.13;
+                drawLayer(x - offset, y, width, height, alpha * 0.78);
+                drawLayer(x + offset, y, width * 0.78, height * 0.78, alpha);
+            } else if (render.composition === 'directional-streak') {
+                const leadX = orientation === 'portrait' ? x : x + width * 0.22;
+                const leadY = orientation === 'portrait' ? y + height * 0.22 : y;
+                drawLayer(x, y, width, height, alpha * 0.72);
+                drawLayer(leadX, leadY, width * 0.48, height * 0.72, alpha);
+            } else {
+                drawLayer(x, y, width, height, alpha * (1 - progress * 0.42));
+                drawLayer(x, y, width * 0.54, height * 0.54, Math.min(1, alpha + 0.18));
+            }
+            ctx.restore();
             return true;
         }
 
@@ -3015,9 +3520,10 @@
             const tx = target.x + this.G / 2, ty = target.y + this.G / 2;
             const ang = Math.atan2(ty - sy, tx - sx);
             const speed = cfg.projectileSpeed || 8;
-            this.objs.push({
+            const projectile = {
                 type: 'enemyProjectile',
                 x: sx, y: sy,
+                enemy,
                 target,
                 dmg: damage,
                 color,
@@ -3030,18 +3536,36 @@
                 vy: Math.sin(ang) * speed,
                 life: 150,
                 maxLife: 150
-            });
+            };
+            this.objs.push(projectile);
+            projectile.travelFx = this.spawnVfxPhase(enemy, 'travel', { target, label: projectile.label });
+            if (projectile.travelFx) {
+                projectile.travelFx.x = projectile.x;
+                projectile.travelFx.y = projectile.y;
+                projectile.travelFx.life = projectile.life;
+                projectile.travelFx.maxLife = projectile.maxLife;
+            }
             return true;
         }
 
         updateEnemyProjectile(projectile) {
+            if (projectile.enemy && projectile.enemy.hp <= 0) {
+                if (projectile.travelFx) projectile.travelFx.life = 0;
+                projectile.life = 0;
+                return;
+            }
             projectile.life--;
             const target = projectile.target;
-            if (!target || target.destroyed || target.hp <= 0) { projectile.life = 0; return; }
+            if (!target || target.destroyed || target.hp <= 0) {
+                if (projectile.travelFx) projectile.travelFx.life = 0;
+                projectile.life = 0;
+                return;
+            }
             const tx = target.x + this.G / 2, ty = target.y + this.G / 2;
             const dist = Math.hypot(tx - projectile.x, ty - projectile.y);
             if (dist < 28) {
                 this.damageTower(target, projectile.dmg, projectile.color, projectile.label, 18);
+                this.spawnVfxPhase(projectile.enemy, 'impact', { target, label: projectile.label });
                 if (projectile.silenceFrames) target.silenceTimer = Math.max(target.silenceTimer || 0, projectile.silenceFrames);
                 if (projectile.cdPenalty) this.applyTowerCooldownPenalty(target, projectile.cdPenalty);
                 if (projectile.mpDrain) { this.mp = Math.max(0, this.mp - projectile.mpDrain); this.updateStats(); }
@@ -3051,6 +3575,7 @@
                         if (Math.abs(t.x - target.x) <= this.G * 1.05) this.damageTower(t, Math.round(projectile.dmg * 0.45), projectile.color, 'splash', 14);
                     });
                 }
+                if (projectile.travelFx) projectile.travelFx.life = 0;
                 projectile.life = 0;
                 return;
             }
@@ -3060,6 +3585,58 @@
             projectile.vy = Math.sin(ang) * speed;
             projectile.x += projectile.vx;
             projectile.y += projectile.vy;
+            if (projectile.travelFx) {
+                projectile.travelFx.x = projectile.x;
+                projectile.travelFx.y = projectile.y;
+            }
+        }
+
+        executeSpecialAttackImpact(enemy, target, cfg) {
+            if (!enemy || enemy.hp <= 0 || !target || target.destroyed || target.hp <= 0 || !cfg) return false;
+            const sourceColor = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
+            const damage = Math.max(1, Math.round((enemy.dmg || enemy.baseDmg || 1) * (cfg.damageScale || 1)));
+            this.damageTower(target, damage, sourceColor, cfg.label, 19);
+            this.spawnVfxPhase(enemy, 'impact', { target, label: cfg.label });
+            if (cfg.silenceFrames) target.silenceTimer = Math.max(target.silenceTimer || 0, cfg.silenceFrames);
+            if (cfg.dirtyZone) this.spawnDirtyZone(enemy, target, cfg);
+            if (cfg.cdPenalty) this.applyTowerCooldownPenalty(target, cfg.cdPenalty);
+            if (cfg.mpDrain) {
+                this.mp = Math.max(0, this.mp - cfg.mpDrain);
+                this.updateStats();
+            }
+            enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
+            return true;
+        }
+
+        advanceSpecialAttack(action) {
+            const enemy = action && action.enemy;
+            const target = action && action.target;
+            const cfg = action && action.cfg;
+            if (!enemy || enemy.hp <= 0 || !target || target.destroyed || target.hp <= 0 || !cfg) return false;
+            action.delay = Math.max(0, (action.delay || 0) - 1);
+            if (action.delay > 0) return true;
+            if (action.state === 'telegraph') {
+                this.spawnVfxPhase(enemy, 'cast', { target, label: cfg.label });
+                action.state = 'cast';
+                action.delay = 6;
+                return true;
+            }
+            if (action.state === 'cast') {
+                if (cfg.projectile) {
+                    this.spawnEnemyProjectile(enemy, target, cfg);
+                    enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
+                    return false;
+                }
+                this.spawnVfxPhase(enemy, 'travel', { target, label: cfg.label });
+                action.state = 'travel';
+                action.delay = 6;
+                return true;
+            }
+            if (action.state === 'travel') {
+                this.executeSpecialAttackImpact(enemy, target, cfg);
+                return false;
+            }
+            return false;
         }
 
         tryVaultTower(enemy, tower, cfg) {
@@ -3142,29 +3719,16 @@
 
         resolveSpecialAttack(enemy, target, cfg) {
             if (!enemy || !target || !cfg) return false;
-            const sourceColor = cfg.color || (enemy.data && enemy.data.color) || '#E85D5D';
-            const damage = Math.max(1, Math.round((enemy.dmg || enemy.baseDmg || 1) * (cfg.damageScale || 1)));
-            this.spawnSpecialFx(enemy, target, cfg);
-            if (cfg.projectile) {
-                this.spawnEnemyProjectile(enemy, target, cfg);
-                enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
-                return true;
-            }
-            this.damageTower(target, damage, sourceColor, cfg.label, 19);
-            if (cfg.silenceFrames) {
-                target.silenceTimer = Math.max(target.silenceTimer || 0, cfg.silenceFrames);
-            }
-            if (cfg.dirtyZone) {
-                this.spawnDirtyZone(enemy, target, cfg);
-            }
-            if (cfg.cdPenalty) {
-                this.applyTowerCooldownPenalty(target, cfg.cdPenalty);
-            }
-            if (cfg.mpDrain) {
-                this.mp = Math.max(0, this.mp - cfg.mpDrain);
-                this.updateStats();
-            }
-            enemy.specialFlash = Math.max(enemy.specialFlash || 0, 12);
+            const telegraphFrames = Math.max(18, cfg.telegraphFrames || 30);
+            this.spawnVfxPhase(enemy, 'telegraph', { target, label: cfg.label });
+            this.objs.push({
+                type: 'specialAttackAction',
+                enemy,
+                target,
+                cfg,
+                state: 'telegraph',
+                delay: telegraphFrames
+            });
             return true;
         }
 
@@ -3471,32 +4035,6 @@
                 for (let i = this.laneWarnings.length - 1; i >= 0; i--) { if (--this.laneWarnings[i].life <= 0) this.laneWarnings.splice(i, 1); }
                 if (this.freezeTimer > 0) this.freezeTimer--;
                 if (this.frame % 30 === 0) this.pushCombatState(); // 技能槽进度平滑刷新
-                // Phase 4 Boss「红笔点名」：预警一路 → 触发伤害该路最前防御；班主任定身可化解
-                if (LEVELS[this.levelIdx].isBoss) {
-                    if (this.objs.some(o => o.type === 'enemy' && o.id === 'boss')) {
-                        this.bossTimer--;
-                        if (this.bossTimer <= 0) {
-                            const rows = [];
-                            this.objs.forEach(o => { if (o.type === 'tower' && rows.indexOf(o.r) < 0) rows.push(o.r); });
-                            if (rows.length) this.bossMarks.push({ r: rows[Math.floor(Math.random() * rows.length)], life: 95, max: 95, fired: false });
-                            this.bossTimer = 420;
-                        }
-                    }
-                    for (let bi = this.bossMarks.length - 1; bi >= 0; bi--) {
-                        const mk = this.bossMarks[bi];
-                        if (--mk.life <= 0 && !mk.fired) {
-                            mk.fired = true;
-                            if (this.freezeTimer > 0) {
-                                this.floatText('红笔点名被化解！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#4A90E2', 60, 24);
-                            } else {
-                                const ts = this.objs.filter(o => o.type === 'tower' && o.r === mk.r).sort((a, b) => b.x - a.x);
-                                if (ts.length) { const t = ts[0]; this.damageTower(t, 2000, '#E85D5D', '红笔点名！', 26); }
-                                else { this.floatText('红笔点名！', this.OX + this.G, this.OY + mk.r * this.G + this.G / 2, '#E85D5D', 60, 24); }
-                            }
-                            this.bossMarks.splice(bi, 1);
-                        }
-                    }
-                }
                 this.starTimer--;
                 if (this.starTimer <= 0) {
                     if (this.spawnState.active || this.objs.some(o => o.type === 'enemy')) this.spawnStar();
@@ -3545,11 +4083,12 @@
                 for (let i = this.objs.length - 1; i >= 0; i--) {
                     const o = this.objs[i];
                     if (o.type === 'orb' || o.type === 'star') { o.life--; if(o.life<=0) this.objs.splice(i,1); }
-                    else if (o.type === 'skillFx' || o.type === 'rasterFx') { if (o.delay > 0) o.delay--; else o.life--; if(o.life<=0) this.objs.splice(i,1); }
+                    else if (o.type === 'rasterFx') { if (o.delay > 0) o.delay--; else o.life--; if(o.life<=0) this.objs.splice(i,1); }
                     else if (o.type === 'bossAction') {
-                        if (!o.enemy || o.enemy.hp <= 0) { this.objs.splice(i, 1); continue; }
-                        o.delay--;
-                        if (o.delay <= 0) { this.executeBossPhaseAction(o); this.objs.splice(i, 1); }
+                        if (!this.advanceBossAction(o)) this.objs.splice(i, 1);
+                    }
+                    else if (o.type === 'specialAttackAction') {
+                        if (!this.advanceSpecialAttack(o)) this.objs.splice(i, 1);
                     }
                     else if (o.type === 'enemyProjectile') { this.updateEnemyProjectile(o); if(o.life<=0) this.objs.splice(i,1); }
                     else if (o.type === 'dirtyZone') { this.updateDirtyZone(o); if(o.life<=0 || o.hp<=0) this.objs.splice(i,1); }
@@ -3589,6 +4128,15 @@
                         if (o.data.type === 'shoot') this.tickTowerBarrage(o);
                     }
                     else if (o.type === 'enemy') {
+                        if (o.hp <= 0) {
+                            this.registerEnemyDefeat(o);
+                            this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss');
+                            if (o.data.val > 0) this.spawnOrb(o.x, o.y, o.data.val);
+                            else if (Math.random() < 0.4) this.spawnOrb(o.x, o.y, 40);
+                            if (o.id !== 'elf') this.chargeTeacher(3);
+                            this.objs.splice(i, 1);
+                            continue;
+                        }
                         if(o.hitFlash>0) o.hitFlash--;
                         if(o.specialFlash>0) o.specialFlash--;
                         if(o.shieldFlash>0) o.shieldFlash--;
@@ -3602,14 +4150,34 @@
                         if (!o.baseDmg) o.baseDmg = o.dmg || 0;
                         const bossCfg = BOSS_MECHANICS[o.id] || null;
                         if (bossCfg) this.transitionBossPhase(o, bossCfg);
-                        if (hasPendingBossTelegraph(this.objs, o)) {
+                        if (bossActionLocksEnemy(this.objs, o)) {
+                            const activeBossAction = this.objs.find(action =>
+                                action.type === 'bossAction'
+                                && action.enemy === o
+                                && action.state === 'execute'
+                                && action.phase
+                                && action.phase.charge
+                            );
                             o.isEating = false;
                             o.eatCd = 0;
                             o.dmg = o.baseDmg;
+                            if (!frozen && activeBossAction) {
+                                const chargeSpeed = Math.max(0.2, Math.abs(o.vx || 0)) * 1.35;
+                                o.x -= chargeSpeed;
+                                if (o.bossChargeTimer > 0) o.bossChargeTimer--;
+                            }
                             continue;
                         }
                         if(o.hurryTimer > 0) o.hurryTimer--;
                         if (o.vulnerabilityTimer > 0) o.vulnerabilityTimer--;
+                        if (o.id === 'boss' && bossCfg && bossCfg.focusStrike) {
+                            this.bossTimer--;
+                            if (this.bossTimer <= 0) {
+                                const scheduledFocusStrike = !frozen && this.scheduleBossFocusStrike(o, bossCfg);
+                                this.bossTimer = bossCfg.focusStrike.interval || 420;
+                                if (scheduledFocusStrike) continue;
+                            }
+                        }
                         if(o.data && o.data.ability === 'sunSteal') {
                             const cfg = bossCfg || { stealRange: 2.7, boostEvery: 5, stackBoost: 0.2, maxStacks: 5 };
                             o.sunCooldown = Math.max(0, (o.sunCooldown || 0) - 1);
@@ -3658,10 +4226,17 @@
                         }
                         if(o.data && o.data.ability === 'titanOverdrive') {
                             const cfg = bossCfg || {};
-                            const slam = cfg.titanSlam || { interval: 210, damage: 850 };
+                            const slam = cfg.titanSlam || { interval: 210, damage: 850, telegraph: 60, recovery: 45, vulnerability: 90 };
                             if (!o.titanAnnounced) {
                                 o.titanAnnounced = true;
                                 this.floatText('紫晶魔铠王登场!', o.x, o.y - 18, '#a855f7', 90, 30);
+                            }
+                            if (!Number.isFinite(o.titanSlamCooldown)) o.titanSlamCooldown = slam.interval || 210;
+                            o.titanSlamCooldown--;
+                            if (!frozen && o.titanSlamCooldown <= 0) {
+                                const scheduledSlam = this.scheduleTitanSlam(o, bossCfg);
+                                o.titanSlamCooldown = slam.interval || 210;
+                                if (scheduledSlam) continue;
                             }
                             if (o.titanShieldTimer > 0) o.titanShieldTimer--;
                             if (!frozen && this.frame % 300 === 0) {
@@ -3669,14 +4244,6 @@
                                 o.shieldFlash = 20;
                                 this.floatText('紫晶护盾!', o.x, o.y - 8, '#a855f7', 58, 24);
                                 this.spawnParticles(o.x + this.G / 2, o.y + this.G / 2, '#a855f7', 18);
-                            }
-                            if (!frozen && this.frame % (slam.interval || 210) === 0) {
-                                const targetTower = this.objs
-                                    .filter(t => t.type === 'tower' && t.r === o.r)
-                                    .sort((a, b) => b.x - a.x)[0];
-                                if (targetTower) {
-                                    this.damageTower(targetTower, slam.damage || 850, '#a855f7', '巨剑重击!', 26);
-                                }
                             }
                         }
                         const rageCfg = bossCfg && bossCfg.rageRush ? bossCfg.rageRush : (o.data && o.data.ability === 'rageRush' ? { hpRatio: 0.45, duration: 150, statBoost: 1.3 } : null);
@@ -3756,7 +4323,6 @@
                             if (this.triggerLaneRescue(o)) continue;
                             this.hp--; this.objs.splice(i,1); this.updateStats(); this.syncSave(); this.floatText("-1 ❤️", this.OX, o.y, '#e53e3e');
                         }
-                        else if(o.hp<=0) { this.registerEnemyDefeat(o); this.spawnDeathFx(o.x + this.G/2, o.y + this.G/2, o.data.color, o.id === 'boss'); if(o.data.val>0) this.spawnOrb(o.x,o.y,o.data.val); else if(Math.random()<0.4) this.spawnOrb(o.x,o.y,40); if(o.id!=='elf') this.chargeTeacher(3); this.objs.splice(i,1); }
                     }
                     else if (o.type === 'bullet') {
                         let dx = o.vx, dy = o.vy;
@@ -3801,6 +4367,15 @@
             if (o.titanShieldTimer > 0) { ctx.strokeStyle = 'rgba(168,85,247,0.8)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, cy, size * 0.5, 0, Math.PI * 2); ctx.stroke(); }
             if (o.shieldFlash > 0) { ctx.strokeStyle = '#F6D365'; ctx.lineWidth = 4; ctx.strokeRect(o.x + 10, o.y + 10, G - 20, G - 20); }
             if (o.specialFlash > 0) { ctx.strokeStyle = 'rgba(248,113,113,0.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, size * 0.56, 0, Math.PI * 2); ctx.stroke(); }
+            if (o.vulnerabilityTimer > 0) {
+                const seconds = Math.max(1, Math.ceil(o.vulnerabilityTimer / 60));
+                ctx.save();
+                ctx.strokeStyle = '#fef08a'; ctx.fillStyle = '#fef3c7'; ctx.lineWidth = 4;
+                ctx.setLineDash([7, 5]);
+                ctx.beginPath(); ctx.arc(cx, cy, size * 0.64, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, o.vulnerabilityTimer / 180)); ctx.stroke();
+                ctx.setLineDash([]); ctx.font = `bold ${Math.max(11, G * 0.22)}px Arial`; ctx.textAlign = 'center';
+                ctx.fillText('破綻 ' + seconds + 's', cx, o.y - 22); ctx.restore();
+            }
             if (o.isEating) { ctx.fillStyle = '#E85D5D'; ctx.font = `bold ${Math.max(12, G*0.28)}px Arial`; ctx.fillText('咬!', o.x + 4, o.y + 4); }
             if (o.hp < o.maxHp) {
                 const barY = o.y - 6;
@@ -3811,10 +4386,11 @@
         }
 
         drawEnemy(ctx, o, G) {
-            const assetId = 'enemy_' + o.id;
-            const sprite = ASSETS.get(assetId);
+            const baseAssetId = 'enemy_' + o.id;
+            const assetId = o.spriteAssetId || baseAssetId;
+            const sprite = ASSETS.get(assetId) || ASSETS.get(baseAssetId);
             if (sprite) { this.drawEnemySprite(ctx, o, G, sprite); return; }
-            if (hasExpectedAsset(assetId)) {
+            if (hasExpectedAsset(assetId) || hasExpectedAsset(baseAssetId)) {
                 drawMissingPaintedAsset(ctx, o.x + G / 2, o.y + G / 2, G * 0.95, (o.data && o.data.name || '?').slice(0, 1), o.data && o.data.color);
                 return;
             }
@@ -3948,8 +4524,8 @@
         }
 
         // ----- Phase D 通用舞台：每章一个场景，离屏缓存（key 含 chapterId，切关不串场） -----
-        getStageCacheKey(G, chapterId) {
-            return [chapterId, this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100), Math.round((this.dpr || 1) * 100)].join(':');
+        getStageCacheKey(G, chapterId, levelId) {
+            return [levelId || 'no-level', chapterId, this.w, this.h, this.OX, this.OY, this.C, this.R, Math.round(G * 100), Math.round((this.dpr || 1) * 100)].join(':');
         }
 
         // 共用：每格主题地砖（圆角 + 渐层 + 描边 + 可选点缀）+ 格线
@@ -3972,7 +4548,7 @@
             for (let c = 0; c <= this.C; c++) { ctx.beginPath(); ctx.moveTo(gridX + c * G, gridY); ctx.lineTo(gridX + c * G, gridY + gridH); ctx.stroke(); }
         }
 
-        renderStageCache(G, chapterId) {
+        renderStageCache(G, chapterId, levelId) {
             const canvas = document.createElement('canvas');
             const dpr = this.dpr || 1;
             canvas.width = Math.round(this.w * dpr);
@@ -4048,12 +4624,12 @@
                 });
                 overlay = boardH > 28 ? { chalk: { bx, by, bw, boardH } } : null;
             }
-            return { canvas, key: this.getStageCacheKey(G, chapterId), overlay: overlay };
+            return { canvas, key: this.getStageCacheKey(G, chapterId, levelId), overlay: overlay };
         }
 
-        drawChapterStage(ctx, G, chapterId) {
-            const key = this.getStageCacheKey(G, chapterId);
-            if (!this.stageCache || this.stageCache.key !== key) this.stageCache = this.renderStageCache(G, chapterId);
+        drawChapterStage(ctx, G, chapterId, levelId) {
+            const key = this.getStageCacheKey(G, chapterId, levelId);
+            if (!this.stageCache || this.stageCache.key !== key) this.stageCache = this.renderStageCache(G, chapterId, levelId);
             const cache = this.stageCache, ov = cache.overlay;
             ctx.drawImage(cache.canvas, 0, 0, this.w, this.h);
             if (!ov) return;
@@ -4112,6 +4688,9 @@
             const viewportOrientation = w > h ? 'landscape' : 'portrait';
             const variant = resolveSceneVariant('minigame', viewportOrientation, null, mg.id);
             this.drawRasterScene(ctx, 'minigame_' + mg.id + '_' + variant.variant, mg.title);
+            this.objs.forEach(effect => {
+                if (effect.type === 'rasterFx') this.drawRasterFx(ctx, effect, viewportOrientation);
+            });
             ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center';
             ctx.font = 'bold ' + Math.max(20, Math.floor(w * 0.028)) + 'px Arial';
             ctx.fillText((mg && mg.title) || '阳光小游戏', w / 2, 44);
@@ -4169,27 +4748,8 @@
                     ctx.font = 'bold ' + Math.max(16, Math.floor(this.G * 0.5)) + 'px Arial';
                     ctx.fillText('⚠️', gridRight - this.G * 0.95, ry + this.G * 0.64);
                 });
-                // Phase 4 Boss「红笔点名」预警绘制
-                this.bossMarks.forEach(mk => {
-                    const ry = this.OY + mk.r * this.G;
-                    const prog = 1 - mk.life / mk.max;
-                    const blink = 0.35 + 0.45 * Math.abs(Math.sin(this.frame * 0.4));
-                    ctx.fillStyle = 'rgba(232,93,93,' + (0.12 + prog * 0.25) + ')';
-                    ctx.fillRect(this.OX, ry, this.C * this.G, this.G);
-                    const ts = this.objs.filter(o => o.type === 'tower' && o.r === mk.r).sort((a, b) => b.x - a.x);
-                    const mx = ts.length ? ts[0].x + this.G / 2 : this.OX + this.G * 1.5;
-                    const my = ry + this.G / 2, rad = this.G * (0.55 - prog * 0.18);
-                    ctx.strokeStyle = 'rgba(232,93,93,' + blink + ')'; ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.arc(mx, my, rad, 0, Math.PI * 2); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(mx - rad * 0.6, my - rad * 0.6); ctx.lineTo(mx + rad * 0.6, my + rad * 0.6);
-                    ctx.moveTo(mx + rad * 0.6, my - rad * 0.6); ctx.lineTo(mx - rad * 0.6, my + rad * 0.6); ctx.stroke();
-                    ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, blink + 0.3) + ')';
-                    ctx.font = 'bold ' + Math.max(12, Math.floor(this.G * 0.34)) + 'px Arial'; ctx.textAlign = 'center';
-                    ctx.fillText('红笔点名', this.OX + this.C * this.G * 0.5, ry + this.G * 0.32);
-                    ctx.textAlign = 'left';
-                });
                 this.objs.forEach(o => {
-                    if(o.type!=='orb' && o.type!=='bullet' && o.type!=='skillFx' && o.type!=='rasterFx' && o.type!=='bossAction' && o.type!=='dirtyZone' && o.type!=='enemyProjectile') {
+                    if(o.type!=='orb' && o.type!=='bullet' && o.type!=='rasterFx' && o.type!=='bossAction' && o.type!=='specialAttackAction' && o.type!=='dirtyZone' && o.type!=='enemyProjectile') {
                         const shadowScale = o.type === 'enemy' ? ((o.data && o.data.spriteScale) || 1) : 1;
                         ctx.fillStyle='rgba(0,0,0,0.3)';
                         ctx.beginPath();
@@ -4198,30 +4758,27 @@
                     }
                     if(o.type==='bossAction') {
                         if (!o.enemy) return;
+                        const actionState = o.state || 'telegraph';
                         const ratio = Math.max(0, o.delay / Math.max(1, o.maxDelay));
                         const cx = o.enemy.x + G / 2, cy = o.enemy.y + G / 2;
                         const bossTextX = Math.max(this.OX + G, Math.min(this.w - readSafeAreaInset('right') - G * 1.45, cx));
                         ctx.save();
-                        ctx.strokeStyle = ratio < 0.35 ? '#ef4444' : '#fbbf24';
-                        ctx.fillStyle = 'rgba(127, 29, 29, 0.14)';
+                        if (Number.isInteger(o.phase && o.phase.targetRow)) {
+                            ctx.fillStyle = 'rgba(232,93,93,' + (0.14 + (1 - ratio) * 0.2) + ')';
+                            ctx.fillRect(this.OX, this.OY + o.phase.targetRow * G, this.C * G, G);
+                        }
+                        ctx.strokeStyle = actionState === 'recovery' ? '#94a3b8' : (ratio < 0.35 ? '#ef4444' : '#fbbf24');
+                        ctx.fillStyle = actionState === 'recovery' ? 'rgba(71,85,105,0.14)' : 'rgba(127,29,29,0.14)';
                         ctx.lineWidth = 4;
                         ctx.beginPath(); ctx.arc(cx, cy, G * (0.55 + ratio * 0.42), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                         ctx.fillStyle = '#fff7ed';
                         ctx.font = 'bold ' + Math.max(13, Math.floor(G * 0.22)) + 'px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText('BOSS 預警 ' + Math.max(1, Math.ceil(o.delay / 60)), bossTextX, cy - G * 0.62);
+                        const actionLabel = actionState === 'recovery' ? 'BOSS 恢复' : (actionState === 'execute' ? 'BOSS 进攻' : 'BOSS 預警');
+                        ctx.fillText(actionLabel + ' ' + Math.max(1, Math.ceil(o.delay / 60)), bossTextX, cy - G * 0.62);
                         ctx.restore();
                     } else if(o.type==='rasterFx') {
-                        if (o.delay > 0) return;
-                        const image = ASSETS.images[o.assetId];
-                        const size = o.size * (1 + (1 - o.life / o.maxLife) * 0.2);
-                        if (image) {
-                            ctx.save();
-                            ctx.globalAlpha = Math.min(1, Math.max(0, o.life / 8));
-                            ctx.drawImage(image, o.x - size / 2, o.y - size / 2, size, size);
-                            ctx.restore();
-                        }
-                        else drawMissingPaintedAsset(ctx, o.x, o.y, size, o.label, '#f8fafc');
+                        this.drawRasterFx(ctx, o, 'landscape');
                     } else if(o.type==='dirtyZone') {
                         const pulse = 0.38 + 0.18 * Math.abs(Math.sin(this.frame * 0.18));
                         ctx.save();
@@ -4240,24 +4797,6 @@
                         ctx.font = 'bold ' + Math.max(13, Math.floor(G * 0.26)) + 'px Arial';
                         ctx.textAlign = 'center';
                         ctx.fillText('污', o.x + o.w / 2, o.y + o.h / 2 + 5);
-                        ctx.textAlign = 'left';
-                        ctx.restore();
-                    } else if(o.type==='skillFx') {
-                        const k = Math.max(0, o.life / (o.maxLife || 1));
-                        ctx.save();
-                        ctx.globalAlpha = Math.min(1, 0.2 + k);
-                        ctx.strokeStyle = o.color || '#f97316';
-                        ctx.lineWidth = 5 + (1 - k) * 6;
-                        ctx.lineCap = 'round';
-                        ctx.shadowBlur = 18;
-                        ctx.shadowColor = o.color || '#f97316';
-                        ctx.beginPath(); ctx.moveTo(o.x1, o.y1); ctx.lineTo(o.x2, o.y2); ctx.stroke();
-                        ctx.fillStyle = o.color || '#f97316';
-                        ctx.beginPath(); ctx.arc(o.x2, o.y2, 12 + (1 - k) * 22, 0, Math.PI * 2); ctx.fill();
-                        ctx.fillStyle = '#fff7ed';
-                        ctx.font = 'bold ' + Math.max(12, Math.floor(G * 0.22)) + 'px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(o.label || '技能', (o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2 - 12);
                         ctx.textAlign = 'left';
                         ctx.restore();
                     } else if(o.type==='enemyProjectile') {
@@ -4416,6 +4955,8 @@
             this.rewardCards = null;
             this.combatToast = null;
             this.minigameData = null;
+            this.updateBuildId = '';
+            this.updateModalReturnFocus = null;
             this.isLoading = false;
             this.unlockedLevel = 0;
             this.isLandscape = readStableLandscapeOrientation(window.innerWidth > window.innerHeight, true);
@@ -4483,12 +5024,83 @@
             this.onAccountSync = null;
             this.onAccountKeepLocal = null;
             this.onAccountUseCloud = null;
+            this.onPhaseUpdate = null;
+            this.onConfirmUpdate = null;
+            this.onDismissUpdate = null;
             this.render();
         }
 
         update(patch) {
+            const previousPhase = this.phase;
+            const wasUpdatePromptOpen = !!this.updateBuildId;
+            const opensUpdatePrompt = patch && Object.prototype.hasOwnProperty.call(patch, 'updateBuildId') && !!patch.updateBuildId && !wasUpdatePromptOpen;
+            if (opensUpdatePrompt && document.activeElement && typeof document.activeElement.focus === 'function') {
+                this.updateModalReturnFocus = document.activeElement;
+            }
             Object.assign(this, patch);
             this.render();
+            if (wasUpdatePromptOpen && !this.updateBuildId) this.restoreUpdateModalFocus();
+            if (
+                patch
+                && Object.prototype.hasOwnProperty.call(patch, 'phase')
+                && this.phase !== previousPhase
+                && this.onPhaseUpdate
+            ) this.onPhaseUpdate(this.phase);
+        }
+
+        restoreUpdateModalFocus() {
+            const previous = this.updateModalReturnFocus;
+            this.updateModalReturnFocus = null;
+            const restore = () => {
+                const fallback = document.getElementById('gameCanvas');
+                if (fallback) {
+                    fallback.inert = false;
+                    fallback.removeAttribute('aria-hidden');
+                }
+                const canRestorePrevious = previous
+                    && previous.isConnected
+                    && previous !== document.body
+                    && !previous.inert;
+                const target = canRestorePrevious ? previous : fallback;
+                if (target && typeof target.focus === 'function') target.focus();
+            };
+            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(restore);
+            else setTimeout(restore, 0);
+        }
+
+        lockUpdateModal(overlay, initialFocus) {
+            const activate = () => {
+                if (!overlay.isConnected) return;
+                Array.from(this.root.children).filter(child => child !== overlay).forEach(child => {
+                    child.inert = true;
+                    child.setAttribute('aria-hidden', 'true');
+                });
+                const gameCanvas = document.getElementById('gameCanvas');
+                if (gameCanvas) {
+                    gameCanvas.inert = true;
+                    gameCanvas.setAttribute('aria-hidden', 'true');
+                }
+                const actions = () => Array.from(overlay.querySelectorAll('button:not([disabled])'));
+                overlay.addEventListener('keydown', event => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        if (this.onDismissUpdate) this.onDismissUpdate();
+                        return;
+                    }
+                    if (event.key !== 'Tab') return;
+                    const buttons = actions();
+                    if (!buttons.length) return;
+                    const first = buttons[0], last = buttons[buttons.length - 1];
+                    if (event.shiftKey && document.activeElement === first) {
+                        event.preventDefault(); last.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault(); first.focus();
+                    }
+                });
+                (initialFocus || overlay).focus();
+            };
+            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(activate);
+            else setTimeout(activate, 0);
         }
 
         el(tag, style, ...children) {
@@ -5891,6 +6503,46 @@
             return overlay;
         }
 
+        renderUpdatePrompt() {
+            if (!this.updateBuildId || !isSafeUpdatePhase(this.phase)) return null;
+            const overlay = this.el('div', {
+                position:'absolute', inset:'0', display:'flex', alignItems:'center', justifyContent:'center',
+                padding:'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))',
+                background:'rgba(15,23,42,0.68)', zIndex:'120', pointerEvents:'auto'
+            });
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-label', '遊戲更新提示');
+            overlay.setAttribute('data-update-dialog', 'true');
+            overlay.tabIndex = -1;
+            const panel = this.el('div', {
+                display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap',
+                width:'min(520px, 100%)', maxHeight:'100%', overflowY:'auto',
+                padding:'12px 14px', borderRadius:'8px', background:'#fffdf5',
+                color:'#1c1917', border:'2px solid #fbbf24',
+                boxShadow:'0 10px 28px rgba(15,23,42,0.3)'
+            });
+            const copy = this.el('div', { flex:'1 1 220px', minWidth:'0' });
+            copy.append(
+                this.el('div', { fontWeight:'900', fontSize:'16px' }, '新版本已準備好'),
+                this.el('div', { color:'#57534e', fontSize:'13px', marginTop:'2px' }, '更新不會清除遊戲進度或帳號登入。')
+            );
+            const actions = this.el('div', { display:'flex', gap:'8px', marginLeft:'auto' });
+            const dismissBtn = this.btn('稍後', {
+                    padding:'9px 12px', borderRadius:'8px', border:'1px solid #d6d3d1',
+                    background:'#f5f5f4', color:'#44403c', fontWeight:'800', cursor:'pointer'
+                }, () => this.onDismissUpdate && this.onDismissUpdate());
+            const confirmBtn = this.btn('立即更新', {
+                    padding:'9px 14px', borderRadius:'8px', border:'1px solid #7c2d12',
+                    background:'#9a3412', color:'#fff', fontWeight:'900', cursor:'pointer'
+                }, () => this.onConfirmUpdate && this.onConfirmUpdate());
+            actions.append(dismissBtn, confirmBtn);
+            panel.append(copy, actions);
+            overlay.appendChild(panel);
+            if (typeof this.lockUpdateModal === 'function') this.lockUpdateModal(overlay, dismissBtn);
+            return overlay;
+        }
+
         render() {
             this.root.innerHTML = '';
             this.root.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:10;';
@@ -5901,30 +6553,40 @@
                 if (menu) this.root.appendChild(menu);
                 const accountPanel = this.renderAccountPanel();
                 if (accountPanel) this.root.appendChild(accountPanel);
+                const updatePrompt = this.renderUpdatePrompt();
+                if (updatePrompt) this.root.appendChild(updatePrompt);
                 return;
             }
 
             if (this.phase === 'world') {
                 const w = this.renderWorld();
                 if (w) this.root.appendChild(w);
+                const updatePrompt = this.renderUpdatePrompt();
+                if (updatePrompt) this.root.appendChild(updatePrompt);
                 return;
             }
 
             if (this.phase === 'collection') {
                 const c = this.renderCollection();
                 if (c) this.root.appendChild(c);
+                const updatePrompt = this.renderUpdatePrompt();
+                if (updatePrompt) this.root.appendChild(updatePrompt);
                 return;
             }
 
             if (this.phase === 'workshop') {
                 const wk = this.renderWorkshop();
                 if (wk) this.root.appendChild(wk);
+                const updatePrompt = this.renderUpdatePrompt();
+                if (updatePrompt) this.root.appendChild(updatePrompt);
                 return;
             }
 
             if (this.phase === 'prep') {
                 const prep = this.renderPrep();
                 if (prep) this.root.appendChild(prep);
+                const updatePrompt = this.renderUpdatePrompt();
+                if (updatePrompt) this.root.appendChild(updatePrompt);
                 return;
             }
 
@@ -6146,20 +6808,64 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
-    isLoading = true;
+    let activeAssetRequestId = 0;
+    isLoading = false;
     ui.update({ isLoading });
-    const assetLoadPromise = ASSETS.load().then(() => { isLoading = false; ui.update({ isLoading }); });
+    ASSETS.loadBase().then(() => ui.update({ isLoading }));
+    const releaseMonitor = createReleaseMonitor({
+        currentBuildId: BUILD_ID,
+        fetchVersion: () => fetchVersionManifest(fetch, 'version.json'),
+        getPhase: () => phase,
+        onUpdateAvailable: buildId => ui.update({ updateBuildId: buildId }),
+        reload: () => window.location.reload()
+    });
+    ui.onPhaseUpdate = nextPhase => releaseMonitor.handlePhaseChange(nextPhase);
+    ui.onConfirmUpdate = () => releaseMonitor.confirmUpdate();
+    ui.onDismissUpdate = () => {
+        releaseMonitor.dismissUpdate();
+        ui.update({ updateBuildId: '' });
+    };
+    releaseMonitor.check();
+    window.setInterval(() => releaseMonitor.check(), RELEASE_CHECK_INTERVAL_MS);
 
     function startLevelWhenAssetsReady(idx, loadout) {
+        const requestId = ++activeAssetRequestId;
         const begin = () => {
+            if (requestId !== activeAssetRequestId) return false;
             isLoading = false;
             ui.update({ isLoading });
             engine.startLevel(idx, loadout);
+            return true;
         };
-        if (ASSETS.ready) { begin(); return; }
         isLoading = true;
         ui.update({ isLoading });
-        assetLoadPromise.then(begin);
+        return ASSETS.loadLevel(idx, loadout, toolLevels)
+            .catch(() => null)
+            .then(begin);
+    }
+
+    function startChapterMinigameWhenAssetsReady(levelIdx, nextLevelIdx) {
+        const cfg = chapterMinigameForCompletedLevel(levelIdx);
+        if (!cfg) return Promise.resolve(false);
+        const requestId = ++activeAssetRequestId;
+        isLoading = true;
+        ui.update({ isLoading });
+        const loadCurrentOrientation = async () => {
+            while (requestId === activeAssetRequestId) {
+                const orientation = engine.w > engine.h ? 'landscape' : 'portrait';
+                await ASSETS.loadMinigame(cfg.id, orientation).catch(() => null);
+                if (requestId !== activeAssetRequestId) return false;
+                const currentOrientation = engine.w > engine.h ? 'landscape' : 'portrait';
+                if (currentOrientation === orientation) return true;
+            }
+            return false;
+        };
+        return loadCurrentOrientation().then(ready => {
+            if (!ready || requestId !== activeAssetRequestId) return false;
+            isLoading = false;
+            ui.update({ isLoading });
+            return engine.startChapterMinigame(levelIdx, nextLevelIdx);
+        });
     }
 
     // Wire UI events
@@ -6214,6 +6920,9 @@
         stickers = fresh.stickers || stickers; badges = fresh.badges || badges;
         phase = 'collection';
         ui.update({ phase, stickers, badges });
+        ASSETS.loadCatalog().then(() => {
+            if (phase === 'collection') ui.update({ phase, stickers, badges });
+        });
     };
     // 音效 / 语音 开关（持久化到独立 settings，不动存档 schema）
     ui.onToggleSound = () => {
@@ -6234,6 +6943,9 @@
         shards = fresh.shards || 0; toolLevels = fresh.toolLevels || defaultToolLevels(); toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels);
         phase = 'workshop';
         ui.update({ phase, shards, toolLevels, toolUpgrades });
+        ASSETS.loadCatalog().then(() => {
+            if (phase === 'workshop') ui.update({ phase, shards, toolLevels, toolUpgrades });
+        });
     };
     // 装备工坊：花碎片逐级升级某文具（永久）
     ui.onUpgradeTool = (toolId) => {
@@ -6254,12 +6966,14 @@
     };
     // Phase A：进入关卡友善 intro（不需选 loadout，开战给全部文具）
     ui.onOpenPrep = (idx) => {
+        activeAssetRequestId++;
+        isLoading = false;
         prepData = engine.getLevelPreview(idx);
         prepLevelIdx = idx;
         phase = 'prep';
         // 研究所进阶关：备战预选一组泛用文具（玩家可改）；主线无需选
         const prepLoadout = prepData.advanced ? ['textbook', 'pencil', 'ruler', 'glue'].slice(0, prepData.loadoutSize || 4) : [];
-        ui.update({ phase, prepData, prepLevelIdx, prepLoadout });
+        ui.update({ phase, prepData, prepLevelIdx, prepLoadout, isLoading });
     };
     // intro/备战 完成 → 进入战斗（主线全配；研究所用自选 loadout）
     ui.onConfirmPrep = (idx, loadout) => {
@@ -6283,8 +6997,10 @@
     ui.onTeacherSkill = () => engine.releaseTeacherSkill();
     ui.onStampUltimate = () => engine.releaseStampUltimate();
     ui.onUpgrade = () => engine.upgradeSelectedField();
-    ui.onStartMinigame = (levelIdx, nextLevelIdx) => engine.startChapterMinigame(levelIdx, nextLevelIdx);
+    ui.onStartMinigame = (levelIdx, nextLevelIdx) => startChapterMinigameWhenAssetsReady(levelIdx, nextLevelIdx);
     ui.onRestart = () => {
+        activeAssetRequestId++;
+        isLoading = false;
         // 回主选单：重新同步存档（含战斗中/失败关收集到的贴纸、最新解锁与星级）
         const fresh = loadGameSave();
         unlockedLevel = Math.max(unlockedLevel, fresh.unlockedLevel || 0);
@@ -6292,7 +7008,7 @@
         shards = fresh.shards || 0; toolLevels = fresh.toolLevels || toolLevels; toolUpgrades = fresh.toolUpgrades || legacyUpgradesFromLevels(toolLevels);
         phase = 'menu';
         gameOverData = null;
-        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades });
+        ui.update({ phase, gameOverData, unlockedLevel, results, stickers, badges, shards, toolLevels, toolUpgrades, isLoading });
     };
     ui.onQuizAnswer = (ok) => {
         quizData = null;

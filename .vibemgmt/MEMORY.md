@@ -37,16 +37,17 @@
 - [x] PvZ 式存活压力调校：`SCENE_BEAT_PROFILES` 让各场景使用不同波段顺序，`MIN_SURVIVAL_SECONDS` + `getWavePressureMultiplier()` 让怪物按角色、场景波段、pressureLevel 保底存活，避免小怪一出场就被秒杀
 - [x] 收藏馆贴纸/徽章美化：关卡贴纸与敌人贴纸复用 painted enemy WebP，徽章走金属奖章框与红色缎带；已收集/未收集状态有专用卡片、光泽、锁定剪影与稀有度标
 - [x] 印章大招与章间小游戏首轮：每击败 10 只怪获得 1 枚印章，文具可触发专属大招；`MONSTER_SKILL_DESIGN` 规划跑/远程/盾牌/毒气/抢阳光/BOSS 暴走，橡皮盾 CD 减半，章末接入正面射怪小游戏赚下一关开局阳光，题库新增小学 4-5 年级科技题
-- [x] 怪物招式可视化与美术降级修正：怪物专有招式会生成 `skillFx` 光束/爆点，涂鸦怪会生成 2x2 `dirtyZone` 污染区；WebP 失败会回退 PNG，战斗开局等待 painted assets ready，避免退回旧 SVG/程序画风或透明占位
+- [x] 怪物招式可视化与美术降级修正：怪物专有招式使用 raster VFX 的 telegraph/cast/travel/impact 生命周期，涂鸦怪会生成 2x2 `dirtyZone` 污染区；WebP 失败会回退 PNG，战斗开局等待 painted assets ready，避免退回旧 SVG/程序画风或透明占位
 - [x] PvZ 招式模式落地：`PVZ_ZOMBIE_PATTERN_STUDY` 记录远程投射、跳跃越防线、召唤支援、破盾暴走、重击拆设施等设计参考；远程怪会生成 `enemyProjectile` 延迟命中后排，冲刺怪可 `tryVaultTower()` 跳过第一座设施，支援怪可 `summonSupportEnemies()` 增援同路/邻路压力
-- [ ] `TICKET-20260715-001` 怪物招式點陣特效（接手重開）：補 phase-aware raster runtime、招式 coverage、safe area 與真機／效能證據
-- [ ] `TICKET-20260715-002` 關卡點陣場景（接手重開）：改為 per-level preload、補章間小遊戲尺寸與完整視覺矩陣
+- [x] `TICKET-20260715-001` 怪物招式點陣特效：18/18 profile、四階段 raster runtime、safe area、命中同步與 browser/效能證據完成；`FIX-20260723-003` regression closeout PASS
+- [x] `TICKET-20260715-002` 關卡點陣場景：per-level preload、14 關 manifest、雙方向章間小遊戲高解析素材與代表性 browser matrix 完成
 - [x] `TICKET-20260715-003` 文具指定範圍大招（Option B）：完成按住拖曳、放手鎖定、再點 icon 施放；修跨關 pending、負印章、DOM pointer capture 與 Boss threshold concurrency，Pixel 7 Chromium / iPhone 13 WebKit browser device emulation PASS
 - [x] `TICKET-20260723-001` 一鍵全軍齊射與直尺雙向穿透：印章改為一次點擊讓所有已部署攻擊文具覆蓋自身上下各兩路密集開火，既有攻擊文具獲得 300 frame 傷害 +20%；直尺普通攻擊與齊射均可前後命中
 - [x] `FIX-20260723-002` 長局畫面凍結：恢復 Boss hazard 共用的 `enemyGridColumn()`，避免場地技能觸發 TypeError 後 RAF 永久停止；新增 Boss runtime、GameEngine 方法引用稽核與 120,000 幀 soak
 - [x] `FIX-20260716-002` 行動方向與 pointer capture：鍵盤縮放跨越長寬比不再誤判旋轉，補上 `lostpointercapture` 冪等清理；Pixel 7 Chromium / iPhone 13 WebKit 4/4 browser device smoke 與 QA reviewer final PASS
-- [ ] `TICKET-20260715-004` Boss 多階段／遠程壓迫（接手重開）：統一 action scheduler、逐階 transition 與攻後破綻窗口
-- [ ] `TICKET-20260715-005` 素材版本化 + 真正的跨裝置雲端存檔：帳號部分已正式部署，採 Cloudflare Worker + private GitHub data repo + KV session；自訂帳密、local-first、revision CAS、衝突選擇與雙裝置 E2E 已通過。素材 cache versioning 仍未做
+- [ ] `TICKET-20260715-004` Boss 多階段／遠程壓迫：scheduler 主路徑完成，但 `FIX-20260723-004` 尚有死亡後 projectile、phase sprite renderer 與持續破綻倒數 findings
+- [x] `TICKET-20260715-005` 雲端存檔架構已由 `DECISION-20260715-001` 取代並正式部署；剩餘素材版本化拆至 `TICKET-20260723-002`，原混合 ticket 以 superseded 結案
+- [ ] `TICKET-20260723-002` 素材發行版本化：build ID、`version.json`、同版本 fallback、snooze/rearm、視覺 layout 與 CTA contrast 已通過；`FIX-20260723-005` 尚缺完整 modal keyboard focus ownership
 - [ ] **真机** fullscreen/orientation 硬件测试（只有 BOSS 能做）
 - [ ] 平衡手感调校（4-1/4-2 偏高、2-2 偏低、3-x 涂鸦怪回血）— 待真机反馈
 - [ ] 占位节点 → 真关（各世界约 9 个 placeholder）— 待平衡基准 + 设计
@@ -58,10 +59,11 @@
 
 | Work item | Status | Owner | Next action |
 |---|---|---|---|
-| `TICKET-20260715-001` | open | DEV | 補 phase-aware raster runtime、coverage、safe area 與效能證據 |
-| `TICKET-20260715-002` | open | DEV | 完成 per-level preload、章間尺寸與視覺矩陣 |
-| `TICKET-20260715-004` | open | DEV | 統一 Boss scheduler、transition 與 vulnerability window |
-| `TICKET-20260715-005` | open | DEV | 完成素材 cache versioning |
+| `TICKET-20260715-001` | done | DEV | `FIX-20260723-003` completed；QA/UX ticket-specific regression PASS |
+| `TICKET-20260715-002` | done | DEV | Loader、scene matrix、尺寸與代表性 browser matrix PASS |
+| `TICKET-20260715-004` | done | DEV | `FIX-20260723-004` completed; Boss lifecycle and phase-art closeout PASS |
+| `TICKET-20260723-002` | done | DEV | `FIX-20260723-005` completed; release modal and asset-versioning closeout PASS |
+| `FIX-20260724-001` | done | DEV | Save export now creates a portable JSON file and retains the copyable import code |
 
 ---
 

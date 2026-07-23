@@ -1,11 +1,13 @@
 ---
 type: ticket
-status: open
-owner: Codex QA
+status: done
+owner: DEV
 created: 2026-07-15
 priority: high
 reopened: 2026-07-15
 takeover_plan: HANDOFF-20260715-001
+resolution: completed
+closed: 2026-07-23
 ---
 
 # Ticket: 各關卡主題化點陣場景
@@ -82,4 +84,10 @@ takeover_plan: HANDOFF-20260715-001
 
 - `node scripts/verify_game_contracts.js`：14 個場景、4 組雙方向小遊戲與四條方向矩陣契約通過。
 - 實測 1920x1080、844x390、390x844：橫式 TD 正常、直式 TD 顯示方向 gate、橫/直式小遊戲分別載入對應 raster 資產。
+- 2026-07-23 Root 重驗：asset loader 已拆為 base、catalog、current-level 與 current-minigame dependency；首戰不再等待其他 13 關場景、8 張章間圖或無關敵人。
+- 2026-07-23 executable loader probe：當前 scene fallback 未完成前不開戰、重複請求只抓一次、WebP/PNG 雙失敗 fail-soft、直式小遊戲只載 portrait 版本；stage cache key 含 level id 與 DPR。
+- 2026-07-23 圖片規格：4 組 landscape PNG/WebP 為 `2048x1153`，4 組 portrait PNG/WebP 為 `1153x2048`，配對尺寸一致且保留原構圖。
+- 2026-07-23 fresh verification：`verify_game_contracts.js`、`verify_mobile_interactions.js`、`verify_account_client.js`、120,000 frame long-battle soak 與 `git diff --check` 全部通過。
 - 最終複審報告：`.vibemgmt/reviews/QA_2026-07-15_four-tickets-final.md`、`.vibemgmt/reviews/UX_2026-07-15_four-tickets-final.md`。
+- 2026-07-23 regression closeout：QA 驗證 loader、scene matrix、fallback 與尺寸；UX 瀏覽器驗證教室／操場／圖書館／考場代表場景、TD 方向 gate，以及橫直式章間小遊戲。無 ticket-specific finding。
+- Evidence：`.vibemgmt/reviews/QA_2026-07-23_closeout-regression.md`、`.vibemgmt/reviews/UX_2026-07-23_closeout-regression.md`。

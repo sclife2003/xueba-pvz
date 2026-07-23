@@ -1,11 +1,13 @@
 ---
 type: ticket
-status: open
-owner: Codex QA
+status: done
+owner: DEV
 created: 2026-07-15
 priority: high
 reopened: 2026-07-15
 takeover_plan: HANDOFF-20260715-001
+resolution: completed
+closed: 2026-07-24
 ---
 
 # Ticket: BOSS 多階段與遠程壓迫強化
@@ -101,4 +103,17 @@ takeover_plan: HANDOFF-20260715-001
 
 - 合約與 runtime probe 已覆蓋四類 BOSS 的三階段閾值、投射/召喚/場地/衝鋒、延遲執行與破綻窗口。
 - 原阻斷案例重測：BOSS 與塔重疊後連續 10 幀蓄力，塔 HP、BOSS 位置與 special cooldown 均不變，且沒有投射物或提前破綻。
+- 2026-07-23 Root 重驗：`titanSlam`、紅筆點名與 phase action 均統一為 `telegraph -> execute -> recovery -> vulnerability`；預警與恢復期間鎖住移動、啃咬、特技與資源效果，死亡 Boss 不再留下延遲傷害。
+- 2026-07-23 fresh verification：`verify_game_contracts.js`、`verify_mobile_interactions.js`、`verify_account_client.js`、120,000 frame long-battle soak 與 `git diff --check` 全部通過。
 - 最終複審報告：`.vibemgmt/reviews/QA_2026-07-15_four-tickets-final.md`、`.vibemgmt/reviews/UX_2026-07-15_four-tickets-final.md`。
+
+## Phase 4.7 Follow-up
+
+- `QA-20260723-002` found that Boss execute frames can still trigger legacy special/bite side effects and that the death guard runs too late.
+- Linked fix: `FIX-20260723-004-boss-action-overlap-death-guard`.
+
+## Closeout
+
+- The linked fix closes the delayed dead-source projectile, Boss phase sprite selection, and persistent vulnerability-cue regressions.
+- `node scripts/verify_game_contracts.js` and `python scripts/verify_long_battle_runtime.py` pass; the latter includes a 120,000-frame lifecycle soak and Chromium page-error smoke.
+- Final review: `.vibemgmt/reviews/QA_2026-07-24_closeout-final.md` and `.vibemgmt/reviews/UX_2026-07-24_closeout-final.md` are PASS.

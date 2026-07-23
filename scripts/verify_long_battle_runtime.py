@@ -9,6 +9,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from PIL import Image
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
@@ -84,6 +85,39 @@ check(
     "enemyGridColumn" in method_names,
     "boss hazard grid conversion helper exists",
 )
+
+minigame_scene_ids = (
+    "chalk_shooter",
+    "relay_target",
+    "quiet_snipe",
+    "exam_defense",
+)
+for minigame_id in minigame_scene_ids:
+    scene_sizes = {}
+    for orientation, minimum in (
+        ("landscape", (2048, 1152)),
+        ("portrait", (1152, 2048)),
+    ):
+        for extension in ("png", "webp"):
+            asset_path = (
+                ROOT
+                / "assets"
+                / "scenes"
+                / f"minigame_{minigame_id}_{orientation}.{extension}"
+            )
+            with Image.open(asset_path) as image:
+                scene_sizes[(orientation, extension)] = image.size
+            width, height = scene_sizes[(orientation, extension)]
+            check(
+                width >= minimum[0] and height >= minimum[1],
+                f"{asset_path.name} is at least {minimum[0]}x{minimum[1]} "
+                f"(actual={width}x{height})",
+            )
+        check(
+            scene_sizes[(orientation, "png")]
+            == scene_sizes[(orientation, "webp")],
+            f"{minigame_id} {orientation} PNG/WebP dimensions match",
+        )
 
 handler = partial(QuietHandler, directory=str(ROOT))
 server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -164,6 +198,259 @@ try:
         except PlaywrightError as error:
             failures += 1
             print(f"[FAIL] Boss phase hazard runtime threw: {error}")
+
+        try:
+            vfx_runtime = page.evaluate(
+                """async () => {
+                    const families = [
+                        'corrosion', 'impact', 'paper', 'doodle',
+                        'soundwave', 'sunshine', 'crystal'
+                    ];
+                    const profiles = Object.values(VFX_MANIFEST);
+                    await ASSETS.loadEntries(families.map(family => {
+                        const profile = profiles.find(item => item.family === family);
+                        return [
+                            'vfx_' + family,
+                            profile.runtime,
+                            profile.fallback
+                        ];
+                    }));
+                    const assetPixels = {};
+                    for (const family of families) {
+                        const image = ASSETS.images['vfx_' + family];
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 160;
+                        canvas.height = 160;
+                        const ctx = canvas.getContext('2d', {
+                            willReadFrequently: true
+                        });
+                        if (image) ctx.drawImage(image, 0, 0, 160, 160);
+                        const pixels = ctx.getImageData(0, 0, 160, 160).data;
+                        let nontransparent = 0;
+                        for (let i = 3; i < pixels.length; i += 4) {
+                            if (pixels[i] > 0) nontransparent++;
+                        }
+                        assetPixels[family] = nontransparent;
+                    }
+
+                    const probe = Object.create(GameEngine.prototype);
+                    probe.objs = [];
+                    probe.G = 80;
+                    probe.w = 960;
+                    probe.h = 540;
+                    probe.frame = 0;
+                    const enemy = {
+                        id: 'super_boss',
+                        x: 720,
+                        y: 180,
+                        data: { color: '#a855f7' }
+                    };
+                    const target = { x: 180, y: 260 };
+                    for (let cast = 0; cast < 80; cast++) {
+                        probe.spawnSpecialFx(enemy, target, {
+                            label: 'dense cast'
+                        });
+                    }
+                    const denseTypes = Array.from(
+                        new Set(probe.objs.map(obj => obj.type))
+                    );
+                    const densePeak = probe.objs.length;
+                    probe.phase = 'minigame';
+                    probe.spawnVfxPhase(enemy, 'travel', { target });
+                    const landscapeMinigameOrientation =
+                        probe.objs[probe.objs.length - 1].orientation;
+                    for (let frame = 0; frame < 180; frame++) {
+                        probe.updateRasterFxObjects();
+                    }
+
+                    const signatures = {};
+                    for (const phase of [
+                        'telegraph', 'cast', 'travel', 'impact'
+                    ]) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 320;
+                        canvas.height = 320;
+                        const ctx = canvas.getContext('2d', {
+                            willReadFrequently: true
+                        });
+                        probe.drawRasterFx(ctx, {
+                            type: 'rasterFx',
+                            assetId: 'vfx_crystal',
+                            phase,
+                            x: 160,
+                            y: 160,
+                            sourceX: 80,
+                            sourceY: 160,
+                            targetX: 240,
+                            targetY: 160,
+                            size: 100,
+                            life: 20,
+                            maxLife: 30,
+                            delay: 0,
+                            orientation: 'landscape',
+                            landscapeSafeArea: {
+                                x: 0.08, y: 0.14, w: 0.84, h: 0.72,
+                                axis: 'horizontal'
+                            },
+                            portraitSafeArea: {
+                                x: 0.14, y: 0.08, w: 0.72, h: 0.84,
+                                axis: 'vertical'
+                            }
+                        });
+                        const pixels = ctx.getImageData(
+                            0, 0, canvas.width, canvas.height
+                        ).data;
+                        let alphaCount = 0;
+                        let alphaSum = 0;
+                        let minX = canvas.width;
+                        let maxX = -1;
+                        let minY = canvas.height;
+                        let maxY = -1;
+                        for (let pixel = 0; pixel < pixels.length; pixel += 4) {
+                            const alpha = pixels[pixel + 3];
+                            if (!alpha) continue;
+                            const index = pixel / 4;
+                            const x = index % canvas.width;
+                            const y = Math.floor(index / canvas.width);
+                            alphaCount++;
+                            alphaSum += alpha;
+                            minX = Math.min(minX, x);
+                            maxX = Math.max(maxX, x);
+                            minY = Math.min(minY, y);
+                            maxY = Math.max(maxY, y);
+                        }
+                        signatures[phase] = {
+                            alphaCount,
+                            alphaSum,
+                            width: maxX >= minX ? maxX - minX + 1 : 0,
+                            height: maxY >= minY ? maxY - minY + 1 : 0
+                        };
+                    }
+
+                    return {
+                        assetPixels,
+                        denseTypes,
+                        densePeak,
+                        denseFinal: probe.objs.length,
+                        landscapeMinigameOrientation,
+                        signatures
+                    };
+                }"""
+            )
+            check(
+                all(count > 0 for count in vfx_runtime["assetPixels"].values()),
+                "all seven raster VFX families contain nontransparent pixels",
+            )
+            check(
+                vfx_runtime["denseTypes"] == ["rasterFx"],
+                "dense formal skill casts create rasterFx only "
+                f"(types={vfx_runtime['denseTypes']})",
+            )
+            check(
+                vfx_runtime["densePeak"] <= 160,
+                "dense casts keep rasterFx count bounded "
+                f"(peak={vfx_runtime['densePeak']})",
+            )
+            check(
+                vfx_runtime["denseFinal"] == 0,
+                "dense rasterFx lifecycle drains completely",
+            )
+            check(
+                vfx_runtime["landscapeMinigameOrientation"] == "landscape",
+                "landscape minigame defaults to a landscape-safe VFX profile",
+            )
+            signatures = vfx_runtime["signatures"]
+            signature_values = {
+                (
+                    value["alphaCount"],
+                    value["alphaSum"],
+                    value["width"],
+                    value["height"],
+                )
+                for value in signatures.values()
+            }
+            check(
+                all(value["alphaCount"] > 0 for value in signatures.values())
+                and len(signature_values) == 4,
+                "telegraph/cast/travel/impact render nontransparent, distinct "
+                f"pixel signatures ({signatures})",
+            )
+        except PlaywrightError as error:
+            failures += 1
+            print(f"[FAIL] Raster VFX runtime contract threw: {error}")
+
+        try:
+            portrait_minigame = page.evaluate(
+                """() => {
+                    const probe = Object.create(GameEngine.prototype);
+                    probe.w = 420;
+                    probe.h = 760;
+                    probe.G = 80;
+                    probe.frame = 0;
+                    probe.objs = [{
+                        type: 'rasterFx',
+                        phase: 'telegraph',
+                        life: 10,
+                        maxLife: 10,
+                        delay: 0
+                    }];
+                    probe.particles = [];
+                    probe.floatTexts = [];
+                    probe.canvas = {
+                        getBoundingClientRect: () => ({
+                            left: 0, top: 0, width: 420, height: 760
+                        })
+                    };
+                    probe.callbacks = { onMinigameState: () => {} };
+                    probe.spawnParticles = () => {};
+                    probe.floatText = () => {};
+                    probe.minigame = {
+                        id: 'chalk_shooter',
+                        reward: 120,
+                        hits: 0,
+                        shots: 0,
+                        score: 0,
+                        rewardEarned: 0,
+                        targets: [{
+                            x: 210,
+                            y: 380,
+                            radius: 30,
+                            hp: 1,
+                            maxHp: 1,
+                            kind: 'normal',
+                            vfxEnemyId: 'slime'
+                        }],
+                        crosshair: { x: 210, y: 380 }
+                    };
+                    probe.handleMinigameInput('start', 210, 380);
+                    const portraitFx = probe.objs.filter(
+                        obj => obj.type === 'rasterFx'
+                            && obj.orientation === 'portrait'
+                    );
+                    return {
+                        hits: probe.minigame.hits,
+                        targets: probe.minigame.targets.length,
+                        portraitFx: portraitFx.length,
+                        allHavePortraitSafeArea: portraitFx.every(
+                            obj => obj.portraitSafeArea
+                                && obj.portraitSafeArea.axis === 'vertical'
+                        )
+                    };
+                }"""
+            )
+            check(
+                portrait_minigame["hits"] == 1
+                and portrait_minigame["targets"] == 0,
+                "portrait raster VFX does not intercept minigame input",
+            )
+            check(
+                portrait_minigame["portraitFx"] >= 2
+                and portrait_minigame["allHavePortraitSafeArea"],
+                "portrait minigame hit emits portrait-safe raster VFX",
+            )
+        except PlaywrightError as error:
+            failures += 1
+            print(f"[FAIL] Portrait minigame VFX runtime threw: {error}")
 
         try:
             soak = page.evaluate(

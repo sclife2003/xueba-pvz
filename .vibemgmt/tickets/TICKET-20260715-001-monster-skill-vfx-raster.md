@@ -1,11 +1,13 @@
 ---
 type: ticket
-status: open
-owner: Codex QA
+status: done
+owner: DEV
 created: 2026-07-15
 priority: high
 reopened: 2026-07-15
 takeover_plan: HANDOFF-20260715-001
+resolution: completed
+closed: 2026-07-23
 ---
 
 # Ticket: 怪物招式高質感點陣特效
@@ -69,4 +71,14 @@ takeover_plan: HANDOFF-20260715-001
 
 - `node scripts/verify_game_contracts.js`：VFX 覆蓋、四階段、7 家族、WebP/PNG 路徑與非 SVG 契約通過。
 - Chrome smoke：所有資產載入成功，`ASSETS.failed` 為空，console 0 errors / 0 warnings。
+- 2026-07-23 Root 重驗：正式招式 runtime 已移除 `skillFx` 幾何路徑；四階段使用不同 composition、尺寸、alpha 與節奏，並攜帶 landscape/portrait safe-area profile。
+- 2026-07-23 Playwright pixel/runtime：7 個 raster 家族皆有非透明像素；80 次密集施放峰值封頂 160 且 180 frame 後完全回收；橫直式章間小遊戲均採正確方向 profile，命中特效不攔截 input。
+- 2026-07-23 fresh verification：`verify_game_contracts.js`、`verify_mobile_interactions.js`、`verify_account_client.js`、120,000 frame long-battle soak 與 `git diff --check` 全部通過。
 - 最終複審報告：`.vibemgmt/reviews/QA_2026-07-15_four-tickets-final.md`、`.vibemgmt/reviews/UX_2026-07-15_four-tickets-final.md`。
+
+## Phase 4.7 Follow-up
+
+- `QA-20260723-001` found that fixed VFX phase delays are not synchronized with actual projectile or melee damage.
+- Linked fix: `FIX-20260723-003-vfx-hit-timing-lifecycle`.
+- Regression closeout: QA verified near/far projectile impact timing and non-projectile lifecycle; UX verified all seven raster families and distinct four-phase browser pixels. No ticket-specific finding remains.
+- Evidence: `.vibemgmt/reviews/QA_2026-07-23_closeout-regression.md` and `.vibemgmt/reviews/UX_2026-07-23_closeout-regression.md`.
