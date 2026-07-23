@@ -2906,6 +2906,11 @@
             targets.forEach((target, index) => this.spawnEnemyProjectile(enemy, target, { label: phase.ranged, projectileSpeed: 7 + index, damageScale: 1.1, telegraph: phase.telegraph }));
         }
 
+        enemyGridColumn(enemy) {
+            if (!enemy) return -1;
+            return Math.max(0, Math.min(this.C - 1, Math.floor(((enemy.x || 0) - this.OX + this.G / 2) / this.G)));
+        }
+
         spawnBossHazard(enemy, phase) {
             this.objs.push({ type: 'dirtyZone', x: enemy.x - this.G, y: enemy.y, c: Math.max(0, this.enemyGridColumn(enemy) - 1), r: enemy.r, w: this.G * 2, h: this.G, hp: 120, maxHp: 120, life: phase.telegraph + 120, maxLife: phase.telegraph + 120, color: '#a855f7', silenceFrames: 24, tick: 30 });
         }

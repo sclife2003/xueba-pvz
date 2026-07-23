@@ -43,6 +43,7 @@
 - [ ] `TICKET-20260715-002` 關卡點陣場景（接手重開）：改為 per-level preload、補章間小遊戲尺寸與完整視覺矩陣
 - [x] `TICKET-20260715-003` 文具指定範圍大招（Option B）：完成按住拖曳、放手鎖定、再點 icon 施放；修跨關 pending、負印章、DOM pointer capture 與 Boss threshold concurrency，Pixel 7 Chromium / iPhone 13 WebKit browser device emulation PASS
 - [x] `TICKET-20260723-001` 一鍵全軍齊射與直尺雙向穿透：印章改為一次點擊讓所有已部署攻擊文具覆蓋自身上下各兩路密集開火，既有攻擊文具獲得 300 frame 傷害 +20%；直尺普通攻擊與齊射均可前後命中
+- [x] `FIX-20260723-002` 長局畫面凍結：恢復 Boss hazard 共用的 `enemyGridColumn()`，避免場地技能觸發 TypeError 後 RAF 永久停止；新增 Boss runtime、GameEngine 方法引用稽核與 120,000 幀 soak
 - [x] `FIX-20260716-002` 行動方向與 pointer capture：鍵盤縮放跨越長寬比不再誤判旋轉，補上 `lostpointercapture` 冪等清理；Pixel 7 Chromium / iPhone 13 WebKit 4/4 browser device smoke 與 QA reviewer final PASS
 - [ ] `TICKET-20260715-004` Boss 多階段／遠程壓迫（接手重開）：統一 action scheduler、逐階 transition 與攻後破綻窗口
 - [ ] `TICKET-20260715-005` 素材版本化 + 真正的跨裝置雲端存檔：帳號部分已正式部署，採 Cloudflare Worker + private GitHub data repo + KV session；自訂帳密、local-first、revision CAS、衝突選擇與雙裝置 E2E 已通過。素材 cache versioning 仍未做
@@ -78,6 +79,7 @@
 - **图片加载保护 / 招式可视化**: `ASSETS.load()` 对 WebP 失败会尝试同名 PNG，`startLevelWhenAssetsReady()` 确保进入战斗前 high-quality painted assets 已 ready。若某张预期资产仍缺失，战场使用 `drawMissingPaintedAsset()` 中性占位，不再回退旧 SVG/程序绘图。`VFX_MANIFEST` 覆盖 18/18 非 elf 怪物，7 个 raster 家族通过 `spawnVfxPhase()` 呈现 telegraph/cast/travel/impact；涂鸦类技能另有可破坏 `dirtyZone`。
 - **PvZ 启发怪物招式模式**: `PVZ_ZOMBIE_PATTERN_STUDY` 保留招式研究结论；`PVZ_SPECIAL_ATTACK_UPGRADES` 把远程怪转为 `projectile + targeting:'backline'`，把 hallpass/bat/jump_rope 转为 `vault`，把 whistle 转为 `summon:'slime'`。Runtime 入口为 `spawnEnemyProjectile()` / `updateEnemyProjectile()`、`tryVaultTower()`、`summonSupportEnemies()`，分别制造延迟投射物、越过第一座阻挡设施、召唤同路/邻路支援怪。
 - **BOSS 机制**: `BOSS_MECHANICS` 管理 sunshine/deadline/boss/super_boss 的 phase table。阶段重招先建立 0.8-1.5 秒 `bossAction` 预警，蓄力期间锁住移动、啃咬、特殊技、重击、冲锋与抢资源；延迟结束后才执行远程、召唤、危险区或冲锋并开启 vulnerability window。阳光怪仍保留每抢 5 个阳光攻击/速度 +20%；监考官保留低血暴走攻击/速度 +30%。
+- **长局 runtime 防回归**: `scripts/verify_long_battle_runtime.py` 会实际执行 Boss hazard、检查 `GameEngine` 所有 `this.method()` 均有定义，并跑 120,000 帧物件生命周期 soak 与 RAF/page-error smoke。Boss 场地区域透过 `enemyGridColumn()` 将敌人位置夹限到 `[0, C - 1]`，不可在移除其他格位功能时一并删除。
 - **超级大魔王**: `super_boss` / 「紫晶魔铠王」是 4-2 signature 最终 Boss，具备远程、场地/召唤、冲锋三类压力；runtime 会依 phase 切换 `enemy_super_boss_phase1..3_painted.webp`，PNG 为 fallback，且保留紫晶护盾、巨剑重击与低血暴走。
 - **怪物美术方向**: 最终品质怪物使用 `assets/sprites/enemy_*_painted.webp` 精致 runtime raster sprite（透明背景、厚涂光影、清晰剪影），PNG 源图保留在同目录，手写 SVG 只当机制占位或 fallback。`SPRITE_MANIFEST` 现在覆盖所有 `ENEMIES`（包含原本缺 manifest 的 `note` / `doodle`），并全量指向 painted WebP。
 - **我方与徽章美术方向**: 7 个 `TOWERS` 使用 `assets/sprites/tower_*_painted.webp` runtime 基底图（同目录保留 PNG 源图），并扩展为 `tower_*_lv1..lv5.webp` 五阶外观；战斗场上、道具栏、装备工坊均通过 `getTowerAssetId(id, level)` 按等级取图。`teacher` 的角色设定为「刘老师」：约 40 岁、短发、两侧些许花白、严肃但不恐怖。徽章使用 `BADGE_ART` + `assets/badges/badge_*.webp`，收藏馆有「成就徽章」与「世界徽章」两区，未解锁徽章用灰阶资产展示。
