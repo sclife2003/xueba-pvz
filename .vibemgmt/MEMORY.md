@@ -1,6 +1,6 @@
 # Vibe Project Memory: xueba-pvz（学霸校园大冒险）
 
-**Last Updated**: 2026-07-16
+**Last Updated**: 2026-07-23
 
 ---
 
@@ -42,6 +42,7 @@
 - [ ] `TICKET-20260715-001` 怪物招式點陣特效（接手重開）：補 phase-aware raster runtime、招式 coverage、safe area 與真機／效能證據
 - [ ] `TICKET-20260715-002` 關卡點陣場景（接手重開）：改為 per-level preload、補章間小遊戲尺寸與完整視覺矩陣
 - [x] `TICKET-20260715-003` 文具指定範圍大招（Option B）：完成按住拖曳、放手鎖定、再點 icon 施放；修跨關 pending、負印章、DOM pointer capture 與 Boss threshold concurrency，Pixel 7 Chromium / iPhone 13 WebKit browser device emulation PASS
+- [x] `TICKET-20260723-001` 一鍵全軍齊射與直尺雙向穿透：印章改為一次點擊讓所有已部署攻擊文具覆蓋自身上下各兩路密集開火，既有攻擊文具獲得 300 frame 傷害 +20%；直尺普通攻擊與齊射均可前後命中
 - [x] `FIX-20260716-002` 行動方向與 pointer capture：鍵盤縮放跨越長寬比不再誤判旋轉，補上 `lostpointercapture` 冪等清理；Pixel 7 Chromium / iPhone 13 WebKit 4/4 browser device smoke 與 QA reviewer final PASS
 - [ ] `TICKET-20260715-004` Boss 多階段／遠程壓迫（接手重開）：統一 action scheduler、逐階 transition 與攻後破綻窗口
 - [ ] `TICKET-20260715-005` 素材版本化 + 真正的跨裝置雲端存檔：帳號部分已正式部署，採 Cloudflare Worker + private GitHub data repo + KV session；自訂帳密、local-first、revision CAS、衝突選擇與雙裝置 E2E 已通過。素材 cache versioning 仍未做
@@ -72,7 +73,7 @@
 - **存活压力 / 场景节奏**: `SCENE_BEAT_PROFILES` 决定各 chapter 的波段顺序（操场偏 swarm、图书馆偏 support/siege、考场偏 siege/finale）。`scaleEnemyStats(enemyDef, level, challengeRule, wave)` 现在接收当前 wave，使用 `MIN_SURVIVAL_SECONDS` 与 `getWavePressureMultiplier()` 做最低存活时间保底；小怪、快怪、支援怪、坦克、Boss 分开调，Boss 倍率有上限以避免纯磨血。
 - **敌人 / 场景怪物表**: `SCENE_MONSTER_TABLE` 依 classroom/playground/library/exam/research/challenge 组织怪物池；11 个主线关卡均有 `signatureEnemy`，并实际写入 waves。新怪包含 erasercrumb/hallpass/quizpaper/whistle/jump_rope/sunshine/quiet/bookstack/bookmark/paperstorm/deadline，正式 runtime 均使用 `assets/sprites/enemy_*_painted.webp`，PNG 为 fallback。
 - **怪物特色攻击 / 设施破坏**: `SPECIAL_ATTACKS` 覆盖所有非 `elf` 怪物；`MONSTER_ATTACK_PLAN` 将怪物规划为 melee/rush/ranged/support/siege/economy/boss archetype；`findSpecialAttackTarget` 只锁定同路、接近防线的存活文具，`resolveSpecialAttack` 统一处理伤害、静音、射击延迟和能量扣减；`damageTower` 是设施破坏入口（啃咬、红笔点名、紫晶重击、特色攻击都走此路径），方便后续按怪物或关卡调难度。
-- **印章大招 / 文具爆发**: `STAMP_KILLS_REQUIRED = 10`，非友方怪物死亡会通过 `registerEnemyDefeat()` 累积印章（上限 3）。`TOOL_ULTIMATES` 定义 7 种指定范围 AoE 与五级 scaling；`armStampUltimate()` 进入瞄准，`confirmStampUltimate()` 依实时敌人格位结算，`cancelStampUltimate()` 保证取消不耗印章。鼠标/触控、方向键、Enter/Space、Escape 均有完整路径，UI 提供固定取消按钮与 ARIA live。
+- **印章大招 / 文具爆发**: `STAMP_KILLS_REQUIRED = 10`，非友方怪物死亡会通过 `registerEnemyDefeat()` 累积印章（上限 3）。`STAMP_BARRAGE` 定义一键全军齐射：`releaseStampUltimate()` 让每座存活的已部署攻击文具覆盖自身路径与上下各两路，对每路最近合法目标开火；成功施放后所有既有攻击文具获得 300 frame、`1.2x` 伤害，之后新放置文具不继承。UI 不再有瞄准、拖曳、锁定或二次确认，失败施放不耗印章。
 - **章间小游戏**: `chapterMinigameForCompletedLevel(levelIdx)` 会在主线 chapter 切换时返回 `CHAPTER_MINIGAMES` 配置；结算页先进入 `minigame` phase，玩家正面视角点击飞来的怪物赚 `rewardEarned`，`finishChapterMinigame()` 把结果写入 `pendingSunBonus`，下一关 `startLevel()` 自动把这笔阳光加到开局能量。
 - **图片加载保护 / 招式可视化**: `ASSETS.load()` 对 WebP 失败会尝试同名 PNG，`startLevelWhenAssetsReady()` 确保进入战斗前 high-quality painted assets 已 ready。若某张预期资产仍缺失，战场使用 `drawMissingPaintedAsset()` 中性占位，不再回退旧 SVG/程序绘图。`VFX_MANIFEST` 覆盖 18/18 非 elf 怪物，7 个 raster 家族通过 `spawnVfxPhase()` 呈现 telegraph/cast/travel/impact；涂鸦类技能另有可破坏 `dirtyZone`。
 - **PvZ 启发怪物招式模式**: `PVZ_ZOMBIE_PATTERN_STUDY` 保留招式研究结论；`PVZ_SPECIAL_ATTACK_UPGRADES` 把远程怪转为 `projectile + targeting:'backline'`，把 hallpass/bat/jump_rope 转为 `vault`，把 whistle 转为 `summon:'slime'`。Runtime 入口为 `spawnEnemyProjectile()` / `updateEnemyProjectile()`、`tryVaultTower()`、`summonSupportEnemies()`，分别制造延迟投射物、越过第一座阻挡设施、召唤同路/邻路支援怪。
@@ -81,7 +82,7 @@
 - **怪物美术方向**: 最终品质怪物使用 `assets/sprites/enemy_*_painted.webp` 精致 runtime raster sprite（透明背景、厚涂光影、清晰剪影），PNG 源图保留在同目录，手写 SVG 只当机制占位或 fallback。`SPRITE_MANIFEST` 现在覆盖所有 `ENEMIES`（包含原本缺 manifest 的 `note` / `doodle`），并全量指向 painted WebP。
 - **我方与徽章美术方向**: 7 个 `TOWERS` 使用 `assets/sprites/tower_*_painted.webp` runtime 基底图（同目录保留 PNG 源图），并扩展为 `tower_*_lv1..lv5.webp` 五阶外观；战斗场上、道具栏、装备工坊均通过 `getTowerAssetId(id, level)` 按等级取图。`teacher` 的角色设定为「刘老师」：约 40 岁、短发、两侧些许花白、严肃但不恐怖。徽章使用 `BADGE_ART` + `assets/badges/badge_*.webp`，收藏馆有「成就徽章」与「世界徽章」两区，未解锁徽章用灰阶资产展示。
 - **进阶系统（deferred → 仅研究所 advanced 关）**: 备战自选 4/6 文具、关卡内升级（selectField/UPGRADES）、提前上课（callNextWaveEarly）、挑战规则（rule:'speed'）。由关卡 `advanced` 旗标驱动 `advancedMode`（主线恒 false）。
-- **装备工坊 / 文具等级**: schema v3 使用 `toolLevels{id:1..5}` 作为正本；旧 `toolUpgrades:true` 自动迁移为 Lv2。`TOOL_LEVELS` 定义每件文具 5 级实战加成（伤害、攻速、产能、血量、穿透数、冷却等），包含新文具「直尺穿线」（直线穿透输出）。碎片 `shards` 逐级购买；`toolUpgrades` 仅保留为 legacy display compatibility。
+- **装备工坊 / 文具等级**: schema v3 使用 `toolLevels{id:1..5}` 作为正本；旧 `toolUpgrades:true` 自动迁移为 Lv2。`TOOL_LEVELS` 定义每件文具 5 级实战加成（伤害、攻速、产能、血量、穿透数、冷却等），包含新文具「直尺穿线」；直尺以 `bidirectional` 让普通穿透攻击与全军齐射分别搜索前后目标，并在两个方向独立套用穿透上限。碎片 `shards` 逐级购买；`toolUpgrades` 仅保留为 legacy display compatibility。
 - **收藏馆**: 关卡贴纸 / 敌人贴纸(遇到即收集,排除 elf) / 成就徽章 / 世界徽章。`renderCollection()` 使用 `collection-card--owned/locked`、`collection-art--sticker/badge`、`levelStickerAsset()` 与 `asset: 'enemy_' + id` 复用现有高质感 WebP；徽章使用专属金属圆框 + 缎带，未解锁显示灰阶剪影与锁定遮罩。
 - **音效/语音**: `SOUND`(WebAudio 振荡器) + `VOICE`(speechSynthesis)，全 feature-detect + try/catch；首手势解锁 AudioContext；开关存 `xueba_pvz_settings`（独立 localStorage，不动存档 schema）。
 - **雲端帳號／跨裝置同步（正式啟用）**: GitHub Pages 載入公開 `account-service.json` 並連到 `xueba-pvz-account.sclife2003.workers.dev`；`AccountService` 將本機存檔先寫 `localStorage`，登入後 debounce 到 Cloudflare Worker。Worker 以 HMAC pepper prehash + PBKDF2-HMAC-SHA512 100,000 次（Cloudflare runtime 上限）保存 verifier；PBKDF2 隔離到內部 SQLite-backed Durable Object，缺 binding 時 fail-closed。KV 保存 24 小時 opaque session digest，GitHub Contents API 保存 private repo `accounts/<username-hash>.json` 與 `saves/<account-id>.json`。雲端更新使用 revision + blob SHA CAS，衝突時必須由玩家選本機或雲端。正式 GitHub token/pepper 只放 Worker secrets，不進 Pages 或 repo。

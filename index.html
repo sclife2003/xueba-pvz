@@ -344,7 +344,7 @@
       pencil: { id: 'pencil', name: '铅笔射手', cost: 100, type: 'shoot', range: 99, rate: 45, dmg: 45, color: '#48bb78', icon: '✏️', recharge: 100, desc: '稳定攻击单一路线敌人', use: '主力输出，每条路至少一个', counter: '普通敌人' },
       watering: { id: 'watering', name: '喷壶', cost: 150, type: 'shoot', range: 99, rate: 12, dmg: 14, color: '#38bdf8', icon: '🚿', recharge: 100, desc: '高攻速低伤，连续扫射', use: '对付成群的小怪', counter: '蝙蝠等小怪群' },
       glue: { id: 'glue', name: '强力胶水', cost: 75, type: 'shoot', range: 99, rate: 50, dmg: 28, color: '#63b3ed', icon: '💧', slow: true, recharge: 150, desc: '命中后减速敌人', use: '放在快速敌人的来路前段', counter: '高速敌人' },
-      ruler: { id: 'ruler', name: '直尺穿线', cost: 125, type: 'shoot', range: 99, rate: 62, dmg: 34, color: '#f97316', icon: '📏', pierce: true, pierceCount: 2, recharge: 120, desc: '直线穿透攻击同一路多名敌人', use: '敌人排队推进时放在后排打整条线', counter: '排队推进的混合怪' },
+      ruler: { id: 'ruler', name: '直尺穿线', cost: 125, type: 'shoot', range: 99, rate: 62, dmg: 34, color: '#f97316', icon: '📏', pierce: true, pierceCount: 2, bidirectional: true, recharge: 120, desc: '前后双向穿透同一路敌人', use: '放在敌群中段，同时清理前后两侧', counter: '双向排队推进的混合怪' },
       eraser: { id: 'eraser', name: '橡皮盾', cost: 50, type: 'wall', range: 0, rate: 0, dmg: 2500, color: '#f687b3', icon: '🛡️', recharge: 300, desc: '高血量肉盾，阻挡推进', use: '挡在主力塔前方拖延', counter: '铁桶怪 / 魔王压线' },
       teacher: { id: 'teacher', name: '刘老师', cost: 200, type: 'bomb', range: 1, rate: 0, dmg: 5000, color: '#F56565', icon: '👩‍🏫', recharge: 900, desc: '三路范围爆破（一次性）', use: '敌人成群或 Boss 压线时引爆', counter: '群怪 / 魔王' }
     };
@@ -496,14 +496,11 @@
     }
 
     const STAMP_KILLS_REQUIRED = 10;
-    const TOOL_ULTIMATES = {
-      textbook: { label: '知识暴雨', desc: '指定 3x3 区域连续落页', targeted: true, shape: 'square_3x3', levelScaling: [{ damage: 90, pulses: 3, sun: 15 }, { damage: 110, pulses: 4, sun: 18 }, { damage: 130, pulses: 5, sun: 21 }, { damage: 155, pulses: 6, sun: 24 }, { damage: 180, pulses: 7, sun: 28 }] },
-      pencil: { label: '万笔齐发', desc: '指定三条相邻路穿透扫射', targeted: true, shape: 'lanes_3', levelScaling: [{ damage: 95, volleys: 2, pierce: 2 }, { damage: 115, volleys: 3, pierce: 3 }, { damage: 135, volleys: 4, pierce: 4 }, { damage: 160, volleys: 5, pierce: 5 }, { damage: 190, volleys: 6, pierce: 6 }] },
-      watering: { label: '暴雨水幕', desc: '指定 2x3 区域持续水幕', targeted: true, shape: 'rect_2x3', levelScaling: [{ damage: 80, duration: 120, slow: 90 }, { damage: 95, duration: 145, slow: 105 }, { damage: 110, duration: 170, slow: 120 }, { damage: 130, duration: 200, slow: 140 }, { damage: 150, duration: 235, slow: 165 }] },
-      glue: { label: '胶海封锁', desc: '指定 2x3 区域黏着地带', targeted: true, shape: 'rect_2x3', levelScaling: [{ damage: 55, duration: 130, slow: 120 }, { damage: 70, duration: 155, slow: 145 }, { damage: 85, duration: 180, slow: 170 }, { damage: 105, duration: 210, slow: 200 }, { damage: 125, duration: 245, slow: 235 }] },
-      ruler: { label: '十字裁线', desc: '指定格贯穿整行与整列', targeted: true, shape: 'cross', levelScaling: [{ damage: 120, crossBonus: 45, rebounds: 0 }, { damage: 145, crossBonus: 60, rebounds: 1 }, { damage: 170, crossBonus: 75, rebounds: 1 }, { damage: 200, crossBonus: 95, rebounds: 2 }, { damage: 235, crossBonus: 120, rebounds: 2 }] },
-      eraser: { label: '橡皮震波', desc: '指定格释放 3x3 震波', targeted: true, shape: 'burst_3x3', levelScaling: [{ damage: 75, push: 12, shield: 140 }, { damage: 90, push: 16, shield: 180 }, { damage: 110, push: 20, shield: 220 }, { damage: 130, push: 25, shield: 270 }, { damage: 155, push: 30, shield: 330 }] },
-      teacher: { label: '黑板总复习', desc: '指定高威胁区爆破并创造破绽', targeted: true, shape: 'marked_burst', levelScaling: [{ damage: 160, freeze: 45, vulnerability: 75 }, { damage: 190, freeze: 55, vulnerability: 90 }, { damage: 220, freeze: 65, vulnerability: 105 }, { damage: 260, freeze: 75, vulnerability: 125 }, { damage: 300, freeze: 90, vulnerability: 150 }] }
+    const STAMP_BARRAGE = {
+      label: '全军齐射',
+      buffFrames: 300,
+      damageMultiplier: 1.2,
+      laneRadius: 2
     };
 
     const MONSTER_ATTACK_PLAN = {
@@ -2098,7 +2095,6 @@
             this.starTimer = 600; // 知识星掉落计时
             this.minigame = null;
             this.pendingSunBonus = 0;
-            this.pendingUltimate = null;
             // ----- Phase 2.5 策略深度状态 -----
             this.activeLoadout = Object.keys(TOWERS); // 本关可用文具（loadout），默认全配
             this.teacherCharge = 0; this.teacherMax = 100; this.teacherReady = false; // 班主任技能槽
@@ -2222,7 +2218,6 @@
         }
 
         startLevel(idx, loadout) {
-            this.clearPendingUltimate('level-start', false);
             const isContinuation = (this.phase === 'level_complete' && idx === this.levelIdx + 1);
             this.levelIdx = idx; this.waveIdx = 0;
             // 主线由关卡自动给文具，不出现配装选择；研究所未来可继续传入 loadout。
@@ -2294,7 +2289,6 @@
         }
 
         startChapterMinigame(levelIdx, nextLevelIdx) {
-            this.clearPendingUltimate('minigame-start', false);
             const cfg = chapterMinigameForCompletedLevel(levelIdx);
             if (!cfg) return false;
             this.objs = []; this.particles = []; this.floatTexts = [];
@@ -2399,7 +2393,6 @@
         }
 
         finishChapterMinigame() {
-            this.clearPendingUltimate('minigame-finish', false);
             if (!this.minigame) return;
             const result = {
                 reward: Math.min(this.minigame.reward, this.minigame.rewardEarned || 0),
@@ -2480,11 +2473,6 @@
             const scaleY = this.h / rect.height;
             const cx = (x - rect.left) * scaleX;
             const cy = (y - rect.top) * scaleY;
-            if (this.pendingUltimate) {
-                const cell = this.screenToGridCell(x, y);
-                if (cell) this.pendingUltimate.previewCell = cell;
-                return false;
-            }
             for (let i = this.objs.length - 1; i >= 0; i--) {
                 const o = this.objs[i];
                 if (o.type === 'star') {
@@ -2578,7 +2566,6 @@
         }
 
         startMaze() {
-            this.clearPendingUltimate('maze-start', false);
             this.phase = 'maze'; this.callbacks.onPhaseChange('maze');
             this.clearField();
             this.savedTowers = this.objs.filter(o => o.type === 'tower');
@@ -2754,194 +2741,117 @@
             if (message && this.callbacks.onAnnouncement) this.callbacks.onAnnouncement(message);
         }
 
-        clearPendingUltimate(reason, shouldAnnounce = true) {
-            if (!this.pendingUltimate) return false;
-            this.pendingUltimate = null;
-            if (shouldAnnounce) this.announce('已取消大招，印章未消耗。');
-            this.pushCombatState();
-            return true;
+        towerTargetsInDirection(tower, row, direction, limit = 1) {
+            if (!tower || (direction !== 'front' && direction !== 'back')) return [];
+            const targets = this.objs.filter(enemy =>
+                enemy.type === 'enemy'
+                && enemy.hp > 0
+                && enemy.r === row
+                && (direction === 'front' ? enemy.x > tower.x : enemy.x < tower.x)
+            );
+            targets.sort((a, b) => direction === 'front' ? a.x - b.x : b.x - a.x);
+            return targets.slice(0, Math.max(0, limit));
         }
 
-        beginUltimateGesture(toolId) {
-            if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0) {
-                this.clearPendingUltimate('gesture-invalid', false);
-                return false;
-            }
-            const id = toolId || this.selectedTower || 'pencil';
-            if (!TOOL_ULTIMATES[id]) return false;
-            const previousCell = this.pendingUltimate && this.pendingUltimate.toolId === id
-                ? this.pendingUltimate.previewCell
-                : null;
-            this.pendingUltimate = { toolId: id, state: 'dragging', previewCell: previousCell };
-            this.announce('大招瞄準：拖到戰場選擇範圍，放手只鎖定。');
-            return true;
+        getTowerAttackDamage(tower) {
+            if (!tower || !tower.data) return 0;
+            const baseDamage = tower.atkOverride || tower.data.dmg || 0;
+            return Math.round(baseDamage * ((tower.barrageTimer || 0) > 0 ? STAMP_BARRAGE.damageMultiplier : 1));
         }
 
-        updateUltimateGesture(x, y) {
-            if (!this.pendingUltimate || this.pendingUltimate.state !== 'dragging') return false;
-            const cell = this.screenToGridCell(x, y);
-            if (!cell) return false;
-            this.pendingUltimate.previewCell = cell;
-            return true;
+        tickTowerBarrage(tower) {
+            if (!tower || (tower.barrageTimer || 0) <= 0) return 0;
+            tower.barrageTimer = Math.max(0, tower.barrageTimer - 1);
+            return tower.barrageTimer;
         }
 
-        endUltimateGesture(returnedToIcon) {
-            if (!this.pendingUltimate || this.pendingUltimate.state !== 'dragging') return false;
-            if (returnedToIcon || !this.pendingUltimate.previewCell) {
-                this.clearPendingUltimate('gesture-cancel');
-                return false;
-            }
-            this.pendingUltimate.state = 'locked';
-            this.announce('大招範圍已鎖定。再點同一個大招圖示才會施放。');
-            this.pushCombatState();
-            return true;
-        }
-
-        cancelUltimateGesture() {
-            return this.clearPendingUltimate('pointer-cancel');
-        }
-
-        armStampUltimate(toolId) {
-            if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0) return false;
-            const id = toolId || this.selectedTower || 'pencil';
-            if (!TOOL_ULTIMATES[id]) return false;
-            this.pendingUltimate = { toolId: id, state: 'locked', previewCell: { c: Math.floor(this.C / 2), r: Math.floor(this.R / 2) } };
-            this.floatText('选择目标格：' + TOOL_ULTIMATES[id].label, this.w / 2, this.OY - 18, '#F6D365', 75, 24);
-            this.announce('大招瞄準：' + TOOL_ULTIMATES[id].label + '。方向鍵移動，Enter 或空白鍵確認，Escape 取消。');
-            this.pushCombatState();
-            return true;
-        }
-
-        cancelStampUltimate() {
-            return this.clearPendingUltimate('manual-cancel');
-        }
-
-        movePendingUltimate(dx, dy) {
-            if (!this.pendingUltimate || !this.pendingUltimate.previewCell) return false;
-            const cell = this.pendingUltimate.previewCell;
-            cell.c = Math.max(0, Math.min(this.C - 1, cell.c + dx));
-            cell.r = Math.max(0, Math.min(this.R - 1, cell.r + dy));
-            this.announce('大招瞄準：第 ' + (cell.r + 1) + ' 路，第 ' + (cell.c + 1) + ' 格。');
-            this.pushCombatState();
-            return true;
-        }
-
-        confirmPendingUltimate() {
-            if (!this.pendingUltimate) return false;
-            return this.confirmStampUltimate(this.pendingUltimate.previewCell);
-        }
-
-        handleUltimateKey(key) {
-            if (!this.pendingUltimate) return false;
-            if (key === 'ArrowLeft') return this.movePendingUltimate(-1, 0);
-            if (key === 'ArrowRight') return this.movePendingUltimate(1, 0);
-            if (key === 'ArrowUp') return this.movePendingUltimate(0, -1);
-            if (key === 'ArrowDown') return this.movePendingUltimate(0, 1);
-            if (key === 'Escape') return this.cancelStampUltimate();
-            if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
-                this.confirmPendingUltimate();
-                return true;
-            }
-            return false;
-        }
-
-        enemyGridColumn(enemy) {
-            if (!enemy) return -1;
-            return Math.max(0, Math.min(this.C - 1, Math.floor(((enemy.x || 0) - this.OX + this.G / 2) / this.G)));
-        }
-
-        ultimateTargets(meta, cell) {
-            return this.objs.filter(enemy => {
-                if (enemy.type !== 'enemy' || enemy.hp <= 0) return false;
-                const enemyColumn = this.enemyGridColumn(enemy);
-                return meta.shape === 'lanes_3' ? Math.abs(enemy.r - cell.r) <= 1 :
-                    meta.shape === 'cross' ? enemy.r === cell.r || enemyColumn === cell.c :
-                    meta.shape === 'rect_2x3' ? enemyColumn >= cell.c && enemyColumn <= cell.c + 1 && enemy.r >= cell.r - 1 && enemy.r <= cell.r + 1 :
-                    Math.abs(enemy.r - cell.r) <= 1 && Math.abs(enemyColumn - cell.c) <= 1;
-            });
-        }
-
-        ultimateAreaCells(meta, cell) {
-            if (!meta || !cell) return [];
-            const cells = [];
-            const add = (c, r) => {
-                if (c >= 0 && c < this.C && r >= 0 && r < this.R && !cells.some(item => item.c === c && item.r === r)) cells.push({ c, r });
-            };
-            if (meta.shape === 'lanes_3') {
-                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = 0; c < this.C; c++) add(c, r);
-            } else if (meta.shape === 'cross') {
-                for (let c = 0; c < this.C; c++) add(c, cell.r);
-                for (let r = 0; r < this.R; r++) add(cell.c, r);
-            } else if (meta.shape === 'rect_2x3') {
-                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = cell.c; c <= cell.c + 1; c++) add(c, r);
-            } else {
-                for (let r = cell.r - 1; r <= cell.r + 1; r++) for (let c = cell.c - 1; c <= cell.c + 1; c++) add(c, r);
-            }
-            return cells;
-        }
-
-        confirmStampUltimate(cell) {
-            if (!this.pendingUltimate || !cell) return false;
-            const id = this.pendingUltimate.toolId;
-            const meta = TOOL_ULTIMATES[id];
-            if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0 || !meta) {
-                this.clearPendingUltimate('confirm-invalid', false);
-                return false;
-            }
-            const targets = this.ultimateTargets(meta, cell);
-            if (!targets.length) {
-                this.announce('沒有目標，印章未消耗。請移動瞄準位置或取消。');
-                return false;
-            }
-            const levels = (this.save.toolLevels || defaultToolLevels());
-            const scaling = meta.levelScaling[Math.max(0, Math.min(4, (levels[id] || 1) - 1))];
-            this.stamps = Math.max(0, this.stamps - 1);
-            targets.forEach(enemy => {
-                const bossScale = enemy.data && enemy.data.role === 'boss' ? 0.45 : 1;
-                let damage = scaling.damage;
-                if (id === 'textbook') damage += scaling.pulses * 12;
-                if (id === 'pencil') damage += scaling.volleys * 18 + scaling.pierce * 8;
-                if (id === 'ruler') damage += scaling.crossBonus;
-                this.damageEnemy(enemy, Math.round(damage * bossScale), '#F6D365');
-                if (scaling.slow) enemy.slowTimer = Math.max(enemy.slowTimer || 0, scaling.slow);
-                if (scaling.duration) {
-                    enemy.ultimateDotTimer = Math.max(enemy.ultimateDotTimer || 0, scaling.duration);
-                    enemy.ultimateDotDamage = Math.max(enemy.ultimateDotDamage || 0, Math.max(2, Math.round(scaling.damage / 8)));
-                    enemy.ultimateDotColor = id === 'glue' ? '#ec4899' : '#38bdf8';
+        damagePiercingTargets(tower, row, damage, hitCount) {
+            const frontTargets = this.towerTargetsInDirection(tower, row, 'front', hitCount);
+            const backTargets = tower.data && tower.data.bidirectional
+                ? this.towerTargetsInDirection(tower, row, 'back', hitCount)
+                : [];
+            [
+                { direction: 1, targets: frontTargets },
+                { direction: -1, targets: backTargets }
+            ].forEach(group => {
+                group.targets.forEach((enemy, index) => {
+                    this.damageEnemy(enemy, Math.round(damage * (index === 0 ? 1 : 0.72)), tower.data.color);
+                });
+                if (group.targets.length) {
+                    this.objs.push({
+                        type: 'bullet',
+                        x: tower.x + this.G / 2,
+                        y: this.OY + row * this.G + this.G / 4,
+                        dmg: 0,
+                        color: tower.data.color,
+                        vx: 18 * group.direction,
+                        vy: 0,
+                        pierceVisual: true,
+                        life: 24
+                    });
                 }
-                if (scaling.push) enemy.x = Math.min(this.OX + this.C * this.G, enemy.x + scaling.push);
-                if (scaling.freeze) enemy.ultimateFreezeTimer = Math.max(enemy.ultimateFreezeTimer || 0, scaling.freeze);
-                if (id === 'teacher' && enemy.data && enemy.data.role === 'boss') this.startBossVulnerability(enemy, scaling.vulnerability);
             });
-            if (id === 'textbook') this.mp += scaling.sun;
-            if (id === 'ruler' && scaling.rebounds > 0) {
-                const targetSet = new Set(targets);
-                this.objs.filter(enemy => enemy.type === 'enemy' && enemy.hp > 0 && !targetSet.has(enemy))
-                    .sort((a, b) => Math.hypot(this.enemyGridColumn(a) - cell.c, a.r - cell.r) - Math.hypot(this.enemyGridColumn(b) - cell.c, b.r - cell.r))
-                    .slice(0, scaling.rebounds)
-                    .forEach(enemy => this.damageEnemy(enemy, Math.round((scaling.damage + scaling.crossBonus) * 0.45), '#fbbf24'));
-            }
-            if (id === 'eraser') this.objs.filter(o => o.type === 'tower' && o.id === 'eraser').forEach(o => { o.hp = Math.min(o.maxHp, o.hp + scaling.shield); });
-            const vfxFamily = { textbook: 'paper', pencil: 'impact', watering: 'soundwave', glue: 'doodle', ruler: 'impact', eraser: 'impact', teacher: 'paper' }[id];
-            const visualPulses = Math.min(7, scaling.pulses || scaling.volleys || 1);
-            for (let pulse = 0; pulse < visualPulses; pulse++) {
-                this.spawnVfxPhase({ id, x: this.OX + cell.c * this.G, y: this.OY + cell.r * this.G }, 'impact', { label: meta.label, family: vfxFamily, delay: pulse * 6 });
-            }
-            this.pendingUltimate = null;
-            this.announce('大招已施放：' + meta.label + '。');
-            this.updateStats();
-            this.pushCombatState();
-            return true;
+            return frontTargets.length + backTargets.length;
         }
 
         releaseStampUltimate(toolId) {
-            const id = toolId || this.selectedTower || 'pencil';
-            if (this.pendingUltimate && this.pendingUltimate.toolId === id) {
-                if (this.pendingUltimate.state !== 'locked') return false;
-                return this.confirmStampUltimate(this.pendingUltimate.previewCell);
+            if (this.phase !== 'td' || this.combatPaused || (this.stamps || 0) <= 0) return false;
+            const attackTowers = this.objs.filter(tower =>
+                tower.type === 'tower'
+                && tower.data && tower.data.type === 'shoot'
+                && tower.hp > 0 && !tower.destroyed
+            );
+            const aliveEnemies = this.objs.filter(enemy => enemy.type === 'enemy' && enemy.hp > 0);
+            if (!attackTowers.length || !aliveEnemies.length) {
+                this.announce('没有可齐射的目标，印章未消耗。');
+                return false;
             }
-            if (this.pendingUltimate) this.clearPendingUltimate('tool-switch', false);
-            return this.armStampUltimate(id);
+            const shots = [];
+            attackTowers.forEach(tower => {
+                const firstRow = Math.max(0, tower.r - STAMP_BARRAGE.laneRadius);
+                const lastRow = Math.min(this.R - 1, tower.r + STAMP_BARRAGE.laneRadius);
+                for (let row = firstRow; row <= lastRow; row++) {
+                    const front = this.towerTargetsInDirection(tower, row, 'front', 1)[0];
+                    if (front) shots.push({ tower, target: front, row, direction: 1 });
+                    if (tower.data.bidirectional) {
+                        const back = this.towerTargetsInDirection(tower, row, 'back', 1)[0];
+                        if (back) shots.push({ tower, target: back, row, direction: -1 });
+                    }
+                }
+            });
+            if (!shots.length) {
+                this.announce('没有可齐射的目标，印章未消耗。');
+                return false;
+            }
+
+            this.stamps = Math.max(0, this.stamps - 1);
+            attackTowers.forEach(tower => {
+                tower.barrageTimer = STAMP_BARRAGE.buffFrames;
+                this.spawnParticles(tower.x + this.G / 2, tower.y + this.G / 2, '#F6D365', 8);
+                this.floatText('齐射 +20%', tower.x + this.G / 2, tower.y, '#F6D365', 45, 18);
+            });
+            shots.forEach(shot => {
+                const damage = this.getTowerAttackDamage(shot.tower);
+                this.damageEnemy(shot.target, damage, shot.tower.data.color);
+                if (shot.tower.data.slow) {
+                    shot.target.slowTimer = Math.max(shot.target.slowTimer || 0, shot.tower.slowDurOverride || 180);
+                }
+                this.objs.push({
+                    type: 'bullet',
+                    x: shot.tower.x + this.G / 2,
+                    y: this.OY + shot.row * this.G + this.G / 4,
+                    dmg: 0,
+                    color: shot.tower.data.color,
+                    vx: 18 * shot.direction,
+                    vy: 0,
+                    pierceVisual: true,
+                    life: 18
+                });
+            });
+            this.announce(STAMP_BARRAGE.label + '！');
+            this.updateStats();
+            this.pushCombatState();
+            return true;
         }
 
         queueBossPhaseThresholds(enemy, cfg) {
@@ -3326,7 +3236,6 @@
         }
 
         nextLevel() {
-            this.clearPendingUltimate('level-complete', false);
             this.waveIdx++;
             const lvl = LEVELS[this.levelIdx];
             if (this.waveIdx >= lvl.waves.length) {
@@ -3502,12 +3411,7 @@
                 waitWave: this.waitNextWave !== null && this.waitNextWave > 0,
                 stamps: this.stamps || 0,
                 stampKills: this.stampKills || 0,
-                stampProgress: (this.stampKills || 0) / STAMP_KILLS_REQUIRED,
-                pendingUltimate: this.pendingUltimate ? {
-                    toolId: this.pendingUltimate.toolId,
-                    state: this.pendingUltimate.state || 'locked',
-                    previewCell: this.pendingUltimate.previewCell ? { ...this.pendingUltimate.previewCell } : null
-                } : null
+                stampProgress: (this.stampKills || 0) / STAMP_KILLS_REQUIRED
             });
         }
 
@@ -3535,9 +3439,6 @@
         floatText(text, x, y, color, life = 50, size = 24) { this.floatTexts.push({ text, x, y, color, life, size }); }
 
         update() {
-            if (this.pendingUltimate && (this.phase !== 'td' || (this.stamps || 0) <= 0)) {
-                this.clearPendingUltimate('state-invalid', false);
-            }
             if (this.phase === 'minigame') {
                 this.updateChapterMinigame();
                 return;
@@ -3552,7 +3453,6 @@
                 return;
             }
             if (this.hp <= 0 && this.phase !== 'rescue_quiz') {
-                this.clearPendingUltimate('player-death', false);
                 this.phase = 'over'; this.callbacks.onPhaseChange('over');
                 SOUND.play('lose'); this.callbacks.onGameOver(false, "游戏结束", "生命值耗尽！"); return;
             }
@@ -3651,7 +3551,6 @@
                     else if (o.type === 'tower') {
                         if (o.hp <= 0 || o.destroyed) { this.objs.splice(i,1); continue; }
                         if (o.hitFlash > 0) o.hitFlash--;
-                        if (o.ultimateTimer > 0) o.ultimateTimer--;
                         if (o.data.type === 'bomb') {
                             const rowsToBomb = [o.r - 1, o.r, o.r + 1];
                             const bombDmg = o.atkOverride || o.data.dmg;
@@ -3664,25 +3563,25 @@
                         }
                         else if (o.data.type === 'producer') { const prodRate = o.rateOverride || o.data.rate; o.cd++; if(o.cd>=prodRate) { this.spawnOrb(o.x+this.G/2, o.y+this.G/2, o.orbValueOverride || 40); o.cd=0; } }
                         else if (o.data.type === 'shoot') {
-                            const atk = o.atkOverride || o.data.dmg, baseFireRate = o.rateOverride || o.data.rate, fireRate = o.ultimateTimer > 0 ? Math.max(4, Math.round(baseFireRate * 0.5)) : baseFireRate, slowDur = o.slowDurOverride || 180;
+                            const atk = this.getTowerAttackDamage(o), fireRate = o.rateOverride || o.data.rate, slowDur = o.slowDurOverride || 180;
                             o.cd--; if(o.cd<=0) {
-                                const rowTargets = this.objs.filter(e => e.type === 'enemy' && e.r === o.r && e.x > o.x).sort((a, b) => a.x - b.x);
-                                const target = rowTargets[0];
-                                if (!target) {
-                                    const eatingEnemy = this.objs.find(e => e.type === 'enemy' && e.r === o.r && Math.abs(e.x - o.x) < this.G && e.x < this.w);
-                                    if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: 0, vy: 0 }); o.cd = fireRate; }
-                                } else if (o.data.pierce) {
+                                if (o.data.pierce) {
                                     const hitCount = Math.max(1, o.pierceCountOverride || o.data.pierceCount || 2);
-                                    rowTargets.slice(0, hitCount).forEach((e, idx) => this.damageEnemy(e, Math.round(atk * (idx === 0 ? 1 : 0.72)), o.data.color));
-                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, dmg: 0, color: o.data.color, vx: 18, vy: 0, pierceVisual: true, life: 24 });
-                                    o.cd = fireRate;
+                                    if (this.damagePiercingTargets(o, o.r, atk, hitCount) > 0) o.cd = fireRate;
                                 } else {
-                                    const ang = Math.atan2((target.y+this.G/2)-(o.y+this.G/4), (target.x+this.G/2)-(o.x+this.G/2));
-                                    this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
-                                    o.cd = fireRate;
+                                    const target = this.towerTargetsInDirection(o, o.r, 'front', 1)[0];
+                                    if (!target) {
+                                        const eatingEnemy = this.objs.find(e => e.type === 'enemy' && e.hp > 0 && e.r === o.r && Math.abs(e.x - o.x) < this.G && e.x < this.w);
+                                        if (eatingEnemy) { this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target: eatingEnemy, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: 0, vy: 0 }); o.cd = fireRate; }
+                                    } else {
+                                        const ang = Math.atan2((target.y+this.G/2)-(o.y+this.G/4), (target.x+this.G/2)-(o.x+this.G/2));
+                                        this.objs.push({ type: 'bullet', x: o.x+this.G/2, y: o.y+this.G/4, target, dmg: atk, color: o.data.color, isSlow: o.data.slow, slowDur, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15 });
+                                        o.cd = fireRate;
+                                    }
                                 }
                             }
                         }
+                        if (o.data.type === 'shoot') this.tickTowerBarrage(o);
                     }
                     else if (o.type === 'enemy') {
                         if(o.hitFlash>0) o.hitFlash--;
@@ -4203,23 +4102,6 @@
             ctx.restore();
         }
 
-        drawUltimateTargetPreview(ctx) {
-            if (!this.pendingUltimate || !this.pendingUltimate.previewCell) return;
-            const meta = TOOL_ULTIMATES[this.pendingUltimate.toolId];
-            const cells = this.ultimateAreaCells(meta, this.pendingUltimate.previewCell);
-            ctx.save();
-            cells.forEach(cell => {
-                const x = this.OX + cell.c * this.G;
-                const y = this.OY + cell.r * this.G;
-                ctx.fillStyle = 'rgba(246, 211, 101, 0.28)';
-                ctx.fillRect(x + 2, y + 2, this.G - 4, this.G - 4);
-                ctx.strokeStyle = 'rgba(255, 247, 237, 0.92)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x + 3, y + 3, this.G - 6, this.G - 6);
-            });
-            ctx.restore();
-        }
-
         drawChapterMinigame(ctx) {
             const mg = this.minigame, w = this.w, h = this.h;
             const viewportOrientation = w > h ? 'landscape' : 'portrait';
@@ -4268,7 +4150,6 @@
                 const variant = resolveSceneVariant('td', viewportOrientation, level.id, null);
                 if (variant.variant === 'landscape') this.drawRasterScene(ctx, 'scene_' + String(level.id || '').replace(/[^a-z0-9]+/gi, '_'), level.name || '场景加载中');
                 this.drawBattleGrid(ctx);
-                this.drawUltimateTargetPreview(ctx);
                 // 路线预警：敌人即将出现的那一路，右侧闪红 + ⚠️
                 this.laneWarnings.forEach(w => {
                     const blink = 0.3 + 0.4 * Math.abs(Math.sin(this.frame * 0.3));
@@ -4551,9 +4432,6 @@
             this.stamps = 0;
             this.stampKills = 0;
             this.stampProgress = 0;
-            this.pendingUltimate = null;
-            this.ultimatePointer = null;
-            this.suppressUltimateClick = false;
             this.liveMessage = '';
             this.waitWave = false;      // 是否显示「提前上课」按钮
             this.fieldSel = null;       // 选中的场上单位（升级面板）
@@ -4590,11 +4468,6 @@
             this.onEarlyCall = null;    // 提前上课
             this.onTeacherSkill = null; // 释放班主任技能
             this.onStampUltimate = null; // 释放印章大招
-            this.onCancelUltimate = null;
-            this.onUltimateGestureStart = null;
-            this.onUltimateGestureMove = null;
-            this.onUltimateGestureEnd = null;
-            this.onUltimateGestureCancel = null;
             this.onUpgrade = null;      // 关卡内升级
             this.onStartMinigame = null; // 章间阳光小游戏
             this.onRetry = null;        // 重玩本关
@@ -4610,11 +4483,6 @@
 
         update(patch) {
             Object.assign(this, patch);
-            if (this.ultimatePointer) {
-                const leavesBattle = Object.prototype.hasOwnProperty.call(patch, 'phase') && patch.phase !== 'td';
-                if (!leavesBattle) return;
-                this.ultimatePointer = null;
-            }
             this.render();
         }
 
@@ -5329,25 +5197,6 @@
             return live;
         }
 
-        renderUltimateControls() {
-            if (this.phase !== 'td' || !this.pendingUltimate) return null;
-            const meta = TOOL_ULTIMATES[this.pendingUltimate.toolId] || TOOL_ULTIMATES.pencil;
-            const wrap = this.el('div', {
-                position:'fixed', top:'calc(52px + env(safe-area-inset-top))', right:'calc(12px + env(safe-area-inset-right))',
-                zIndex:'90', pointerEvents:'auto', display:'flex', alignItems:'center', gap:'8px',
-                maxWidth:'calc(100vw - 24px)', padding:'7px 9px', borderRadius:'12px',
-                background:'rgba(15,23,42,0.92)', border:'2px solid #F6D365', color:'#fff7ed', boxShadow:'0 8px 24px rgba(0,0,0,0.38)'
-            });
-            wrap.append(
-                this.el('span', { fontSize:'12px', fontWeight:'900' }, meta.label + '：方向鍵移動，Enter 確認'),
-                this.btn('X 取消', {
-                    padding:'7px 10px', borderRadius:'9px', border:'2px solid #fca5a5', background:'#7f1d1d',
-                    color:'white', fontWeight:'900', fontFamily:'inherit', cursor:'pointer', whiteSpace:'nowrap'
-                }, (event) => { event.stopPropagation(); this.onCancelUltimate && this.onCancelUltimate(); })
-            );
-            return wrap;
-        }
-
         renderTowerBar() {
             if (this.phase !== 'td') return null;
             const isL = this.isLandscape;
@@ -5355,7 +5204,7 @@
             const ids = (this.activeLoadout && this.activeLoadout.length) ? this.activeLoadout : Object.keys(TOWERS);
             const towerList = Object.values(TOWERS).filter(t => ids.includes(t.id));
             const landscapeButtonSize = isL
-                ? Math.max(42, Math.min(54, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 160) / Math.max(1, towerList.length))))
+                ? Math.max(32, Math.min(48, Math.floor((window.innerHeight - readSafeAreaInset('top') - readSafeAreaInset('bottom') - 160) / 4)))
                 : 80;
             const bar = this.el('div', {
                 pointerEvents:'auto',
@@ -5371,7 +5220,7 @@
                     backgroundColor:'#5D4037', borderRight:'4px solid #3E2723', borderTopRightRadius:'1rem', borderBottomRightRadius:'1rem',
                     boxShadow:'4px 0 10px rgba(0,0,0,0.3)', height:'100%', display:'flex', flexDirection:'column',
                     justifyContent:'flex-start', padding:'6px 4px', gap:'3px', width: SIDEBAR_WIDTH_LANDSCAPE + 'px', boxSizing:'border-box',
-                    overflowY:'auto', overflowX:'visible'
+                    overflowY:'visible', overflowX:'visible'
                 } : {
                     backgroundColor:'#5D4037', borderTop:'4px solid #3E2723', padding:'8px 8px', paddingBottom:'calc(20px + env(safe-area-inset-bottom))', borderTopLeftRadius:'24px', borderTopRightRadius:'24px',
                     boxShadow:'0 -4px 20px rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', gap:'8px', overflowX:'auto', flexShrink:'0'
@@ -5379,27 +5228,43 @@
             });
 
             // Landscape：文具盒标签 + 黑板小卡 HUD（知识星 / 专注值）
+            let landscapeActionRow = null;
             if (isL) {
                 const boxLabel = this.el('div', {}, '✏️ 文具盒');
                 boxLabel.className = 'pencil-box-label';
                 inner.appendChild(boxLabel);
-                const stats = this.el('div', { display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', padding:'6px', background:'#2F6B4F', border:'1px solid #B9825B', borderRadius:'8px', margin:'0 4px 4px', flexShrink:'0' });
-                const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'6px', color:'#F7F3E8', justifyContent:'center' });
-                mpRow.append(this.el('span', { fontSize:'16px' }, '⭐'), this.el('span', { color:'#F6D365', fontWeight:'900', fontSize:'16px' }, String(Math.floor(this.stats.mp))));
-                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'6px', color:'#F7F3E8', justifyContent:'center', borderTop:'1px solid rgba(247,243,232,0.18)', paddingTop:'2px' });
+                const stats = this.el('div', { display:'flex', flexDirection:'row', alignItems:'stretch', gap:'4px', marginBottom:'4px', padding:'4px', background:'#2F6B4F', border:'1px solid #B9825B', borderRadius:'8px', margin:'0 4px 4px', flexShrink:'0' });
+                const mpRow = this.el('div', { display:'flex', alignItems:'center', gap:'3px', color:'#F7F3E8', justifyContent:'center', flex:'1', minWidth:'0' });
+                mpRow.append(this.el('span', { fontSize:'14px' }, '⭐'), this.el('span', { color:'#F6D365', fontWeight:'900', fontSize:'14px' }, String(Math.floor(this.stats.mp))));
+                const hpRow = this.el('div', { display:'flex', alignItems:'center', gap:'3px', color:'#F7F3E8', justifyContent:'center', borderLeft:'1px solid rgba(247,243,232,0.18)', paddingLeft:'4px', flex:'1', minWidth:'0' });
                 const hpColor = this.stats.hp <= 1 ? '#E85D5D' : '#F2A6A6';
-                hpRow.append(this.el('span', { fontSize:'16px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'16px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
+                hpRow.append(this.el('span', { fontSize:'14px' }, '❤️'), this.el('span', { color: hpColor, fontWeight:'900', fontSize:'14px', animation: this.stats.hp <= 1 ? 'pulse 2s infinite' : '' }, String(this.stats.hp)));
                 stats.append(mpRow, hpRow);
                 inner.appendChild(stats);
+                landscapeActionRow = this.el('div', {
+                    display:'grid',
+                    gridTemplateColumns:'repeat(2, minmax(0, 1fr))',
+                    gap:'3px',
+                    height:'46px',
+                    minHeight:'46px',
+                    margin:'0 4px 4px',
+                    boxSizing:'border-box',
+                    overflow:'hidden',
+                    flexShrink:'0'
+                });
+                landscapeActionRow.setAttribute('data-landscape-action-row', 'landscape');
+                inner.appendChild(landscapeActionRow);
                 if (ids.includes('teacher')) {
                     const pct = Math.round((this.teacherCharge || 0) * 100);
                     const skill = this.el('button', {
-                        margin:'0 4px 4px', padding:'5px 4px', borderRadius:'8px', border:'1px solid ' + (this.teacherReady ? '#F6D365' : '#B9825B'),
+                        margin:'0', padding:'3px 2px', borderRadius:'8px', border:'1px solid ' + (this.teacherReady ? '#F6D365' : '#B9825B'),
                         background: this.teacherReady ? '#4A90E2' : '#23463a', color:'#F7F3E8', fontFamily:'inherit',
-                        cursor: this.teacherReady ? 'pointer' : 'default', flexShrink:'0', display:'flex', flexDirection:'column', gap:'2px',
+                        cursor: this.teacherReady ? 'pointer' : 'default', minWidth:'0', minHeight:'0', height:'100%', boxSizing:'border-box',
+                        overflow:'hidden', whiteSpace:'nowrap',
+                        display:'flex', flexDirection:'column', justifyContent:'center', gap:'2px',
                         animation: this.teacherReady ? 'pulse 1.4s infinite' : ''
                     });
-                    skill.appendChild(this.el('div', { fontSize:'9px', fontWeight:'900', textAlign:'center', letterSpacing:'1px' }, '👩‍🏫 班主任'));
+                    skill.appendChild(this.el('div', { fontSize:'9px', fontWeight:'900', textAlign:'center' }, '班主任'));
                     if (this.teacherReady) {
                         skill.appendChild(this.el('div', { fontSize:'10px', fontWeight:'900', textAlign:'center', color:'#F6D365' }, '⚡就绪·点击'));
                     } else {
@@ -5409,18 +5274,15 @@
                         skill.appendChild(this.el('div', { fontSize:'9px', textAlign:'center', color:'rgba(247,243,232,0.7)' }, pct + '%'));
                     }
                     if (this.teacherReady) skill.onclick = (e) => { e.stopPropagation(); this.onTeacherSkill && this.onTeacherSkill(); };
-                    inner.appendChild(skill);
+                    skill.setAttribute('data-landscape-action', 'teacher');
+                    landscapeActionRow.appendChild(skill);
                 }
             }
 
-            const selectedUltimateId = (this.pendingUltimate && this.pendingUltimate.toolId)
-                || this.selectedTower
-                || (ids.includes('pencil') ? 'pencil' : ids[0]);
-            const ultimateMeta = TOOL_ULTIMATES[selectedUltimateId] || TOOL_ULTIMATES.pencil;
             const stampReady = (this.stamps || 0) > 0;
             const stampBtn = this.el('button', {
-                margin: isL ? '0 4px 5px' : '0',
-                padding: isL ? '6px 5px' : '8px 12px',
+                margin:'0',
+                padding: isL ? '4px 3px' : '8px 12px',
                 borderRadius:'10px',
                 border:'2px solid ' + (stampReady ? '#F6D365' : '#475569'),
                 background: stampReady ? 'linear-gradient(135deg,#92400e,#f59e0b)' : '#1e293b',
@@ -5428,90 +5290,42 @@
                 cursor: stampReady ? 'pointer' : 'default',
                 display:'flex', flexDirection:'column', alignItems:'center', gap:'2px',
                 flexShrink:'0',
-                touchAction:'none',
+                ...(isL ? { minWidth:'0', minHeight:'0', height:'100%', boxSizing:'border-box', overflow:'hidden', whiteSpace:'nowrap' } : {}),
+                touchAction:'manipulation',
                 boxShadow: stampReady ? '0 0 16px rgba(246,211,101,0.42)' : 'none'
             });
             stampBtn.append(
-                this.el('div', { fontSize:isL ? '10px' : '12px' }, '🏅 印章 x' + (this.stamps || 0)),
-                this.el('div', { fontSize:isL ? '9px' : '11px', color: stampReady ? '#fff7ed' : '#cbd5e1' }, stampReady ? ultimateMeta.label : Math.floor((this.stampProgress || 0) * 10) + '/' + STAMP_KILLS_REQUIRED)
+                this.el('div', { fontSize:isL ? '9px' : '12px' }, isL ? '印章 x' + (this.stamps || 0) : '🏅 印章 x' + (this.stamps || 0)),
+                this.el('div', { fontSize:isL ? '9px' : '11px', color: stampReady ? '#fff7ed' : '#cbd5e1' }, stampReady ? STAMP_BARRAGE.label : Math.floor((this.stampProgress || 0) * 10) + '/' + STAMP_KILLS_REQUIRED)
             );
             if (stampReady) {
-                stampBtn.onpointerdown = event => {
-                    if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const wasLocked = !!(this.pendingUltimate
-                        && this.pendingUltimate.toolId === selectedUltimateId
-                        && this.pendingUltimate.state === 'locked');
-                    this.ultimatePointer = {
-                        pointerId: event.pointerId,
-                        toolId: selectedUltimateId,
-                        startX: event.clientX,
-                        startY: event.clientY,
-                        dragging: !wasLocked
-                    };
-                    if (stampBtn.setPointerCapture) {
-                        try { stampBtn.setPointerCapture(event.pointerId); } catch (error) {}
-                    }
-                    if (!wasLocked) {
-                        this.suppressUltimateClick = true;
-                        this.onUltimateGestureStart && this.onUltimateGestureStart(selectedUltimateId);
-                    }
-                };
-                stampBtn.onpointermove = event => {
-                    const pointer = this.ultimatePointer;
-                    if (!pointer || pointer.pointerId !== event.pointerId || event.isPrimary === false) return;
-                    const moved = Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) >= 8;
-                    if (!pointer.dragging && moved) {
-                        pointer.dragging = true;
-                        this.suppressUltimateClick = true;
-                        this.onUltimateGestureStart && this.onUltimateGestureStart(pointer.toolId);
-                    }
-                    if (pointer.dragging) {
-                        event.preventDefault();
-                        this.onUltimateGestureMove && this.onUltimateGestureMove(event.clientX, event.clientY);
-                    }
-                };
-                stampBtn.onpointerup = event => {
-                    const pointer = this.ultimatePointer;
-                    if (!pointer || pointer.pointerId !== event.pointerId || event.isPrimary === false) return;
-                    event.preventDefault();
-                    const rect = stampBtn.getBoundingClientRect();
-                    const returnedToIcon = event.clientX >= rect.left && event.clientX <= rect.right
-                        && event.clientY >= rect.top && event.clientY <= rect.bottom;
-                    this.ultimatePointer = null;
-                    if (pointer.dragging) {
-                        this.suppressUltimateClick = true;
-                        this.onUltimateGestureEnd && this.onUltimateGestureEnd(returnedToIcon);
-                    }
-                    setTimeout(() => { this.suppressUltimateClick = false; }, 0);
-                };
-                stampBtn.onpointercancel = event => {
-                    const pointer = this.ultimatePointer;
-                    if (!pointer || pointer.pointerId !== event.pointerId) return;
-                    this.ultimatePointer = null;
-                    this.suppressUltimateClick = true;
-                    this.onUltimateGestureCancel && this.onUltimateGestureCancel();
-                    setTimeout(() => { this.suppressUltimateClick = false; }, 0);
-                };
-                stampBtn.onlostpointercapture = event => {
-                    const pointer = this.ultimatePointer;
-                    if (!pointer || pointer.pointerId !== event.pointerId) return;
-                    this.ultimatePointer = null;
-                    this.suppressUltimateClick = true;
-                    this.onUltimateGestureCancel && this.onUltimateGestureCancel();
-                    setTimeout(() => { this.suppressUltimateClick = false; }, 0);
-                };
                 stampBtn.onclick = event => {
                     event.stopPropagation();
-                    if (this.suppressUltimateClick) {
-                        this.suppressUltimateClick = false;
-                        return;
-                    }
-                    this.onStampUltimate && this.onStampUltimate(selectedUltimateId);
+                    this.onStampUltimate && this.onStampUltimate();
                 };
             }
-            inner.appendChild(stampBtn);
+            if (isL && landscapeActionRow) {
+                stampBtn.setAttribute('data-landscape-action', 'stamp');
+                landscapeActionRow.appendChild(stampBtn);
+            } else {
+                inner.appendChild(stampBtn);
+            }
+
+            const towerSlots = isL ? this.el('div', {
+                display:'grid',
+                gridTemplateColumns:'repeat(2, minmax(0, 1fr))',
+                gridTemplateRows:'repeat(4, minmax(0, 1fr))',
+                gap:'3px',
+                flex:'1 1 187px',
+                minHeight:'187px',
+                padding:'0 2px 2px',
+                boxSizing:'border-box',
+                overflowY:'visible'
+            }) : inner;
+            if (isL) {
+                towerSlots.setAttribute('data-tower-slots', 'landscape');
+                inner.appendChild(towerSlots);
+            }
 
             towerList.forEach(t => {
                 const cooldown = this.stats.cooldowns?.[t.id] || 0;
@@ -5528,10 +5342,10 @@
                 const btnEl = this.el('button', {
                     position:'relative', borderRadius:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                     overflow:'hidden', transition:'all 0.15s', border:'4px solid', fontFamily:'inherit',
-                    ...(isL ? { width:'100%', height: landscapeButtonSize + 'px', minHeight:'42px', flex:'0 0 auto', margin:'0' } : { width:'64px', height:'80px', flexShrink:'0' }),
+                    ...(isL ? { width:'100%', height:'100%', minWidth:'0', minHeight:'44px', flex:'0 0 auto', margin:'0', borderWidth:'2px' } : { width:'64px', height:'80px', flexShrink:'0' }),
                     backgroundColor: isSelected ? '#F6D365' : (canAfford ? '#F7F3E8' : '#c7b89e'),
                     borderColor: isSelected ? '#E8B84B' : '#8a5638',
-                    transform: isSelected ? (isL ? 'translateX(8px) scale(1.05)' : 'translateY(-16px) scale(1.1)') : 'none',
+                    transform: isSelected ? (isL ? 'scale(1.04)' : 'translateY(-16px) scale(1.1)') : 'none',
                     boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.3)' : 'none',
                     cursor: isCooldown ? 'not-allowed' : 'pointer',
                     opacity: (!canAfford || isCooldown) && !isSelected ? '0.7' : '1'
@@ -5580,7 +5394,8 @@
                     e.stopPropagation();
                     if (!isCooldown && this.onSelectTower) this.onSelectTower(isSelected ? null : t.id);
                 };
-                inner.appendChild(btnEl);
+                btnEl.setAttribute('data-tower-id', t.id);
+                towerSlots.appendChild(btnEl);
             });
 
             inner.className = 'hide-scrollbar ' + (isL ? 'pencil-box' : 'pencil-box-portrait');
@@ -6126,9 +5941,6 @@
             const towerBar = this.renderTowerBar();
             if (towerBar) this.root.appendChild(towerBar);
 
-            const ultimateControls = this.renderUltimateControls();
-            if (ultimateControls) this.root.appendChild(ultimateControls);
-
             const towerInfo = this.renderTowerInfo();
             if (towerInfo) this.root.appendChild(towerInfo);
 
@@ -6171,7 +5983,7 @@
     const canvas = document.getElementById('gameCanvas');
     canvas.tabIndex = 0;
     canvas.setAttribute('role', 'application');
-    canvas.setAttribute('aria-label', '學霸校園塔防戰場。大招瞄準時可用方向鍵移動，Enter 或空白鍵確認，Escape 取消。');
+    canvas.setAttribute('aria-label', '學霸校園塔防戰場。印章按鈕可一鍵發動全軍齊射。');
     const ui = new UIManager();
 
     function applyCloudProgress(save) {
@@ -6232,7 +6044,7 @@
     let prepData = null;
     let prepLevelIdx = 0;
     let teacherCharge = 0, teacherReady = false, waitWave = false;
-    let stamps = 0, stampKills = 0, stampProgress = 0, pendingUltimate = null;
+    let stamps = 0, stampKills = 0, stampProgress = 0;
     let fieldSel = null;
     // ----- Phase 4 状态 -----
     let results = loadGameSave().results || {};
@@ -6246,7 +6058,6 @@
         onPhaseChange: (p) => {
             phase = p;
             if (p !== 'td') {
-                engine.clearPendingUltimate('phase-change', false);
                 selectedTower = null;
                 engine.setSelectedTower(null);
             }
@@ -6305,8 +6116,7 @@
         onCombatState: (s) => {
             teacherCharge = s.teacherCharge; teacherReady = s.teacherReady; waitWave = s.waitWave;
             stamps = s.stamps || 0; stampKills = s.stampKills || 0; stampProgress = s.stampProgress || 0;
-            pendingUltimate = s.pendingUltimate || null;
-            ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress, pendingUltimate });
+            ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress });
         },
         onAnnouncement: (message) => ui.update({ liveMessage: message || '' }),
         onFieldSelect: (info) => {
@@ -6331,12 +6141,6 @@
 
     const engine = new GameEngine(callbacks);
     engine.mount(canvas);
-    canvas.addEventListener('keydown', event => {
-        if (engine.handleUltimateKey(event.key)) {
-            event.preventDefault();
-            SOUND.arm();
-        }
-    });
     isLoading = true;
     ui.update({ isLoading });
     const assetLoadPromise = ASSETS.load().then(() => { isLoading = false; ui.update({ isLoading }); });
@@ -6472,17 +6276,11 @@
     // Phase 2.5：提前上课 / 班主任技能 / 关卡内升级
     ui.onEarlyCall = () => engine.callNextWaveEarly();
     ui.onTeacherSkill = () => engine.releaseTeacherSkill();
-    ui.onStampUltimate = (toolId) => engine.releaseStampUltimate(toolId);
-    ui.onCancelUltimate = () => engine.cancelStampUltimate();
-    ui.onUltimateGestureStart = toolId => engine.beginUltimateGesture(toolId);
-    ui.onUltimateGestureMove = (x, y) => engine.updateUltimateGesture(x, y);
-    ui.onUltimateGestureEnd = returnedToIcon => engine.endUltimateGesture(returnedToIcon);
-    ui.onUltimateGestureCancel = () => engine.cancelUltimateGesture();
+    ui.onStampUltimate = () => engine.releaseStampUltimate();
     ui.onUpgrade = () => engine.upgradeSelectedField();
     ui.onStartMinigame = (levelIdx, nextLevelIdx) => engine.startChapterMinigame(levelIdx, nextLevelIdx);
     ui.onRestart = () => {
         // 回主选单：重新同步存档（含战斗中/失败关收集到的贴纸、最新解锁与星级）
-        engine.clearPendingUltimate('return-menu', false);
         const fresh = loadGameSave();
         unlockedLevel = Math.max(unlockedLevel, fresh.unlockedLevel || 0);
         results = fresh.results || results; stickers = fresh.stickers || stickers; badges = fresh.badges || badges;

@@ -140,7 +140,16 @@ assert(script.includes('fallbackUrlForAsset(url)'), 'painted assets can fall bac
 assert(script.includes('hasExpectedAsset(id)'), 'renderer can distinguish expected painted assets from legacy fallback');
 assert(script.includes('drawMissingPaintedAsset'), 'missing painted assets use a neutral placeholder instead of old SVG-style art while loading');
 assert(script.includes('startLevelWhenAssetsReady(idx, loadout)'), 'combat start waits for painted assets before entering the field');
-assert(script.includes("eraser: { id: 'eraser'") && script.includes('recharge: 300'), 'eraser shield cooldown is reduced to 300 frames');
+const towers = readConstObject('TOWERS');
+assert(towers && towers.eraser && towers.eraser.recharge === 300, 'eraser shield cooldown is reduced to 300 frames');
+assert(
+  towers
+    && towers.ruler
+    && towers.ruler.type === 'shoot'
+    && towers.ruler.pierce === true
+    && towers.ruler.bidirectional === true,
+  'ruler data contract declares a bidirectional piercing shooter'
+);
 assert(script.includes('const MONSTER_SKILL_DESIGN = {'), 'monster dedicated skill design table exists');
 assert(script.includes('const PVZ_ZOMBIE_PATTERN_STUDY = {'), 'PvZ zombie pattern study is captured in game design data');
 assert(script.includes('catapultRanged'), 'PvZ-inspired ranged pressure pattern is represented');
@@ -156,7 +165,7 @@ assert(script.includes("type: 'enemyProjectile'"), 'enemy ranged attacks are rep
 assert(script.includes('tryVaultTower(enemy, tower, cfg)'), 'runner monsters can vault over the first blocking tower');
 assert(script.includes('summonSupportEnemies(enemy, cfg)'), 'support monsters can summon lane pressure enemies');
 assert(script.includes('const STAMP_KILLS_REQUIRED = 10'), 'stamp ultimate charges every 10 defeated monsters');
-assert(script.includes('const TOOL_ULTIMATES = {'), 'tool ultimate design table exists');
+assert(script.includes('const STAMP_BARRAGE = {'), 'one-click global stamp barrage contract exists');
 assert(script.includes('releaseStampUltimate(toolId)'), 'stamp ultimate release function exists');
 assert(script.includes('this.registerEnemyDefeat(o);'), 'enemy defeat routes through stamp charge handler');
 assert(script.includes('const CHAPTER_MINIGAMES = {'), 'chapter interval sunlight minigame plan exists');
@@ -194,36 +203,56 @@ assert(orientationMatrix && orientationMatrix.minigame.landscape === 'landscape'
 assert(orientationMatrix && orientationMatrix.minigame.portrait === 'portrait', 'orientation matrix: minigame + portrait = portrait');
 assert(script.includes('function resolveSceneVariant(mode, viewportOrientation, levelId, minigameId)'), 'scene resolver is game-mode and viewport aware');
 
-const ultimates = readConstObject('TOOL_ULTIMATES');
-const ultimateIds = ['textbook', 'pencil', 'watering', 'glue', 'ruler', 'eraser', 'teacher'];
-assert(ultimates && ultimateIds.every(id => ultimates[id] && ultimates[id].targeted && ultimates[id].shape), 'seven tool ultimates are targeted AoE profiles with distinct shapes');
-assert(ultimates && ultimateIds.every(id => Array.isArray(ultimates[id].levelScaling) && ultimates[id].levelScaling.length === 5), 'every ultimate exposes five readable level-scaling entries');
-assert(ultimates && ultimateIds.every(id => {
-  const scaling = ultimates[id].levelScaling;
-  return Array.isArray(scaling) && scaling.length === 5
-    && Object.keys(scaling[0]).filter(key => typeof scaling[0][key] === 'number' && scaling[4][key] > scaling[0][key]).length >= 2;
-}), 'every ultimate grows at least two combat parameters from Lv1 to Lv5');
-assert(script.includes('armStampUltimate(toolId)') && script.includes('confirmStampUltimate(cell)') && script.includes('cancelStampUltimate()'), 'ultimate input has aim, confirm, and cancel paths');
-const confirmUltimateStart = script.indexOf('confirmStampUltimate(cell) {');
-const confirmUltimateEnd = script.indexOf('releaseStampUltimate(toolId)', confirmUltimateStart);
-const confirmUltimateBody = script.slice(confirmUltimateStart, confirmUltimateEnd);
-const noTargetGuardIndex = confirmUltimateBody.indexOf('if (!targets.length) {');
-const stampSpendIndex = confirmUltimateBody.indexOf('this.stamps = Math.max(0, this.stamps - 1);');
-const cancelUltimateStart = script.indexOf('cancelStampUltimate() {');
-const cancelUltimateEnd = script.indexOf('movePendingUltimate(', cancelUltimateStart);
-const cancelUltimateBody = script.slice(cancelUltimateStart, cancelUltimateEnd);
+const barrage = readConstObject('STAMP_BARRAGE');
 assert(
-  noTargetGuardIndex >= 0
-    && confirmUltimateBody.indexOf('return false;', noTargetGuardIndex) >= 0
-    && stampSpendIndex > noTargetGuardIndex
-    && confirmUltimateBody.includes('沒有目標，印章未消耗')
-    && cancelUltimateStart >= 0
-    && !cancelUltimateBody.includes('this.stamps--'),
-  'cancelled or targetless ultimates do not consume a stamp'
+  barrage
+    && barrage.buffFrames === 300
+    && barrage.damageMultiplier === 1.2
+    && barrage.laneRadius === 2,
+  'global barrage contract fixes the buff at 300 frames, 1.2x damage, and +/-2 lanes'
 );
-assert(script.includes('ultimateAreaCells(meta, cell)') && script.includes('drawUltimateTargetPreview(ctx)'), 'targeted ultimates expose a readable area preview');
-assert(['scaling.pulses', 'scaling.sun', 'scaling.volleys', 'scaling.pierce', 'scaling.duration', 'scaling.crossBonus', 'scaling.rebounds', 'scaling.push', 'scaling.freeze'].every(token => script.includes(token)), 'all level-scaling parameters affect runtime combat');
-assert(script.includes('enemyGridColumn(enemy)') && script.includes('const enemyColumn = this.enemyGridColumn(enemy);'), 'AoE targeting derives live columns from moving enemy positions');
+assert(
+  !script.includes('pendingUltimate')
+    && !script.includes('armStampUltimate(')
+    && !script.includes('confirmStampUltimate(')
+    && !script.includes('cancelStampUltimate(')
+    && !script.includes('renderUltimateControls()')
+    && !script.includes('drawUltimateTargetPreview(')
+    && !script.includes('stampBtn.onpointer'),
+  'one-click barrage removes pending targets, aim preview, cancel row, drag/capture, and second confirmation'
+);
+const releaseStart = script.indexOf('releaseStampUltimate(toolId) {');
+const releaseEnd = script.indexOf('queueBossPhaseThresholds(', releaseStart);
+const releaseBody = script.slice(releaseStart, releaseEnd);
+const noShotGuardIndex = releaseBody.indexOf('if (!shots.length) {');
+const stampSpendIndex = releaseBody.indexOf('this.stamps = Math.max(0, this.stamps - 1);');
+const buffAllAttackTowersIndex = releaseBody.indexOf('attackTowers.forEach(tower => {', stampSpendIndex);
+assert(
+  releaseStart >= 0
+    && releaseBody.includes("tower.data && tower.data.type === 'shoot'")
+    && releaseBody.includes('tower.hp > 0 && !tower.destroyed')
+    && releaseBody.includes('tower.r - STAMP_BARRAGE.laneRadius')
+    && releaseBody.includes('tower.r + STAMP_BARRAGE.laneRadius')
+    && releaseBody.includes("this.towerTargetsInDirection(tower, row, 'front', 1)")
+    && releaseBody.includes("this.towerTargetsInDirection(tower, row, 'back', 1)")
+    && noShotGuardIndex >= 0
+    && releaseBody.indexOf('return false;', noShotGuardIndex) >= 0
+    && stampSpendIndex > noShotGuardIndex,
+  'barrage plans nearest legal front/back shots before spending one stamp'
+);
+assert(
+  buffAllAttackTowersIndex > stampSpendIndex
+    && releaseBody.indexOf('tower.barrageTimer = STAMP_BARRAGE.buffFrames;', buffAllAttackTowersIndex) > buffAllAttackTowersIndex
+    && script.includes('this.tickTowerBarrage(o);')
+    && script.includes('this.getTowerAttackDamage(o)'),
+  'every alive deployed attack tower owns and expires the 300-frame damage multiplier after a successful cast'
+);
+assert(
+  script.includes('this.damagePiercingTargets(o, o.r, atk, hitCount)')
+    && script.includes("this.towerTargetsInDirection(tower, row, 'front', hitCount)")
+    && script.includes("this.towerTargetsInDirection(tower, row, 'back', hitCount)"),
+  'ruler normal attacks pierce forward and backward independently'
+);
 
 const bossMechanics = readConstObject('BOSS_MECHANICS');
 const phaseBosses = ['sunshine', 'deadline', 'boss', 'super_boss'];
@@ -248,13 +277,9 @@ const bossLockIndex = enemyUpdateBody.indexOf('if (hasPendingBossTelegraph(this.
 const firstBossSideEffect = Math.min(...['sunSteal', 'titanOverdrive', 'specialCd', 'const eating =', 'if(move) o.x -= spd'].map(token => enemyUpdateBody.indexOf(token)).filter(index => index >= 0));
 assert(bossLockIndex >= 0 && bossLockIndex < firstBossSideEffect && /if \(hasPendingBossTelegraph\(this\.objs, o\)\) \{[\s\S]*?continue;[\s\S]*?\}/.test(enemyUpdateBody), 'pending boss telegraph exits before movement, bite, special, slam, charge, and resource effects');
 
-assert(script.includes('canvas.tabIndex = 0') && script.includes("canvas.setAttribute('role', 'application')"), 'canvas is keyboard focusable with an application role');
-assert(script.includes("canvas.addEventListener('keydown'") && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].every(key => script.includes(`'${key}'`)) && script.includes("key === ' '"), 'canvas keyboard handler supports arrow aim, Enter/Space confirm, and Escape cancel');
-assert(script.includes('movePendingUltimate(dx, dy)') && script.includes('confirmPendingUltimate()'), 'engine exposes keyboard-equivalent ultimate aim and confirm operations');
-assert(script.includes('pendingUltimate: this.pendingUltimate ?') && script.includes('ui.update({ teacherCharge, teacherReady, waitWave, stamps, stampKills, stampProgress, pendingUltimate })'), 'pending ultimate state is pushed into the UI');
-assert(script.includes('renderUltimateControls()') && script.includes("'X 取消'") && script.includes('this.onCancelUltimate'), 'aim mode renders a fixed clickable cancel control');
-assert(script.includes("setAttribute('aria-live', 'assertive')") && script.includes('renderLiveRegion()'), 'critical aim and boss states use an assertive aria-live region');
-assert(['大招瞄準', '沒有目標，印章未消耗', '已取消大招，印章未消耗', 'BOSS 預警', 'BOSS 破綻'].every(message => script.includes(message)), 'aria-live messages cover aim, no-target, cancel, boss telegraph, and vulnerability');
+assert(script.includes('canvas.tabIndex = 0') && script.includes("canvas.setAttribute('role', 'application')"), 'canvas remains keyboard focusable with an application role');
+assert(script.includes("setAttribute('aria-live', 'assertive')") && script.includes('renderLiveRegion()'), 'critical barrage and boss states use an assertive aria-live region');
+assert(['没有可齐射的目标，印章未消耗', '全军齐射', 'BOSS 預警', 'BOSS 破綻'].every(message => script.includes(message)), 'aria-live messages cover barrage success/failure and Boss states');
 assert(script.includes('const bossTextX = Math.max(') && script.includes("ctx.fillText('BOSS 預警 '"), 'boss warning text uses a safe horizontal position');
 
 if (process.exitCode) process.exit(process.exitCode);
